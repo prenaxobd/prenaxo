@@ -1,0 +1,4 @@
+import { prisma } from '@/lib/prisma';
+import { requireAdmin, jsonError } from '@/lib/admin';
+export async function GET(request){try{await requireAdmin();const {searchParams}=new URL(request.url);const status=searchParams.get('status');const q=searchParams.get('q');return Response.json(await prisma.order.findMany({where:{...(status?{status}:{}),...(q?{OR:[{orderNumber:{contains:q}},{customerName:{contains:q}},{customerEmail:{contains:q}}]}:{})},include:{items:true},orderBy:{createdAt:'desc'}}))}catch(error){return jsonError(error)}}
+export async function PATCH(request){try{await requireAdmin();const {id,status,paymentStatus}=await request.json();return Response.json(await prisma.order.update({where:{id},data:{...(status?{status}:{}),...(paymentStatus?{paymentStatus}:{})}}))}catch(error){return jsonError(error)}}

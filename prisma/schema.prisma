@@ -1,0 +1,1272 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * =========================================================
+ * ENUMS
+ * =========================================================
+ */
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum SEOIndexStatus {
+  INDEX
+  NOINDEX
+}
+
+enum SEORobotsFollow {
+  FOLLOW
+  NOFOLLOW
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignType {
+  DISCOUNT
+  FLASH_SALE
+  EMAIL
+  WHATSAPP
+  POPUP
+  BANNER
+  GENERAL
+}
+
+enum AnalyticsEventType {
+  PAGE_VIEW
+  PRODUCT_VIEW
+  CATEGORY_VIEW
+  SEARCH
+  ADD_TO_CART
+  REMOVE_FROM_CART
+  WISHLIST_ADD
+  WISHLIST_REMOVE
+  CHECKOUT_START
+  PURCHASE
+  LOGIN
+  SIGNUP
+}
+
+enum AIContentType {
+  PRODUCT_DESCRIPTION
+  META_TITLE
+  META_DESCRIPTION
+  ALT_TEXT
+  CATEGORY_DESCRIPTION
+  BRAND_DESCRIPTION
+  BLOG
+  FAQ
+  SOCIAL_POST
+  AD_COPY
+  EMAIL
+  WHATSAPP
+  OTHER
+}
+
+enum AIInsightType {
+  SALES
+  PRODUCT
+  CUSTOMER
+  INVENTORY
+  SEO
+  MARKETING
+  GENERAL
+}
+
+enum AIActionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  APPLIED
+}
+
+enum RedirectType {
+  PERMANENT
+  TEMPORARY
+}
+
+/**
+ * =========================================================
+ * USER
+ * =========================================================
+ */
+
+model User {
+  id String @id @default(cuid())
+
+  name         String
+  email        String  @unique
+  phone        String?
+  passwordHash String?
+
+  role Role @default(USER)
+
+  image   String?
+  address Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders   Order[]
+  cart     Cart?
+  wishlist Wishlist?
+  reviews  Review[]
+
+  activities AdminActivity[]
+
+  analyticsEvents AnalyticsEvent[]
+
+  customerSegmentMembers CustomerSegmentMember[]
+
+  aiInsights AIInsight[] @relation("AIInsightUser")
+}
+
+/**
+ * =========================================================
+ * CATEGORY
+ * =========================================================
+ */
+
+model Category {
+  id String @id @default(cuid())
+
+  name String
+  slug String @unique
+
+  description String?
+  image       String?
+
+  active Boolean @default(true)
+
+  parentId String?
+
+  parent Category? @relation("CategoryTree", fields: [parentId], references: [id])
+
+  children Category[] @relation("CategoryTree")
+
+  homepageSections HomepageSection[]
+
+  products Product[]
+
+  seo CategorySEO?
+
+  analyticsEvents AnalyticsEvent[]
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================================================
+ * BRAND
+ * =========================================================
+ */
+
+model Brand {
+  id String @id @default(cuid())
+
+  name String
+  slug String @unique
+
+  description String?
+
+  logo  String?
+  image String?
+
+  website String?
+
+  active   Boolean @default(true)
+  featured Boolean @default(false)
+
+  products Product[]
+
+  seo BrandSEO?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * PRODUCT
+ * =========================================================
+ */
+
+model Product {
+  id String @id @default(cuid())
+
+  name String
+  slug String @unique
+  sku  String @unique
+
+  shortDescription String?
+  description      String?
+
+  regularPrice Decimal  @db.Decimal(10, 2)
+  salePrice    Decimal? @db.Decimal(10, 2)
+  costPrice    Decimal? @db.Decimal(10, 2)
+
+  stock    Int @default(0)
+  lowStock Int @default(5)
+
+  /**
+   * Existing brand field রাখা হয়েছে
+   * যাতে পুরোনো data নষ্ট না হয়।
+   */
+  brand String?
+
+  /**
+   * New proper Brand relation
+   */
+  brandId String?
+
+  brandRelation Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  featured Boolean @default(false)
+  active   Boolean @default(true)
+
+  categoryId String
+
+  category Category @relation(fields: [categoryId], references: [id])
+
+  images ProductImage[]
+
+  variants ProductVariant[]
+
+  orderItems OrderItem[]
+
+  reviews Review[]
+
+  cartItems CartItem[]
+
+  wishlistItems WishlistItem[]
+
+  seo ProductSEO?
+
+  campaignProducts CampaignProduct[]
+
+  analyticsEvents AnalyticsEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * PRODUCT IMAGE
+ * =========================================================
+ */
+
+model ProductImage {
+  id String @id @default(cuid())
+
+  url String
+  alt String?
+
+  sortOrder Int @default(0)
+
+  productId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+/**
+ * =========================================================
+ * PRODUCT VARIANT
+ * =========================================================
+ */
+
+model ProductVariant {
+  id String @id @default(cuid())
+
+  size  String?
+  color String?
+
+  price Decimal? @db.Decimal(10, 2)
+
+  stock Int @default(0)
+
+  sku String @unique
+
+  productId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+/**
+ * =========================================================
+ * CART
+ * =========================================================
+ */
+
+model Cart {
+  id String @id @default(cuid())
+
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items CartItem[]
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * CART ITEM
+ * =========================================================
+ */
+
+model CartItem {
+  id String @id @default(cuid())
+
+  quantity Int @default(1)
+
+  cartId String
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  productId String
+
+  product Product @relation(fields: [productId], references: [id])
+
+  variantId String?
+
+  @@unique([cartId(length: 64), productId(length: 64)])
+}
+
+/**
+ * =========================================================
+ * WISHLIST
+ * =========================================================
+ */
+
+model Wishlist {
+  id String @id @default(cuid())
+
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items WishlistItem[]
+}
+
+/**
+ * =========================================================
+ * WISHLIST ITEM
+ * =========================================================
+ */
+
+model WishlistItem {
+  id String @id @default(cuid())
+
+  wishlistId String
+
+  wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+
+  productId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId(length: 64), productId(length: 64)])
+}
+
+/**
+ * =========================================================
+ * ORDER
+ * =========================================================
+ */
+
+model Order {
+  id String @id @default(cuid())
+
+  orderNumber String @unique
+
+  userId String?
+
+  user User? @relation(fields: [userId], references: [id])
+
+  customerName  String
+  customerEmail String
+  customerPhone String
+
+  shippingAddress Json
+  billingAddress  Json?
+
+  subtotal Decimal @db.Decimal(10, 2)
+
+  discount Decimal @default(0) @db.Decimal(10, 2)
+
+  shippingCharge Decimal @default(0) @db.Decimal(10, 2)
+
+  total Decimal @db.Decimal(10, 2)
+
+  paymentMethod String
+
+  paymentStatus PaymentStatus @default(PENDING)
+
+  status OrderStatus @default(PENDING)
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================================================
+ * ORDER ITEM
+ * =========================================================
+ */
+
+model OrderItem {
+  id String @id @default(cuid())
+
+  quantity Int
+
+  unitPrice Decimal @db.Decimal(10, 2)
+
+  productName String
+
+  orderId String
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+
+  product Product @relation(fields: [productId], references: [id])
+}
+
+/**
+ * =========================================================
+ * COUPON
+ * =========================================================
+ */
+
+model Coupon {
+  id String @id @default(cuid())
+
+  code String @unique
+
+  type DiscountType
+
+  value Decimal @db.Decimal(10, 2)
+
+  minimumOrder Decimal? @db.Decimal(10, 2)
+
+  expiresAt DateTime?
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * REVIEW
+ * =========================================================
+ */
+
+model Review {
+  id String @id @default(cuid())
+
+  rating Int
+
+  comment String?
+
+  approved Boolean @default(false)
+
+  verifiedPurchase Boolean @default(false)
+
+  userId String
+
+  productId String
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+}
+
+/**
+ * =========================================================
+ * BANNER
+ * =========================================================
+ */
+
+model Banner {
+  id String @id @default(cuid())
+
+  title String
+
+  subtitle String?
+
+  image String?
+
+  desktopImage String?
+  mobileImage  String?
+
+  link String?
+
+  buttonText String?
+
+  startAt DateTime?
+  endAt   DateTime?
+
+  active Boolean @default(true)
+
+  sortOrder Int @default(0)
+}
+
+/**
+ * =========================================================
+ * HOMEPAGE SECTION
+ * =========================================================
+ */
+
+model HomepageSection {
+  id String @id @default(cuid())
+
+  type String
+
+  title String
+
+  subtitle String?
+
+  eyebrow String?
+
+  href String?
+
+  categoryId String?
+
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  productLimit Int @default(8)
+
+  active Boolean @default(true)
+
+  sortOrder Int @default(0)
+}
+
+/**
+ * =========================================================
+ * SITE SETTINGS
+ * =========================================================
+ */
+
+model SiteSettings {
+  id String @id @default(cuid())
+
+  siteName String @default("Khatibazar")
+
+  logo String?
+
+  contactEmail String?
+  contactPhone String?
+
+  currency String @default("BDT")
+
+  shippingCharge Decimal @default(60) @db.Decimal(10, 2)
+
+  freeDeliveryThreshold Decimal @default(2000) @db.Decimal(10, 2)
+
+  /**
+   * SEO
+   */
+
+  metaTitle String?
+
+  metaDescription String?
+
+  keywords Json?
+
+  canonicalUrl String?
+
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+
+  /**
+   * Marketing / Tracking
+   */
+
+  googleAnalyticsId String?
+
+  googleSearchConsoleVerification String?
+
+  facebookPixelId String?
+
+  tikTokPixelId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * DELIVERY ZONE
+ * =========================================================
+ */
+
+model DeliveryZone {
+  id String @id @default(cuid())
+
+  division String
+
+  district String @unique
+
+  charge Decimal @db.Decimal(10, 2)
+
+  estimatedDelivery String
+
+  insideDhaka Boolean @default(false)
+
+  active Boolean @default(true)
+}
+
+/**
+ * =========================================================
+ * ADMIN ACTIVITY
+ * =========================================================
+ */
+
+model AdminActivity {
+  id String @id @default(cuid())
+
+  action String
+
+  entity String
+
+  entityId String?
+
+  adminId String
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([entity])
+}
+
+/**
+ * =========================================================
+ * PRODUCT SEO
+ * =========================================================
+ */
+
+model ProductSEO {
+  id String @id @default(cuid())
+
+  productId String @unique
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  metaTitle String?
+
+  metaDescription String?
+
+  focusKeyword String?
+
+  secondaryKeywords Json?
+
+  canonicalUrl String?
+
+  robotsIndex SEOIndexStatus @default(INDEX)
+
+  robotsFollow SEORobotsFollow @default(FOLLOW)
+
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+
+  twitterTitle       String?
+  twitterDescription String?
+  twitterImage       String?
+
+  schemaType String? @default("Product")
+
+  schemaJson Json?
+
+  seoScore Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * CATEGORY SEO
+ * =========================================================
+ */
+
+model CategorySEO {
+  id String @id @default(cuid())
+
+  categoryId String @unique
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  metaTitle String?
+
+  metaDescription String?
+
+  focusKeyword String?
+
+  secondaryKeywords Json?
+
+  canonicalUrl String?
+
+  robotsIndex SEOIndexStatus @default(INDEX)
+
+  robotsFollow SEORobotsFollow @default(FOLLOW)
+
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+
+  schemaType String?
+
+  schemaJson Json?
+
+  seoScore Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * BRAND SEO
+ * =========================================================
+ */
+
+model BrandSEO {
+  id String @id @default(cuid())
+
+  brandId String @unique
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  metaTitle String?
+
+  metaDescription String?
+
+  focusKeyword String?
+
+  secondaryKeywords Json?
+
+  canonicalUrl String?
+
+  robotsIndex SEOIndexStatus @default(INDEX)
+
+  robotsFollow SEORobotsFollow @default(FOLLOW)
+
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+
+  schemaType String?
+
+  schemaJson Json?
+
+  seoScore Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * PAGE
+ * =========================================================
+ */
+
+model Page {
+  id String @id @default(cuid())
+
+  title String
+
+  slug String @unique
+
+  excerpt String?
+
+  content String?
+
+  featuredImage String?
+
+  active Boolean @default(true)
+
+  published Boolean @default(false)
+
+  seo PageSEO?
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * PAGE SEO
+ * =========================================================
+ */
+
+model PageSEO {
+  id String @id @default(cuid())
+
+  pageId String @unique
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  metaTitle String?
+
+  metaDescription String?
+
+  focusKeyword String?
+
+  secondaryKeywords Json?
+
+  canonicalUrl String?
+
+  robotsIndex SEOIndexStatus @default(INDEX)
+
+  robotsFollow SEORobotsFollow @default(FOLLOW)
+
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+
+  twitterTitle       String?
+  twitterDescription String?
+  twitterImage       String?
+
+  schemaType String?
+
+  schemaJson Json?
+
+  seoScore Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * REDIRECT MANAGER
+ * =========================================================
+ */
+
+model Redirect {
+  id String @id @default(cuid())
+
+  fromPath String @unique
+
+  toPath String
+
+  type RedirectType @default(PERMANENT)
+
+  active Boolean @default(true)
+
+  hitCount Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * SEO AUDIT
+ * =========================================================
+ */
+
+model SEOAudit {
+  id String @id @default(cuid())
+
+  url String
+
+  entityType String?
+
+  entityId String?
+
+  score Int @default(0)
+
+  issues Json?
+
+  warnings Json?
+
+  passed Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([url])
+  @@index([createdAt])
+}
+
+/**
+ * =========================================================
+ * MARKETING CAMPAIGN
+ * =========================================================
+ */
+
+model Campaign {
+  id String @id @default(cuid())
+
+  name String
+
+  description String?
+
+  type CampaignType
+
+  status CampaignStatus @default(DRAFT)
+
+  startAt DateTime?
+
+  endAt DateTime?
+
+  budget Decimal? @db.Decimal(10, 2)
+
+  discountType DiscountType?
+
+  discountValue Decimal? @db.Decimal(10, 2)
+
+  bannerImage String?
+
+  landingUrl String?
+
+  products CampaignProduct[]
+
+  segments CampaignSegmentMember[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * CAMPAIGN PRODUCT
+ * =========================================================
+ */
+
+model CampaignProduct {
+  id String @id @default(cuid())
+
+  campaignId String
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  productId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, productId])
+}
+
+/**
+ * =========================================================
+ * CUSTOMER SEGMENT
+ * =========================================================
+ */
+
+model CustomerSegment {
+  id String @id @default(cuid())
+
+  name String
+
+  description String?
+
+  rules Json?
+
+  active Boolean @default(true)
+
+  members CustomerSegmentMember[]
+
+  campaigns CampaignSegmentMember[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * CUSTOMER SEGMENT MEMBER
+ * =========================================================
+ */
+
+model CustomerSegmentMember {
+  id String @id @default(cuid())
+
+  segmentId String
+
+  segment CustomerSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([segmentId, userId])
+}
+
+/**
+ * =========================================================
+ * CAMPAIGN SEGMENT
+ * =========================================================
+ */
+
+model CampaignSegmentMember {
+  id String @id @default(cuid())
+
+  campaignId String
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  segmentId String
+
+  segment CustomerSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, segmentId])
+}
+
+/**
+ * =========================================================
+ * NEWSLETTER
+ * =========================================================
+ */
+
+model NewsletterSubscriber {
+  id String @id @default(cuid())
+
+  email String @unique
+
+  name String?
+
+  active Boolean @default(true)
+
+  subscribedAt DateTime @default(now())
+
+  unsubscribedAt DateTime?
+}
+
+/**
+ * =========================================================
+ * MARKETING POPUP
+ * =========================================================
+ */
+
+model MarketingPopup {
+  id String @id @default(cuid())
+
+  title String
+
+  message String?
+
+  image String?
+
+  buttonText String?
+
+  buttonUrl String?
+
+  startAt DateTime?
+
+  endAt DateTime?
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================================================
+ * ANALYTICS EVENT
+ * =========================================================
+ */
+
+model AnalyticsEvent {
+  id String @id @default(cuid())
+
+  type AnalyticsEventType
+
+  userId String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  productId String?
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  categoryId String?
+
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  sessionId String?
+
+  path String?
+
+  referrer String?
+
+  source String?
+
+  medium String?
+
+  campaign String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([productId])
+  @@index([categoryId])
+}
+
+/**
+ * =========================================================
+ * AI CONTENT
+ * =========================================================
+ */
+
+model AIContent {
+  id String @id @default(cuid())
+
+  type AIContentType
+
+  entityType String?
+
+  entityId String?
+
+  prompt String?
+
+  inputText String?
+
+  generatedText String
+
+  model String?
+
+  approved Boolean @default(false)
+
+  applied Boolean @default(false)
+
+  createdById String?
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([entityType])
+  @@index([entityId])
+}
+
+/**
+ * =========================================================
+ * AI INSIGHT
+ * =========================================================
+ */
+
+model AIInsight {
+  id String @id @default(cuid())
+
+  type AIInsightType
+
+  title String
+
+  summary String
+
+  data Json?
+
+  priority Int @default(0)
+
+  userId String?
+
+  user User? @relation("AIInsightUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  dismissed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+/**
+ * =========================================================
+ * AI ACTION
+ * =========================================================
+ */
+
+model AIAction {
+  id String @id @default(cuid())
+
+  action String
+
+  entityType String?
+
+  entityId String?
+
+  input Json?
+
+  output Json?
+
+  status AIActionStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([entityType])
+  @@index([entityId])
+}

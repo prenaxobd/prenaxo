@@ -1,0 +1,4 @@
+import Link from 'next/link';
+import ProductCard from '@/components/ProductCard';
+import { prisma } from '@/lib/prisma';
+export default async function CategoryPage({params}){const {slug}=await params;const category=await prisma.category.findUnique({where:{slug},include:{products:{where:{active:true},include:{category:true,images:true},orderBy:{createdAt:'desc'}}}});if(!category)return <main className="container page-title"><h1>Category not found</h1><Link href="/shop">Back to shop</Link></main>;return <main className="container"><div className="page-title"><div className="eyebrow" style={{color:'var(--coral)'}}>Collection</div><h1>{category.name}</h1><p className="muted">{category.description||'Thoughtful picks for your everyday.'}</p></div><div className="shop-grid">{category.products.map(product=><ProductCard key={product.id} product={product}/>)}</div></main>}

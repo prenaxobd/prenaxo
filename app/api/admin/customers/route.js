@@ -1,0 +1,3 @@
+import { prisma } from '@/lib/prisma';
+import { requireAdmin, jsonError } from '@/lib/admin';
+export async function GET(request){try{await requireAdmin();const q=new URL(request.url).searchParams.get('q');const users=await prisma.user.findMany({where:{role:'USER',...(q?{OR:[{name:{contains:q}},{email:{contains:q}},{phone:{contains:q}}]}:{})},include:{_count:{select:{orders:true}},orders:{select:{total:true}}},orderBy:{createdAt:'desc'}});return Response.json(users.map(user=>({...user,passwordHash:undefined,totalSpent:user.orders.reduce((sum,order)=>sum+Number(order.total),0)})))}catch(error){return jsonError(error)}}

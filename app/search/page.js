@@ -1,0 +1,3 @@
+import ProductCard from '@/components/ProductCard';
+import { prisma } from '@/lib/prisma';
+export default async function SearchPage({searchParams}){const query=(await searchParams).q||'';const products=await prisma.product.findMany({where:{active:true,OR:[{name:{contains:query}},{description:{contains:query}},{brand:{contains:query}}]},include:{category:true,images:true}});return <main className="container"><div className="page-title"><div className="eyebrow" style={{color:'var(--coral)'}}>Search</div><h1>{query?`Results for “${query}”`:'Find your next good thing'}</h1></div>{products.length?<div className="shop-grid">{products.map(p=><ProductCard key={p.id} product={p}/>)}</div>:<p className="muted">No products matched your search.</p>}</main>}

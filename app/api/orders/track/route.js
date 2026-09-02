@@ -1,0 +1,3 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+export async function GET(request){try{const params=new URL(request.url).searchParams;const order=await prisma.order.findFirst({where:{orderNumber:params.get('orderNumber')||'',customerPhone:params.get('phone')||''},select:{orderNumber:true,customerName:true,total:true,status:true,paymentStatus:true,createdAt:true}});if(!order)return NextResponse.json({error:'Order not found.'},{status:404});return NextResponse.json({...order,total:Number(order.total),createdAt:order.createdAt.toISOString()})}catch{return NextResponse.json({error:'Unable to track order.'},{status:400})}}

@@ -1,0 +1,3 @@
+import ProductCard from '@/components/ProductCard';
+import { getProducts } from '@/lib/products';
+export default async function FlashSale(){const products=(await getProducts()).filter(product=>product.salePrice&&product.salePrice<product.regularPrice);return <main className="container page-title"><div className="eyebrow">Limited-time offers</div><h1>Flash sale</h1><p className="muted">Good prices on good things, while stock lasts.</p>{products.length?<div className="shop-grid">{products.map(product=><ProductCard key={product.id} product={product}/>)}</div>:<p className="muted">No flash sale products available.</p>}</main>}
