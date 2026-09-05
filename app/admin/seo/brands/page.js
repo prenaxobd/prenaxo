@@ -1,0 +1,3 @@
+import { prisma } from '@/lib/prisma';
+import EntitySEOManager from '@/components/admin/EntitySEOManager';
+export default async function BrandSEO() { const entities = await prisma.brand.findMany({ where: { active: true }, select: { id: true, name: true, slug: true }, orderBy: { name: 'asc' } }); const seoRows = await prisma.brandSEO.findMany({ where: { brandId: { in: entities.map(entity => entity.id) } } }); const seoByEntity = new Map(seoRows.map(row => [row.brandId, row])); return <EntitySEOManager eyebrow="SEO workspace" title="Brand SEO" endpoint="/api/admin/seo/brands" entities={entities.map(entity => ({ ...entity, seo: seoByEntity.get(entity.id) || null }))} />; }

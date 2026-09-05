@@ -43,6 +43,7 @@ export default function CheckoutView() {
   });
 
   useEffect(() => {
+    const savedCoupon = localStorage.getItem('khatibazar-coupon');
     Promise.all([fetch('/api/cart'), fetch('/api/delivery')])
       .then(async ([cartResponse, deliveryResponse]) => {
         const cartData = await cartResponse.json();
@@ -64,6 +65,7 @@ export default function CheckoutView() {
             ...current,
             city: firstZone.division,
             area: firstZone.district,
+            ...(savedCoupon ? { couponCode: savedCoupon } : {}),
           }));
         }
       })
@@ -138,6 +140,7 @@ export default function CheckoutView() {
         );
       }
 
+      localStorage.removeItem('khatibazar-coupon');
       window.location.assign(
         `/order-success?order=${data.orderNumber}`
       );

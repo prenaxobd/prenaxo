@@ -1,0 +1,4 @@
+-- Recovery SQL for the failed migration attempt.
+-- The Product.productType column already applied successfully and must be preserved.
+-- The original migration did not create ProductComboItem because its index was rejected.
+-- No rollback SQL is intentionally provided: it would be destructive.

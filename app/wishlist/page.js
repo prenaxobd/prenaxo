@@ -87,6 +87,16 @@ export default function Wishlist() {
 
   useEffect(() => {
     loadWishlist();
+
+    function handleWishlistUpdated() {
+      loadWishlist();
+    }
+
+    window.addEventListener('wishlist-updated', handleWishlistUpdated);
+
+    return () => {
+      window.removeEventListener('wishlist-updated', handleWishlistUpdated);
+    };
   }, []);
 
 

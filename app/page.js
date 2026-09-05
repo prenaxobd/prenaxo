@@ -23,7 +23,5 @@ export default async function Home() {
     ...data.categorySections.map(category => ({ id: category.id, type: 'CATEGORY', categoryId: category.id, title: category.name, eyebrow: 'Explore the collection', href: `/category/${category.slug}` })),
     { id: 'new-arrivals', type: 'NEW_ARRIVALS', title: 'New arrivals', eyebrow: 'Freshly added' },
   ];
-  const brands = Array.from(new Set(data.products.map(product => product.brand).filter(Boolean))).slice(0, 10);
-
-  return <main className="home-page"><HeroSlider banners={data.banners} /><CategoryRail categories={data.categories} />{configuredSections.map(section => <ProductRail key={section.id} title={section.title} eyebrow={section.eyebrow} products={productsFor(section.type, data, section)} href={section.href || (section.type === 'CATEGORY' ? `/category/${section.category?.slug || ''}` : '/shop')} />)}<BrandRail brands={brands} /><ReviewRail reviews={data.reviews} /></main>;
+  return <main className="home-page"><HeroSlider banners={data.banners} /><CategoryRail categories={data.categories} />{configuredSections.map(section => <ProductRail key={section.id} title={section.title} eyebrow={section.eyebrow} products={productsFor(section.type, data, section)} href={section.href || (section.type === 'CATEGORY' ? `/category/${section.category?.slug || ''}` : '/shop')} />)}<BrandRail brands={data.brands} /><ReviewRail reviews={data.reviews} /></main>;
 }

@@ -1,81 +1,31 @@
 
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getCurrentUser } from '@/lib/auth';
-
-const navigation = [
-  ['Dashboard', '/admin'],
-  ['Products', '/admin/products'],
-  ['Categories', '/admin/categories'],
-  ['Orders', '/admin/orders'],
-  ['Reviews', '/admin/reviews'],
-  ['Customers', '/admin/customers'],
-  ['Coupons', '/admin/coupons'],
-  ['Banners', '/admin/banners'],
-  ['Delivery', '/admin/delivery'],
-  ['Settings', '/admin/settings'],
-];
+import { requireAdmin, getUserPermissions } from '@/lib/admin';
+import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminHeader from '@/components/admin/AdminHeader';
 
 export default async function AdminLayout({ children }) {
-  const user = await getCurrentUser();
+  let user;
 
-  if (!user || user.role !== 'ADMIN') {
+  try {
+    user = await requireAdmin();
+  } catch {
     redirect('/login?next=/admin');
   }
 
+  const permissions = [...await getUserPermissions(user.id)];
+
   return (
-    <div className="admin">
+    <div className="admin-shell">
+      <AdminSidebar permissions={permissions} />
 
-      <aside className="admin-side">
-
-        <Link className="logo" href="/admin">
-          k<span>h</span>atibazar
-        </Link>
-
-        <p className="admin-caption">
-          ADMIN CONSOLE
-        </p>
-
-        <nav>
-          {navigation.map(([label, href]) => (
-            <Link href={href} key={href}>
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-      </aside>
-
-      <section className="admin-content">
-
-        <header className="admin-header">
-
-          <span>
-            Store administration
-          </span>
-
-          <div>
-            <Link href="/" target="_blank">
-              View store
-            </Link>
-
-            <Link href="/admin/settings">
-              Settings
-            </Link>
-
-            <span className="admin-user">
-              {user.name}
-            </span>
-          </div>
-
-        </header>
+      <div className="admin-content-shell">
+        <AdminHeader user={user} />
 
         <main className="admin-main">
           {children}
         </main>
-
-      </section>
-
+      </div>
     </div>
   );
 }

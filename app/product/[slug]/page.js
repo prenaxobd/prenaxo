@@ -4,6 +4,9 @@ import {
   Truck,
   ShieldCheck,
   Check,
+  PackageCheck,
+  RotateCcw,
+  MapPin,
 } from 'lucide-react';
 
 import { getProduct, getProducts } from '@/lib/products';
@@ -13,39 +16,99 @@ import ProductGallery from '@/components/product/ProductGallery';
 import ProductActions from '@/components/product/ProductActions';
 import RelatedProducts from '@/components/product/RelatedProducts';
 
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const product = await getProduct(slug);
+
+  if (!product) {
+    return {
+      title: 'Product not found | Khatibazar',
+    };
+  }
+
+  const seo = product.seo;
+
+  return {
+    title:
+      seo?.metaTitle ||
+      product.name ||
+      'Product | Khatibazar',
+
+    description:
+      seo?.metaDescription ||
+      product.shortDescription ||
+      product.description ||
+      `Shop ${product.name} at Khatibazar.`,
+
+    alternates: seo?.canonicalUrl
+      ? {
+          canonical: seo.canonicalUrl,
+        }
+      : undefined,
+
+    robots: {
+      index: seo?.robotsIndex !== 'NOINDEX',
+      follow: seo?.robotsFollow !== 'NOFOLLOW',
+    },
+
+    openGraph: {
+      title:
+        seo?.ogTitle ||
+        seo?.metaTitle ||
+        product.name,
+
+      description:
+        seo?.ogDescription ||
+        seo?.metaDescription ||
+        product.shortDescription ||
+        undefined,
+
+      images:
+        seo?.ogImage
+          ? [seo.ogImage]
+          : product.images?.[0]?.url
+          ? [product.images[0].url]
+          : undefined,
+    },
+  };
+}
+
 export default async function ProductPage({ params }) {
   const { slug } = await params;
 
   const product = await getProduct(slug);
 
-  /* =========================================
-     PRODUCT NOT FOUND
-  ========================================= */
-
   if (!product) {
     return (
-      <main className="container product-not-found">
-        <div className="product-not-found-inner">
-          <div className="not-found-icon">📦</div>
+      <main className="single-product-page">
+        <div className="container">
+          <div className="product-not-found">
+            <div className="product-not-found-inner">
+              <div className="not-found-icon">
+                📦
+              </div>
 
-          <h1>Product not found</h1>
+              <h1>
+                Product not found
+              </h1>
 
-          <p>
-            Sorry, we could not find the product you are
-            looking for.
-          </p>
+              <p>
+                Sorry, we could not find the
+                product you are looking for.
+              </p>
 
-          <Link href="/shop" className="btn">
-            Back to Shop
-          </Link>
+              <Link
+                href="/shop"
+                className="product-back-shop"
+              >
+                Back to Shop
+              </Link>
+            </div>
+          </div>
         </div>
       </main>
     );
   }
-
-  /* =========================================
-     ALL PRODUCTS
-  ========================================= */
 
   const allProducts = await getProducts();
 
@@ -53,7 +116,9 @@ export default async function ProductPage({ params }) {
      PRICE
   ========================================= */
 
-  const regularPrice = Number(product.regularPrice || 0);
+  const regularPrice = Number(
+    product.regularPrice || 0
+  );
 
   const salePrice =
     product.salePrice !== null &&
@@ -61,31 +126,26 @@ export default async function ProductPage({ params }) {
       ? Number(product.salePrice)
       : null;
 
-  const price =
-    salePrice !== null &&
-    salePrice < regularPrice
-      ? salePrice
-      : regularPrice;
-
-  /* =========================================
-     DISCOUNT
-  ========================================= */
-
   const hasDiscount =
     salePrice !== null &&
-    regularPrice > salePrice;
+    salePrice > 0 &&
+    salePrice < regularPrice;
 
-  const discount = hasDiscount
-    ? Math.round(
-        ((regularPrice - salePrice) /
-          regularPrice) *
-          100
-      )
-    : 0;
+  const price = hasDiscount
+    ? salePrice
+    : regularPrice;
+
+  const discount =
+    hasDiscount && regularPrice > 0
+      ? Math.round(
+          ((regularPrice - salePrice) /
+            regularPrice) *
+            100
+        )
+      : 0;
 
   /* =========================================
      RELATED PRODUCTS
-     Same category first
   ========================================= */
 
   const sameCategory = allProducts.filter(
@@ -111,33 +171,29 @@ export default async function ProductPage({ params }) {
 
   const reviews = product.reviews || [];
 
-  /*
-   * Only approved reviews affect
-   * public rating.
-   */
-
   const approvedReviews = reviews.filter(
     (review) => review.approved === true
   );
 
-  const reviewCount = approvedReviews.length;
+  const reviewCount =
+    approvedReviews.length;
 
-  const ratingTotal = approvedReviews.reduce(
-    (total, review) =>
-      total + Number(review.rating || 0),
-    0
-  );
+  const ratingTotal =
+    approvedReviews.reduce(
+      (total, review) =>
+        total + Number(review.rating || 0),
+      0
+    );
 
   const averageRating =
     reviewCount > 0
       ? Number(
-          (ratingTotal / reviewCount).toFixed(1)
+          (
+            ratingTotal /
+            reviewCount
+          ).toFixed(1)
         )
       : 0;
-
-  /* =========================================
-     REVIEW DISTRIBUTION
-  ========================================= */
 
   const ratingDistribution = {
     5: 0,
@@ -148,7 +204,9 @@ export default async function ProductPage({ params }) {
   };
 
   approvedReviews.forEach((review) => {
-    const rating = Number(review.rating);
+    const rating = Number(
+      review.rating
+    );
 
     if (
       rating >= 1 &&
@@ -159,37 +217,44 @@ export default async function ProductPage({ params }) {
   });
 
   /* =========================================
-     IMAGES
+     PRODUCT DATA
   ========================================= */
 
   const images = product.images || [];
-
-  /* =========================================
-     SKU
-  ========================================= */
 
   const sku =
     product.sku ||
     `KB-${String(product.id).toUpperCase()}`;
 
+  const stock = Number(
+    product.stock || 0
+  );
+
+  const inStock = stock > 0;
+
+  const shortDescription =
+    product.shortDescription?.trim() || '';
+
   /* =========================================
-     STOCK
+     REVIEW STARS
   ========================================= */
 
-  const inStock =
-    Number(product.stock || 0) > 0;
+  const stars = Array.from({
+    length: 5,
+  });
 
   return (
     <main className="single-product-page">
 
-      {/* =================================================
+      {/* =========================================
           BREADCRUMB
-      ================================================= */}
+      ========================================= */}
 
       <div className="container">
-
-        <div className="product-breadcrumb">
-
+        <nav
+          className="product-breadcrumb"
+          aria-label="Breadcrumb"
+        >
           <Link href="/">
             Home
           </Link>
@@ -217,101 +282,85 @@ export default async function ProductPage({ params }) {
           <span className="current">
             {product.name}
           </span>
-
-        </div>
-
+        </nav>
       </div>
 
-
-      {/* =================================================
-          MAIN PRODUCT AREA
-      ================================================= */}
+      {/* =========================================
+          PRODUCT MAIN
+      ========================================= */}
 
       <section
         id="product-top"
         className="container product-main"
       >
 
-        {/* ===============================================
-            PRODUCT GALLERY
-        =============================================== */}
+        {/* =======================================
+            GALLERY
+        ======================================= */}
 
-        <ProductGallery
-          product={product}
-          discount={discount}
-        />
+        <div className="product-gallery-column">
+          <ProductGallery
+            product={product}
+            discount={discount}
+          />
+        </div>
 
-
-        {/* ===============================================
+        {/* =======================================
             PRODUCT INFORMATION
-        =============================================== */}
+        ======================================= */}
 
         <div className="product-info">
 
-          {/* QUALITY BADGE */}
+          {/* TOP BADGES */}
 
-          <div className="quality-badge">
-            <Check size={14} />
+          <div className="product-top-meta">
 
-            <span>
-              Fresh &amp; Quality
-            </span>
-          </div>
-
-
-          {/* BRAND */}
-
-          {product.brand && (
-            <div className="product-brand">
-              Brand:{' '}
-
-              <strong>
-                {product.brand}
-              </strong>
+            <div className="quality-badge">
+              <Check size={14} />
+              <span>
+                Fresh & Quality
+              </span>
             </div>
-          )}
 
+            {product.brand && (
+              <span className="product-brand-pill">
+                {product.brand}
+              </span>
+            )}
+
+          </div>
 
           {/* CATEGORY */}
 
           {product.category?.name && (
             <div className="product-category">
-
               <span>
                 Grocery
               </span>
 
-              <ChevronRight size={14} />
+              <ChevronRight size={13} />
 
               <span>
                 {product.category.name}
               </span>
-
             </div>
           )}
 
-
-          {/* PRODUCT TITLE */}
+          {/* TITLE */}
 
           <h1 className="product-title">
             {product.name}
           </h1>
 
-
-          {/* =============================================
-              DYNAMIC RATING
-          ============================================= */}
+          {/* RATING */}
 
           <a
             href="#reviews"
             className="product-rating product-rating-link"
             aria-label="View product reviews"
           >
-
             <span className="stars">
-              {Array.from({
-                length: 5,
-              }).map((_, index) => (
+              {stars.map((_, index) => (
                 <span
                   key={index}
                   className={
@@ -335,95 +384,96 @@ export default async function ProductPage({ params }) {
             </strong>
 
             <span className="review-count">
-              (
-              {reviewCount}
-              {' '}
+              {reviewCount}{' '}
               {reviewCount === 1
                 ? 'Review'
                 : 'Reviews'}
-              )
             </span>
-
           </a>
 
+          {/* SKU + STOCK */}
 
-          {/* SKU */}
+          <div className="product-meta-row">
 
-          <div className="product-sku">
+            <div className="product-sku">
+              <span>
+                SKU
+              </span>
 
-            SKU:
+              <strong>
+                {sku}
+              </strong>
+            </div>
 
-            <strong>
-              {sku}
-            </strong>
+            <div
+              className={
+                inStock
+                  ? 'product-stock available'
+                  : 'product-stock unavailable'
+              }
+            >
+              <span className="stock-dot" />
 
-          </div>
-
-
-          {/* STOCK */}
-
-          <div
-            className={
-              inStock
-                ? 'product-stock available'
-                : 'product-stock unavailable'
-            }
-          >
-
-            <span className="stock-dot" />
-
-            {inStock
-              ? `${product.stock} available · Ready to ship`
-              : 'Currently unavailable'}
+              {inStock
+                ? `${stock} available`
+                : 'Out of stock'}
+            </div>
 
           </div>
 
-
-          {/* =============================================
-              PRICE
-          ============================================= */}
+          {/* PRICE */}
 
           <div className="product-price-area">
 
-            <span className="current-price">
-              ৳
-              {price.toLocaleString()}
-            </span>
+            <div className="product-price-main">
+              <span className="current-price">
+                ৳{price.toLocaleString()}
+              </span>
 
-            {hasDiscount && (
-              <>
+              {hasDiscount && (
                 <span className="old-price">
                   ৳
                   {regularPrice.toLocaleString()}
                 </span>
+              )}
+            </div>
 
-                <span className="discount-badge">
-                  {discount}% OFF
-                </span>
-              </>
+            {hasDiscount && (
+              <span className="discount-badge">
+                Save {discount}%
+              </span>
             )}
 
           </div>
 
-
-          {/* =============================================
+          {/* =====================================
               SHORT DESCRIPTION
-          ============================================= */}
+          ===================================== */}
 
-          {product.shortDescription && (
+          {shortDescription && (
             <div className="product-short-description">
 
+              <div className="short-description-title">
+                About this product
+              </div>
+
               <p>
-                {product.shortDescription}
+                {shortDescription}
               </p>
 
             </div>
           )}
 
+          {product.productType === 'COMBO' && product.comboItems?.length > 0 && (
+            <div className="product-combo-includes">
+              <h2>This Bundle Includes</h2>
+              {product.comboItems.map(item => <div key={item.id}><span>{item.includedProduct?.images?.[0]?.url && <img src={item.includedProduct.images[0].url} alt="" />}</span><strong>{item.includedProduct?.name}</strong><b>× {item.quantity}</b></div>)}
+            </div>
+          )}
 
-          {/* =============================================
+          {/* =====================================
               VARIANTS
-          ============================================= */}
+          ===================================== */}
 
           {product.variants?.length > 0 && (
             <div className="product-variation">
@@ -441,7 +491,6 @@ export default async function ProductPage({ params }) {
                       key={variant.id}
                       className="variation-option"
                     >
-
                       {variant.size && (
                         <span>
                           {variant.size}
@@ -460,7 +509,6 @@ export default async function ProductPage({ params }) {
                             Option
                           </span>
                         )}
-
                     </button>
                   )
                 )}
@@ -470,54 +518,48 @@ export default async function ProductPage({ params }) {
             </div>
           )}
 
-
-          {/* =============================================
+          {/* =====================================
               CART ACTIONS
-          ============================================= */}
+          ===================================== */}
 
           <div className="product-action-area">
-
             <ProductActions
               product={product}
               disabled={!inStock}
             />
-
           </div>
 
-
-          {/* =============================================
-              DELIVERY
-          ============================================= */}
+          {/* =====================================
+              DELIVERY INFO
+          ===================================== */}
 
           <div className="delivery-card">
 
             <div className="delivery-card-title">
-
-              <Truck size={20} />
+              <Truck size={19} />
 
               <strong>
                 Delivery Information
               </strong>
-
             </div>
-
 
             <div className="delivery-row">
 
               <span>
-                📍 Deliver to
+                <MapPin size={15} />
+                Deliver to
               </span>
 
               <strong>
-                Enter your location
+                Your location
               </strong>
 
             </div>
 
-
             <div className="delivery-row">
 
               <span>
+                <PackageCheck size={15} />
                 Estimated delivery
               </span>
 
@@ -526,7 +568,6 @@ export default async function ProductPage({ params }) {
               </strong>
 
             </div>
-
 
             <div className="delivery-row">
 
@@ -540,85 +581,75 @@ export default async function ProductPage({ params }) {
 
             </div>
 
-
             <div className="free-delivery">
-
-              Free delivery on orders above ৳3,000
-
+              Free delivery on orders
+              above ৳3,000
             </div>
 
           </div>
 
-
-          {/* =============================================
+          {/* =====================================
               TRUST FEATURES
-          ============================================= */}
+          ===================================== */}
 
           <div className="trust-features">
 
             <div>
-              <ShieldCheck size={19} />
-
+              <ShieldCheck size={18} />
               <span>
-                100% Authentic
+                Authentic
               </span>
             </div>
 
-
             <div>
-              <Check size={19} />
-
+              <Check size={18} />
               <span>
                 Quality Checked
               </span>
             </div>
 
-
             <div>
-              <ShieldCheck size={19} />
-
+              <Truck size={18} />
               <span>
-                Secure Payment
+                Fast Delivery
               </span>
             </div>
 
-
             <div>
-              <Truck size={19} />
-
+              <RotateCcw size={18} />
               <span>
-                Fast Delivery
+                Easy Return
               </span>
             </div>
 
           </div>
 
         </div>
-
       </section>
 
-
-      {/* =================================================
-          PRODUCT DESCRIPTION
-      ================================================= */}
+      {/* =========================================
+          PRODUCT DETAILS
+      ========================================= */}
 
       <section className="container product-details-section">
 
         <div className="product-details-card">
 
+          {/* =======================================
+              DESCRIPTION
+          ======================================= */}
+
           <div className="product-description-block">
 
             <div className="details-eyebrow">
-              Product information
+              PRODUCT INFORMATION
             </div>
 
             <h2>
-              About this product
+              Product Description
             </h2>
 
-
             {product.description ? (
-
               <div
                 className="full-product-description"
                 dangerouslySetInnerHTML={{
@@ -626,33 +657,28 @@ export default async function ProductPage({ params }) {
                     product.description,
                 }}
               />
-
             ) : (
-
               <p className="muted">
-                Product description is not
-                available yet.
+                Product description is
+                not available yet.
               </p>
-
             )}
 
           </div>
 
-
-          {/* =================================================
+          {/* =======================================
               SPECIFICATIONS
-          ================================================= */}
+          ======================================= */}
 
           <div className="specifications">
 
             <div className="details-eyebrow">
-              Product details
+              PRODUCT DETAILS
             </div>
 
             <h2>
               Specifications
             </h2>
-
 
             <div className="spec-grid">
 
@@ -668,7 +694,6 @@ export default async function ProductPage({ params }) {
                 </div>
               )}
 
-
               {product.category?.name && (
                 <div>
                   <span>
@@ -681,34 +706,15 @@ export default async function ProductPage({ params }) {
                 </div>
               )}
 
+              <div>
+                <span>
+                  SKU
+                </span>
 
-              {product.sku && (
-                <div>
-                  <span>
-                    SKU
-                  </span>
-
-                  <strong>
-                    {product.sku}
-                  </strong>
-                </div>
-              )}
-
-
-              {product.variants?.length > 0 && (
-                <div>
-                  <span>
-                    Options
-                  </span>
-
-                  <strong>
-                    {product.variants.length}
-                    {' '}
-                    options
-                  </strong>
-                </div>
-              )}
-
+                <strong>
+                  {sku}
+                </strong>
+              </div>
 
               <div>
                 <span>
@@ -728,58 +734,69 @@ export default async function ProductPage({ params }) {
                 </strong>
               </div>
 
+              {product.variants?.length > 0 && (
+                <div>
+                  <span>
+                    Options
+                  </span>
+
+                  <strong>
+                    {product.variants.length}{' '}
+                    options
+                  </strong>
+                </div>
+              )}
+
             </div>
 
           </div>
 
-
-          {/* =================================================
-              DELIVERY & RETURN
-          ================================================= */}
+          {/* =======================================
+              DELIVERY / RETURN
+          ======================================= */}
 
           <div className="delivery-return-section">
 
             <div className="details-eyebrow">
-              Customer care
+              CUSTOMER CARE
             </div>
 
             <h2>
-              Delivery &amp; Return
+              Delivery & Return
             </h2>
-
 
             <div className="delivery-return-grid">
 
               <div className="delivery-return-card">
-
                 <Truck size={22} />
 
-                <h3>
-                  Fast Delivery
-                </h3>
+                <div>
+                  <h3>
+                    Fast Delivery
+                  </h3>
 
-                <p>
-                  Your order is carefully packed
-                  and delivered safely to your
-                  doorstep.
-                </p>
-
+                  <p>
+                    Your order is carefully
+                    packed and delivered safely
+                    to your doorstep.
+                  </p>
+                </div>
               </div>
 
-
               <div className="delivery-return-card">
-
                 <ShieldCheck size={22} />
 
-                <h3>
-                  Quality Guarantee
-                </h3>
+                <div>
+                  <h3>
+                    Quality Guarantee
+                  </h3>
 
-                <p>
-                  Every product is checked before
-                  it leaves our warehouse.
-                </p>
-
+                  <p>
+                    Every product is checked
+                    before it leaves our
+                    warehouse.
+                  </p>
+                </div>
               </div>
 
             </div>
@@ -790,71 +807,62 @@ export default async function ProductPage({ params }) {
 
       </section>
 
-
-      {/* =================================================
+      {/* =========================================
           REVIEWS
-      ================================================= */}
+      ========================================= */}
 
       <section
         id="reviews"
         className="container product-reviews-section"
       >
-
         <ProductReviews
           productId={product.id}
           reviews={reviews}
           averageRating={averageRating}
           reviewCount={reviewCount}
-          ratingDistribution={ratingDistribution}
+          ratingDistribution={
+            ratingDistribution
+          }
         />
-
       </section>
 
-
-      {/* =================================================
+      {/* =========================================
           RELATED PRODUCTS
-      ================================================= */}
+      ========================================= */}
 
       {related.length > 0 && (
-
         <section className="container related-products">
 
           <div className="section-heading">
 
             <div>
-
               <span>
-                You may also like
+                YOU MAY ALSO LIKE
               </span>
 
               <h2>
                 Related Products
               </h2>
-
             </div>
-
 
             <Link
               href="/shop"
               className="related-view-all"
             >
               View all
-
               <ChevronRight size={16} />
-
             </Link>
 
           </div>
-
 
           <RelatedProducts
             products={related}
           />
 
         </section>
-
       )}
 
     </main>
   );
 }
+

@@ -38,6 +38,12 @@ enum DiscountType {
   FIXED
 }
 
+enum ProductType {
+  SINGLE
+  COMBO
+}
+
+
 enum SEOIndexStatus {
   INDEX
   NOINDEX
@@ -151,9 +157,68 @@ model User {
 
   analyticsEvents AnalyticsEvent[]
 
+  inventoryMovements InventoryMovement[]
+
   customerSegmentMembers CustomerSegmentMember[]
 
   aiInsights AIInsight[] @relation("AIInsightUser")
+
+  adminRoles AdminUserRole[]
+}
+
+model AdminPermission {
+  id String @id @default(cuid())
+
+  key         String  @unique
+  label       String?
+  module      String?
+  description String?
+
+  createdAt DateTime @default(now())
+
+  rolePermissions AdminRolePermission[]
+}
+
+model AdminRole {
+  id String @id @default(cuid())
+
+  name        String  @unique
+  key         String  @unique
+  description String?
+  isSystem    Boolean @default(false)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  permissions AdminRolePermission[]
+  userRoles   AdminUserRole[]
+}
+
+model AdminRolePermission {
+  id String @id @default(cuid())
+
+  adminRoleId String @db.VarChar(64)
+  permissionId String @db.VarChar(64)
+
+  adminRole AdminRole @relation(fields: [adminRoleId], references: [id], onDelete: Cascade)
+  permission AdminPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([adminRoleId, permissionId])
+}
+
+model AdminUserRole {
+  id String @id @default(cuid())
+
+  userId String @db.VarChar(64)
+  adminRoleId String @db.VarChar(64)
+  isActive Boolean @default(true)
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role AdminRole @relation(fields: [adminRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, adminRoleId])
 }
 
 /**
@@ -234,7 +299,7 @@ model Product {
   sku  String @unique
 
   shortDescription String?
-  description      String?
+  description      String? @db.Text
 
   regularPrice Decimal  @db.Decimal(10, 2)
   salePrice    Decimal? @db.Decimal(10, 2)
@@ -255,6 +320,9 @@ model Product {
   brandId String?
 
   brandRelation Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  productType ProductType @default(SINGLE)
+
 
   featured Boolean @default(false)
   active   Boolean @default(true)
@@ -281,9 +349,33 @@ model Product {
 
   analyticsEvents AnalyticsEvent[]
 
+  inventoryMovements InventoryMovement[]
+
+  comboItems ProductComboItem[] @relation("ComboProduct")
+
+  includedInCombos ProductComboItem[] @relation("IncludedProduct")
+
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model ProductComboItem {
+  id String @id @default(cuid())
+
+  comboProductId String
+  includedProductId String
+
+  quantity Int @default(1)
+
+  comboProduct Product @relation("ComboProduct", fields: [comboProductId], references: [id], onDelete: Cascade)
+  includedProduct Product @relation("IncludedProduct", fields: [includedProductId], references: [id], onDelete: Restrict)
+
+  @@unique([comboProductId(length: 64), includedProductId(length: 64)])
+  @@index([comboProductId])
+  @@index([includedProductId])
+}
+
 
 /**
  * =========================================================
@@ -1269,4 +1361,31 @@ model AIAction {
   @@index([status])
   @@index([entityType])
   @@index([entityId])
+}
+
+/**
+ * =========================================================
+ * INVENTORY MOVEMENT
+ * =========================================================
+ */
+
+model InventoryMovement {
+  id String @id @default(cuid())
+
+  productId String
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  quantityChange Int
+  previousStock Int
+  newStock Int
+  reason String?
+  type String
+
+  adminId String?
+  admin User? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
 }

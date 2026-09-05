@@ -8,6 +8,8 @@ export default function StickyCartButton() {
 
   const count = cart?.count || 0;
 
+  if (cart?.isOpen) return null;
+
   return (
     <button
       type="button"

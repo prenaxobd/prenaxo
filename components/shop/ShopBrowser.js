@@ -52,7 +52,7 @@ const PRODUCTS_PER_PAGE = 12;
    SHOP BROWSER
 ========================================================= */
 
-export default function ShopBrowser({ products = [] }) {
+export default function ShopBrowser({ products = [], brands: availableBrands = [] }) {
 
   const [category, setCategory] = useState('all');
 
@@ -75,6 +75,11 @@ export default function ShopBrowser({ products = [] }) {
 
   const [currentPage, setCurrentPage] =
     useState(1);
+
+  useEffect(() => {
+    const requestedBrand = new URLSearchParams(window.location.search).get('brand');
+    if (requestedBrand) setBrand(requestedBrand);
+  }, []);
 
 
   /* =======================================================
@@ -101,17 +106,7 @@ export default function ShopBrowser({ products = [] }) {
      BRANDS
   ======================================================= */
 
-  const brands = useMemo(() => {
-
-    return Array.from(
-      new Set(
-        products
-          .map(product => product.brand)
-          .filter(Boolean)
-      )
-    ).sort();
-
-  }, [products]);
+  const brands = useMemo(() => availableBrands, [availableBrands]);
 
 
   /* =======================================================
@@ -131,7 +126,7 @@ export default function ShopBrowser({ products = [] }) {
       /* BRAND */
       .filter(product =>
         brand === 'all' ||
-        product.brand === brand
+        product.brandRelation?.name === brand
       )
 
       /* PRICE */
@@ -1060,13 +1055,13 @@ function FilterPanel({
             {brands.map(item => (
 
               <FilterRadio
-                key={item}
-                label={item}
+                key={item.id}
+                label={item.name}
                 checked={
-                  brand === item
+                  brand === item.name
                 }
                 onChange={() =>
-                  setBrand(item)
+                  setBrand(item.name)
                 }
               />
 

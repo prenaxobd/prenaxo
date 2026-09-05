@@ -7,7 +7,7 @@ import {
   Send,
   CheckCircle,
 } from 'lucide-react';
-
+import './ProductReviews.css';
 import { useState } from 'react';
 
 

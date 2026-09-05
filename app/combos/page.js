@@ -1,3 +1,8 @@
-import ProductCard from '@/components/ProductCard';
 import { getProducts } from '@/lib/products';
-export default async function Combos(){const products=(await getProducts()).filter(product=>product.salePrice).slice(0,12);return <main className="container page-title"><div className="eyebrow">Better together</div><h1>Combo deals</h1><p className="muted">Save on thoughtful pairings for your pantry and home.</p>{products.length?<div className="shop-grid">{products.map(product=><ProductCard key={product.id} product={product}/>)}</div>:<p className="muted">No combo deals available right now.</p>}</main>}
+import ComboProductsPage from '@/components/combos/ComboProductsPage';
+
+export default async function Combos() {
+	const products = await getProducts();
+
+	return <ComboProductsPage products={products.filter((product) => product.productType === 'COMBO')} />;
+}

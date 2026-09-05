@@ -1,4 +1,5 @@
 import { Building2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function BrandRail({
   brands,
@@ -29,9 +30,10 @@ export default function BrandRail({
 
           {brands.map((brand) => (
 
-            <div
+            <Link
               className="home-brand"
-              key={brand}
+              href={`/shop?brand=${encodeURIComponent(brand.name)}`}
+              key={brand.id}
             >
 
               <span className="home-brand-icon">
@@ -39,10 +41,10 @@ export default function BrandRail({
               </span>
 
               <strong>
-                {brand}
+                {brand.name}
               </strong>
 
-            </div>
+            </Link>
 
           ))}
 

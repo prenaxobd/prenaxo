@@ -91,7 +91,7 @@ function RatingStars({ rating }) {
 |--------------------------------------------------------------------------
 */
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, flashSale = false }) {
 
   const cart = useCart();
 
@@ -623,6 +623,13 @@ export default function ProductCard({ product }) {
 
         </div>
 
+        {flashSale && product.stock > 0 && (
+          <div className="flash-card-stock">
+            <div><span>স্টক: {product.stock} টি বাকি</span><span>{Math.min(100, Math.max(8, product.stock))}%</span></div>
+            <span className="flash-card-stock-bar"><i style={{ width: `${Math.min(100, Math.max(8, product.stock))}%` }} /></span>
+          </div>
+        )}
+
 
         {/* ADD TO CART */}
 
@@ -642,7 +649,7 @@ export default function ProductCard({ product }) {
 
               <span className="cart-spinner" />
 
-              Adding...
+              {flashSale ? 'যোগ হচ্ছে...' : 'Adding...'}
 
             </>
 
@@ -652,7 +659,7 @@ export default function ProductCard({ product }) {
 
               <ShoppingCart size={17} />
 
-              Out of Stock
+              {flashSale ? 'স্টক শেষ' : 'Out of Stock'}
 
             </>
 
@@ -662,7 +669,7 @@ export default function ProductCard({ product }) {
 
               <ShoppingCart size={17} />
 
-              Add to Cart
+              {flashSale ? 'কার্টে যোগ করুন' : 'Add to Cart'}
 
             </>
 
