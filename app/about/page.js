@@ -59,7 +59,7 @@ export default function About() {
 
           <div className="about-hero-content">
             <div className="about-eyebrow">
-              ABOUT KHATIBAZAR
+              ABOUT PONNOMELA
             </div>
 
             <h1>
@@ -69,7 +69,7 @@ export default function About() {
             </h1>
 
             <p className="about-hero-text">
-              Khatibazar is a Bangladeshi online marketplace built to make
+              Ponnomela is a Bangladeshi online marketplace built to make
               your daily life easier. We curate quality products, fair prices,
               and a smooth shopping experience you can trust.
             </p>
@@ -111,7 +111,7 @@ export default function About() {
           <div className="story-image-wrap">
             <img
               src="/uploads/our_story_img.webp"
-              alt="Khatibazar team and warehouse"
+              alt="Ponnomela team and warehouse"
             />
           </div>
 
@@ -127,7 +127,7 @@ export default function About() {
             </h2>
 
             <p>
-              Khatibazar began with a simple belief – shopping should be easy,
+              Ponnomela began with a simple belief – shopping should be easy,
               affordable, and reliable for everyone.
             </p>
 
@@ -144,7 +144,7 @@ export default function About() {
 
             <div className="story-signature">
               <span>With care,</span>
-              <strong>Khatibazar Team</strong>
+              <strong>Ponnomela Team</strong>
               <small>Building trust. Delivering happiness.</small>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function About() {
 
           <div className="section-heading centered">
             <div className="about-eyebrow">
-              WHY CHOOSE KHATIBAZAR
+              WHY CHOOSE PONNOMELA
             </div>
 
             <h2>
@@ -255,7 +255,7 @@ export default function About() {
           <div className="values-image-wrap">
             <img
               src="/uploads/our_valuse_img.webp"
-              alt="Khatibazar team"
+              alt="Ponnomela team"
             />
           </div>
 

@@ -3,7 +3,7 @@ import './globals.css';
 import StorefrontShell from '@/components/layout/StorefrontShell';
 
 export const metadata = {
-  title: 'Khatibazar | Everyday essentials, thoughtfully chosen',
+  title: 'Ponnomela | Everyday essentials, thoughtfully chosen',
   description:
     'A modern Bangladeshi marketplace for quality everyday goods.',
   icons: {

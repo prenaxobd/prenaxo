@@ -433,7 +433,7 @@ export default function ProductManager({
 
     link.href = url;
     link.download =
-      'khatibazar-products.csv';
+      'ponnomela-products.csv';
 
     document.body.appendChild(link);
 

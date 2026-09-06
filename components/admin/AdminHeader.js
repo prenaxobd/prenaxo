@@ -30,7 +30,7 @@ export default function AdminHeader({ user }) {
     setLoggingOut(true);
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.replace('/login');
+      router.replace('/admin/login');
       router.refresh();
     } finally {
       setLoggingOut(false);

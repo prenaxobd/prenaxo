@@ -22,7 +22,7 @@ export default function ProductRail({
 
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [perView, setPerView] = useState(4);
+  const [perView, setPerView] = useState(5);
 
   const touchStart = useRef(0);
   const touchEnd = useRef(0);
@@ -34,7 +34,7 @@ export default function ProductRail({
       } else if (window.innerWidth <= 900) {
         setPerView(3);
       } else {
-        setPerView(4);
+        setPerView(5);
       }
     }
 

@@ -500,11 +500,11 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
           <div>
 
             <p className="shop-kicker">
-              The Khatibazar collection
+              The Ponnomela collection
             </p>
 
             <h1>
-              Khatibazar - Online Shopping
+              Ponnomela - Online Shopping
             </h1>
 
             <p>
@@ -879,7 +879,7 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
                 <p>
                   Try clearing a filter
                   to see more of the
-                  Khatibazar collection.
+                  Ponnomela collection.
                 </p>
 
                 <button

@@ -547,7 +547,7 @@ export default function ProductCard({ product, flashSale = false }) {
           <span className="product-category">
 
             {product.category?.name ||
-              'Khatibazar'}
+              'Ponnomela'}
 
           </span>
 

@@ -121,7 +121,7 @@ export default function Contact() {
                 </div>
 
                 <strong>
-                  khatibazar
+                  Ponnomela
                 </strong>
 
               </div>
@@ -288,7 +288,7 @@ export default function Contact() {
                     </strong>
 
                     <p>
-                      Thank you for contacting Khatibazar.
+                      Thank you for contacting Ponnomela.
                       We&apos;ll get back to you soon.
                     </p>
 
@@ -528,7 +528,7 @@ export default function Contact() {
             <div className="visit-map">
 
               <iframe
-                title="Khatibazar Location"
+                title="Ponnomela Location"
                 src="https://www.google.com/maps?q=Dhaka,Bangladesh&output=embed"
                 loading="lazy"
               />
@@ -554,7 +554,7 @@ export default function Contact() {
 
 
               <p>
-                We welcome you to visit Khatibazar.
+                We welcome you to visit Ponnomela.
                 Find our location easily using the map.
               </p>
 

@@ -537,7 +537,7 @@ export default function OrderManager({
     const link = document.createElement('a');
 
     link.href = url;
-    link.download = `khatibazar-orders-${new Date()
+    link.download = `ponnomela-orders-${new Date()
       .toISOString()
       .slice(0, 10)}.csv`;
 

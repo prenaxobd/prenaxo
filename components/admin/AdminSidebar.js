@@ -66,7 +66,7 @@ export default function AdminSidebar({ permissions = [] }) {
       <aside className="admin-side" id="admin-navigation">
         <div className="admin-side-top">
           <Link className="logo" href="/admin" onClick={() => document.body.classList.remove('admin-nav-open')}>
-            <img src="/uploads/khatibazar_logo.png" alt="Khatibazar" />
+            <img src="/uploads/PonnoMelaLogo.webp" alt="Ponnomela" />
           </Link>
           <button className="admin-nav-close" type="button" aria-label="Close admin navigation" onClick={() => document.body.classList.remove('admin-nav-open')}>
             <FontAwesomeIcon icon={faXmark} />
@@ -95,7 +95,7 @@ export default function AdminSidebar({ permissions = [] }) {
           <div className="admin-store-card">
             <div className="admin-store-avatar">K</div>
             <div>
-              <strong>Khatibazar Store</strong>
+              <strong>Ponnomela Store</strong>
               <small>View Store</small>
             </div>
           </div>

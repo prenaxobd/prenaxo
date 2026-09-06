@@ -1,11 +1,11 @@
-# Khatibazar
+# Ponnomela
 
 A full-stack Next.js App Router storefront for a modern Bangladeshi marketplace. The UI is ready for local development and the data layer uses Prisma with MySQL.
 
 ## Setup
 
 1. Copy `.env.local.example` to `.env.local` and set `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL`.
-2. Create the MySQL database: `CREATE DATABASE khatibazar;`
+2. Create the MySQL database: `CREATE DATABASE ponnomela;`
 3. Generate the client and apply the schema: `npx prisma generate` then `npx prisma migrate dev --name init`.
 4. Seed sample data: `npx prisma db seed`.
 5. Start development: `npm run dev`.

@@ -63,7 +63,7 @@ export default function NewUser() {
 
             <label>
               Email address
-              <input type="email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} placeholder="admin@khatibazar.com" required />
+              <input type="email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} placeholder="admin@example.com" required />
             </label>
 
             <label>

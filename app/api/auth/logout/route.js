@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { logSecurityEvent, revokeAdminSession } from '@/lib/auth';
 
 export async function POST() {
+
+  await revokeAdminSession();
+  await logSecurityEvent('logout').catch(() => {});
 
   const cookieStore = await cookies();
 

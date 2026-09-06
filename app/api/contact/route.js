@@ -49,7 +49,7 @@ export async function POST(request) {
 
     // Send email
     await transporter.sendMail({
-      from: `"Khatibazar Website" <${process.env.SMTP_USER}>`,
+      from: `"Ponnomela Website" <${process.env.SMTP_USER}>`,
 
       // Test email
       to: 'mdnadim9154@gmail.com',
@@ -57,7 +57,7 @@ export async function POST(request) {
       // Customer email
       replyTo: email,
 
-      subject: `Khatibazar Contact - ${subject}`,
+      subject: `Ponnomela Contact - ${subject}`,
 
       text: `
 New Contact Message

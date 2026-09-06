@@ -193,7 +193,7 @@ export default function ReviewRail({
 
                   <p>
                     {review.comment ||
-                      'A lovely experience from Khatibazar.'}
+                      'A lovely experience from Ponnomela.'}
                   </p>
 
 

@@ -141,6 +141,7 @@ model User {
   passwordHash String?
 
   role Role @default(USER)
+  adminAuthRole String? @db.VarChar(32)
 
   image   String?
   address Json?
@@ -164,6 +165,65 @@ model User {
   aiInsights AIInsight[] @relation("AIInsightUser")
 
   adminRoles AdminUserRole[]
+  authSessions AdminAuthSession[]
+  passwordResetTokens AdminPasswordResetToken[]
+  securityEvents SecurityEvent[]
+}
+
+model AdminAuthSession {
+  id String @id @default(cuid())
+  userId String @db.VarChar(191)
+  tokenHash String @unique @db.VarChar(64)
+  expiresAt DateTime
+  rememberMe Boolean @default(false)
+  ipAddress String? @db.VarChar(64)
+  userAgent String? @db.VarChar(512)
+  lastUsedAt DateTime @default(now())
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model AdminPasswordResetToken {
+  id String @id @default(cuid())
+  userId String @db.VarChar(191)
+  tokenHash String @unique @db.VarChar(64)
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
+  @@index([expiresAt])
+}
+
+model AdminLoginThrottle {
+  id String @id @default(cuid())
+  key String @unique @db.VarChar(191)
+  failures Int @default(0)
+  lockedUntil DateTime?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model SecurityEvent {
+  id String @id @default(cuid())
+  userId String? @db.VarChar(191)
+  eventType String @db.VarChar(64)
+  ipAddress String? @db.VarChar(64)
+  userAgent String? @db.VarChar(512)
+  metadata Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, createdAt])
+  @@index([userId, createdAt])
 }
 
 model AdminPermission {

@@ -22,7 +22,7 @@ export async function generateMetadata({ params }) {
 
   if (!product) {
     return {
-      title: 'Product not found | Khatibazar',
+      title: 'Product not found | Ponnomela',
     };
   }
 
@@ -32,13 +32,13 @@ export async function generateMetadata({ params }) {
     title:
       seo?.metaTitle ||
       product.name ||
-      'Product | Khatibazar',
+      'Product | Ponnomela',
 
     description:
       seo?.metaDescription ||
       product.shortDescription ||
       product.description ||
-      `Shop ${product.name} at Khatibazar.`,
+      `Shop ${product.name} at Ponnomela.`,
 
     alternates: seo?.canonicalUrl
       ? {
