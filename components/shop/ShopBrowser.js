@@ -500,11 +500,11 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
           <div>
 
             <p className="shop-kicker">
-              The Ponnomela collection
+              The Prenaxo collection
             </p>
 
             <h1>
-              Ponnomela - Online Shopping
+              Prenaxo - Online Shopping
             </h1>
 
             <p>
@@ -879,7 +879,7 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
                 <p>
                   Try clearing a filter
                   to see more of the
-                  Ponnomela collection.
+                  Prenaxo collection.
                 </p>
 
                 <button

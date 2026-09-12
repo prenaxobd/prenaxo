@@ -1,6 +1,7 @@
 import './globals.css';
 
 import StorefrontShell from '@/components/layout/StorefrontShell';
+import Footer from '@/components/layout/Footer';
 import {
   SITE_NAME,
   SITE_URL,
@@ -19,7 +20,7 @@ export async function generateMetadata() {
 
   const description =
     settings?.metaDescription ||
-    'Shop quality products online in Bangladesh at Ponno Mela. Discover everyday essentials, trending products, great deals and reliable delivery.';
+    'Shop quality products online in Bangladesh at Prenaxo. Discover everyday essentials, trending products, great deals and reliable delivery.';
 
   const canonical =
     settings?.canonicalUrl || SITE_URL;
@@ -42,7 +43,7 @@ export async function generateMetadata() {
   const keywords = Array.isArray(settings?.keywords)
     ? settings.keywords
     : [
-        'Ponno Mela',
+        'Prenaxo',
         'online shopping Bangladesh',
         'Bangladesh online shop',
         'ecommerce Bangladesh',
@@ -121,7 +122,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <StorefrontShell>
+        <StorefrontShell footer={<Footer />}>
           {children}
         </StorefrontShell>
       </body>

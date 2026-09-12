@@ -433,7 +433,7 @@ export default function ProductManager({
 
     link.href = url;
     link.download =
-      'ponnomela-products.csv';
+      'prenaxo-products.csv';
 
     document.body.appendChild(link);
 

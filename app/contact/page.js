@@ -121,7 +121,7 @@ export default function Contact() {
                 </div>
 
                 <strong>
-                  Ponnomela
+                  Prenaxo
                 </strong>
 
               </div>
@@ -288,7 +288,7 @@ export default function Contact() {
                     </strong>
 
                     <p>
-                      Thank you for contacting Ponnomela.
+                      Thank you for contacting Prenaxo.
                       We&apos;ll get back to you soon.
                     </p>
 
@@ -482,7 +482,7 @@ export default function Contact() {
 
 
                 <a
-                  href="https://www.tiktok.com/@ponnomela392"
+                  href="https://www.tiktok.com/@prenaxo"
                   aria-label="TikTok"
                 >
                   <span>♪</span>
@@ -528,7 +528,7 @@ export default function Contact() {
             <div className="visit-map">
 
               <iframe
-                title="Ponnomela Location"
+                title="Prenaxo Location"
                 src="https://www.google.com/maps?q=Dhaka,Bangladesh&output=embed"
                 loading="lazy"
               />
@@ -554,7 +554,7 @@ export default function Contact() {
 
 
               <p>
-                We welcome you to visit Ponnomela.
+                We welcome you to visit Prenaxo.
                 Find our location easily using the map.
               </p>
 

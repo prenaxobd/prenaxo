@@ -9,11 +9,54 @@ const CartContext = createContext(null);
 function localCart() { try { return JSON.parse(localStorage.getItem('khatibazar-cart') || '{"items":[]}'); } catch { return { items: [] }; } }
 function saveLocal(cart) { localStorage.setItem('khatibazar-cart', JSON.stringify(cart)); }
 
+function mergeCartItems(localItems = [], serverItems = []) {
+  const normalizedLocal = localItems.filter(item => item && item.productId);
+  const normalizedServer = serverItems.filter(item => item && item.productId);
+
+  const merged = [...normalizedServer];
+
+  for (const localItem of normalizedLocal) {
+    const existingIndex = merged.findIndex((item) => item.productId === localItem.productId);
+
+    if (existingIndex >= 0) {
+      merged[existingIndex] = {
+        ...merged[existingIndex],
+        ...localItem,
+        quantity: Math.max(merged[existingIndex].quantity || 0, localItem.quantity || 0),
+      };
+    } else {
+      merged.push(localItem);
+    }
+  }
+
+  return merged;
+}
+
 export function CartProvider({ children }) {
   const [cart, setCart] = useState({ items: [] });
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
-  useEffect(() => { const stored = localCart(); setCart(stored); setReady(true); fetch('/api/cart').then(async response => { if (!response.ok) return; const serverCart = await response.json(); for (const item of stored.items) await fetch('/api/cart', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({productId:item.productId,quantity:item.quantity}) }).catch(() => {}); const refreshed = stored.items.length ? await fetch('/api/cart') : null; setCart(refreshed?.ok ? await refreshed.json() : serverCart); localStorage.removeItem('khatibazar-cart'); }).catch(() => {}); }, []);
+  useEffect(() => { const stored = localCart(); setCart(stored); setReady(true); fetch('/api/cart').then(async response => { if (!response.ok) return; const serverCart = await response.json(); const serverItems = serverCart?.items || [];
+      if (stored.items.length) {
+        for (const item of stored.items) {
+          await fetch('/api/cart', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ productId:item.productId, quantity:item.quantity }) }).catch(() => {});
+        }
+
+        const refreshed = await fetch('/api/cart');
+
+        if (refreshed.ok) {
+          const mergedCart = await refreshed.json();
+          setCart({ ...mergedCart, items: mergeCartItems(stored.items, mergedCart.items || []) });
+          localStorage.removeItem('khatibazar-cart');
+          return;
+        }
+      }
+
+      setCart({ ...(serverCart || { items: [] }), items: mergeCartItems(stored.items, serverItems) });
+      if ((serverCart?.items || []).length > 0 || stored.items.length) {
+        localStorage.removeItem('khatibazar-cart');
+      }
+    }).catch(() => {}); }, []);
   useEffect(() => { if (ready && !cart.id) saveLocal(cart); }, [cart, ready]);
   useEffect(() => { const close = event => event.key === 'Escape' && setOpen(false); window.addEventListener('keydown', close); return () => window.removeEventListener('keydown', close); }, []);
   async function sync(action, payload) {

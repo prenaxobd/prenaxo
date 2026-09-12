@@ -49,7 +49,7 @@ export default async function sitemap() {
 
         select: {
           slug: true,
-          updatedAt: true,
+          createdAt: true,
 
           seo: {
             select: {

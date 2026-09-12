@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma.js';
 import { ALL_ADMIN_PERMISSIONS } from '../lib/permissions.js';
 
-const email = (process.env.ADMIN_EMAIL || 'ponnomela5@gmail.com').trim().toLowerCase();
+const email = (process.env.ADMIN_EMAIL || 'admin@prenaxo.com').trim().toLowerCase();
 
 if (!email) {
   throw new Error('ADMIN_EMAIL is required.');
@@ -82,7 +82,7 @@ async function main() {
         select: { id: true, email: true, role: true },
       })
     : await prisma.user.create({
-        data: { name: 'Ponnomela Admin', email, passwordHash, role: 'ADMIN', adminAuthRole: 'main_admin' },
+        data: { name: 'Prenaxo Admin', email, passwordHash, role: 'ADMIN', adminAuthRole: 'main_admin' },
         select: { id: true, email: true, role: true },
       });
 

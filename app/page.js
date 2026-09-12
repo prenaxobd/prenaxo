@@ -1,3 +1,4 @@
+import React from 'react';
 import { getHomepageData } from '@/lib/homepage';
 
 import HeroSlider from '@/components/home/HeroSlider';
@@ -23,7 +24,7 @@ export async function generateMetadata() {
 
   const description =
     settings?.metaDescription ||
-    'Shop quality products online in Bangladesh at Ponno Mela. Discover everyday essentials, trending products, great deals and reliable delivery.';
+    'Shop quality products online in Bangladesh at Prenaxo. Discover everyday essentials, trending products, great deals and reliable delivery.';
 
   const canonical =
     settings?.canonicalUrl || SITE_URL;
@@ -242,33 +243,33 @@ export default async function Home() {
             ===================================================== */}
 
         {configuredSections.map((section) => (
-          <ProductRail
-            key={section.id}
-            title={section.title}
-            eyebrow={section.eyebrow}
-            products={productsFor(
-              section.type,
-              data,
-              section
-            )}
-            href={
-              section.href ||
-              (
-                section.type === 'CATEGORY'
-                  ? `/category/${section.category?.slug || ''}`
-                  : '/shop'
-              )
-            }
-          />
+          <React.Fragment key={section.id}>
+            <ProductRail
+              title={section.title}
+              eyebrow={section.eyebrow}
+              products={productsFor(
+                section.type,
+                data,
+                section
+              )}
+              href={
+                section.href ||
+                (
+                  section.type === 'CATEGORY'
+                    ? `/category/${section.category?.slug || ''}`
+                    : '/shop'
+                )
+              }
+            />
+
+            {section.type === 'DEALS' ? (
+              <BrandRail
+                key={`${section.id}-brands`}
+                brands={data.brands}
+              />
+            ) : null}
+          </React.Fragment>
         ))}
-
-        {/* =====================================================
-            BRAND RAIL
-            ===================================================== */}
-
-        <BrandRail
-          brands={data.brands}
-        />
 
         {/* =====================================================
             REVIEW RAIL

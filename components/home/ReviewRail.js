@@ -119,6 +119,14 @@ export default function ReviewRail({
   const translate =
     -(active * (100 / perView));
 
+  const getInitials = (name = '') =>
+    name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || '')
+      .join('') || 'C';
+
   return (
     <section className="home-section home-review-section">
 
@@ -165,52 +173,46 @@ export default function ReviewRail({
               >
 
                 <article className="home-review">
-
-                  <div className="home-stars">
-
-                    {Array.from(
-                      { length: 5 },
-                      (_, index) => (
-
-                        <Star
-                          key={index}
-                          size={14}
-                          fill={
-                            index <
-                            Number(
-                              review.rating || 0
-                            )
-                              ? 'currentColor'
-                              : 'none'
-                          }
+                  <div className="home-review-header">
+                    <div className="home-review-avatar-wrap">
+                      {review.user?.image ? (
+                        <img
+                          src={review.user.image}
+                          alt={review.user?.name || 'Customer'}
+                          className="home-review-avatar"
+                          onError={(event) => {
+                            event.currentTarget.style.display = 'none';
+                            event.currentTarget.nextSibling?.classList?.remove('hidden');
+                          }}
                         />
+                      ) : null}
 
-                      )
-                    )}
+                      <span
+                        className={`home-review-avatar-fallback ${review.user?.image ? 'hidden' : ''}`}
+                      >
+                        {getInitials(review.user?.name)}
+                      </span>
+                    </div>
 
+                    <div className="home-review-user-meta">
+                      <strong>{review.user?.name || 'Verified customer'}</strong>
+                      {review.product?.name && <small>{review.product.name}</small>}
+                    </div>
                   </div>
 
+                  <div className="home-stars">
+                    {Array.from({ length: 5 }, (_, index) => (
+                      <Star
+                        key={index}
+                        size={14}
+                        fill={
+                          index < Number(review.rating || 0) ? 'currentColor' : 'none'
+                        }
+                      />
+                    ))}
+                  </div>
 
-                  <p>
-                    {review.comment ||
-                      'A lovely experience from Ponnomela.'}
-                  </p>
-
-
-                  <strong>
-                    {review.user?.name ||
-                      'Verified customer'}
-                  </strong>
-
-
-                  {review.product?.name && (
-
-                    <small>
-                      {review.product.name}
-                    </small>
-
-                  )}
-
+                  <p>{review.comment || 'A lovely experience from Prenaxo.'}</p>
                 </article>
 
               </div>

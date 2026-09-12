@@ -43,7 +43,6 @@ enum ProductType {
   COMBO
 }
 
-
 enum SEOIndexStatus {
   INDEX
   NOINDEX
@@ -383,7 +382,6 @@ model Product {
 
   productType ProductType @default(SINGLE)
 
-
   featured Boolean @default(false)
   active   Boolean @default(true)
 
@@ -415,7 +413,6 @@ model Product {
 
   includedInCombos ProductComboItem[] @relation("IncludedProduct")
 
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -435,7 +432,6 @@ model ProductComboItem {
   @@index([comboProductId])
   @@index([includedProductId])
 }
-
 
 /**
  * =========================================================
@@ -573,7 +569,7 @@ model Order {
   user User? @relation(fields: [userId], references: [id])
 
   customerName  String
-  customerEmail String
+  customerEmail String?
   customerPhone String
 
   shippingAddress Json
@@ -588,6 +584,10 @@ model Order {
   total Decimal @db.Decimal(10, 2)
 
   paymentMethod String
+
+  paymentTransactionId String?
+
+  orderNote String? @db.Text
 
   paymentStatus PaymentStatus @default(PENDING)
 
@@ -684,7 +684,7 @@ model Review {
  */
 
 model Banner {
- id String @id @default(cuid())
+  id String @id @default(cuid())
 
   title String
   subtitle String?
@@ -708,6 +708,7 @@ model Banner {
  * HOME RIGHT PROMOTIONAL BANNER
  * =========================================================
  */
+
 model HomeRightBanner {
   id        String   @id @default(cuid())
   image     String
@@ -716,6 +717,7 @@ model HomeRightBanner {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 /**
  * =========================================================
  * HOMEPAGE SECTION
@@ -1442,19 +1444,63 @@ model InventoryMovement {
   id String @id @default(cuid())
 
   productId String
+
   product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   quantityChange Int
+
   previousStock Int
+
   newStock Int
+
   reason String?
+
   type String
 
   adminId String?
+
   admin User? @relation(fields: [adminId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
 
   @@index([productId])
   @@index([createdAt])
+}
+
+/**
+ * =========================================================
+ * PAYMENT METHOD
+ * =========================================================
+ */
+
+model PaymentMethod {
+  id String @id @default(cuid())
+
+  code String @unique @db.VarChar(32)
+
+  name String
+
+  description String? @db.Text
+
+  accountNumber String?
+
+  accountName String?
+
+  bankName String?
+
+  branchName String?
+
+  routingNumber String?
+
+  instructions String? @db.Text
+
+  active Boolean @default(true)
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([active, sortOrder])
 }

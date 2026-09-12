@@ -15,7 +15,7 @@ export async function POST(request) {
     if (process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
       const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } });
       const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      await transporter.sendMail({ from: process.env.SMTP_USER, to: user.email, subject: 'Ponnomela admin password reset', text: `Reset your password: ${baseUrl}/admin/reset-password?token=${rawToken}` });
+      await transporter.sendMail({ from: process.env.SMTP_USER, to: user.email, subject: 'Prenaxo admin password reset', text: `Reset your password: ${baseUrl}/admin/reset-password?token=${rawToken}` });
     }
     await logSecurityEvent('admin_password_reset_requested', user.id);
     return Response.json(generic);

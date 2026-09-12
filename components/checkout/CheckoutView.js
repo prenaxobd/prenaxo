@@ -1,98 +1,212 @@
 'use client';
 
+import './CheckoutView.css';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-
-const paymentOptions = [
-  {
-    id: 'COD',
-    title: 'Cash on Delivery',
-    short: 'COD',
-    detail: 'Pay for your order when it is delivered to your address.',
-  },
-  {
-    id: 'MOBILE',
-    title: 'bKash / Nagad',
-    short: 'Mobile Banking',
-    detail: 'Send payment to 01608069154, then enter your transaction ID below.',
-  },
-  {
-    id: 'BANK',
-    title: 'Bank Payment',
-    short: 'Bank',
-    detail:
-      'Our team will contact you with bank payment details after placing your order.',
-  },
-];
 
 export default function CheckoutView() {
   const [cart, setCart] = useState(null);
   const [delivery, setDelivery] = useState(null);
+  const [paymentOptions, setPaymentOptions] = useState([]);
+  const [paymentLoading, setPaymentLoading] = useState(true);
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     customerName: '',
     customerPhone: '',
-    customerEmail: '',
     address: '',
     city: '',
     area: '',
     notes: '',
     paymentMethod: 'COD',
+    paymentTransactionId: '',
+    couponCode: '',
   });
 
   useEffect(() => {
-    const savedCoupon = localStorage.getItem('khatibazar-coupon');
-    Promise.all([fetch('/api/cart'), fetch('/api/delivery')])
-      .then(async ([cartResponse, deliveryResponse]) => {
-        const cartData = await cartResponse.json();
-        const deliveryData = await deliveryResponse.json();
+    const savedCoupon =
+      localStorage.getItem('khatibazar-coupon');
 
-        if (!cartResponse.ok) {
-          throw new Error(cartData.error);
+    async function loadCheckoutData() {
+      try {
+        setPaymentLoading(true);
+
+        let localCart = { items: [] };
+
+        try {
+          const stored =
+            JSON.parse(
+              localStorage.getItem(
+                'khatibazar-cart'
+              ) || '{"items":[]}'
+            );
+
+          localCart = stored || { items: [] };
+        } catch {
+          localCart = { items: [] };
         }
+
+        const [
+          cartResponse,
+          deliveryResponse,
+          paymentResponse,
+        ] = await Promise.all([
+          fetch('/api/cart'),
+          fetch('/api/delivery'),
+          fetch('/api/payment-methods', {
+            cache: 'no-store',
+          }),
+        ]);
+
+        const cartData =
+          await cartResponse.json().catch(() => ({ items: [] }));
+
+        const deliveryData =
+          await deliveryResponse.json();
+
+        const paymentData =
+          await paymentResponse.json();
+
+        const cartFromServer =
+          cartResponse.ok && cartData
+            ? cartData
+            : { items: [] };
+
+        const fallbackCart =
+          (cartFromServer.items || []).length > 0
+            ? cartFromServer
+            : localCart;
 
         if (!deliveryResponse.ok) {
-          throw new Error(deliveryData.error || 'Unable to load delivery options.');
+          throw new Error(
+            deliveryData.error ||
+              'Unable to load delivery options.'
+          );
         }
 
-        setCart(cartData);
+        if (!paymentResponse.ok) {
+          throw new Error(
+            paymentData.error ||
+              'Unable to load payment methods.'
+          );
+        }
+
+        setCart(fallbackCart);
         setDelivery(deliveryData);
-        const firstZone = deliveryData.zones[0];
+
+        const methods = Array.isArray(paymentData)
+          ? paymentData
+          : [];
+
+        setPaymentOptions(methods);
+
+        const firstZone =
+          deliveryData.zones?.[0];
+
+        const currentPayment =
+          methods.find(
+            (method) =>
+              method.id === 'COD'
+          );
+
         if (firstZone) {
           setForm((current) => ({
             ...current,
+
             city: firstZone.division,
+
             area: firstZone.district,
-            ...(savedCoupon ? { couponCode: savedCoupon } : {}),
+
+            ...(savedCoupon
+              ? {
+                  couponCode:
+                    savedCoupon,
+                }
+              : {}),
+
+            paymentMethod:
+              currentPayment?.id ||
+              methods[0]?.id ||
+              current.paymentMethod,
+          }));
+        } else {
+          setForm((current) => ({
+            ...current,
+
+            ...(savedCoupon
+              ? {
+                  couponCode:
+                    savedCoupon,
+                }
+              : {}),
+
+            paymentMethod:
+              currentPayment?.id ||
+              methods[0]?.id ||
+              current.paymentMethod,
           }));
         }
-      })
-      .catch((err) => {
-        setError(err.message || 'Unable to load your cart.');
-      });
+      } catch (err) {
+        setError(
+          err.message ||
+            'Unable to load your checkout.'
+        );
+      } finally {
+        setPaymentLoading(false);
+      }
+    }
+
+    loadCheckoutData();
   }, []);
 
   const items = cart?.items || [];
+
   const zones = delivery?.zones || [];
+
   const selectedZone = zones.find(
-    (zone) => zone.division === form.city && zone.district === form.area
+    (zone) =>
+      zone.division === form.city &&
+      zone.district === form.area
   );
 
-  const subtotal = items.reduce((sum, item) => {
-    const price = Number(
-      item.product.salePrice || item.product.regularPrice
+  const subtotal = items.reduce(
+    (sum, item) => {
+      const price = Number(
+        item.product.salePrice ||
+          item.product.regularPrice
+      );
+
+      return (
+        sum +
+        price * item.quantity
+      );
+    },
+    0
+  );
+
+  const shipping =
+    subtotal >=
+    (delivery?.threshold ?? 2000)
+      ? 0
+      : Number(
+          selectedZone?.charge || 0
+        );
+
+  const total =
+    subtotal + shipping;
+
+  const selectedPayment =
+    paymentOptions.find(
+      (method) =>
+        method.id ===
+        form.paymentMethod
     );
 
-    return sum + price * item.quantity;
-  }, 0);
-
-  const shipping = subtotal >= (delivery?.threshold ?? 2000)
-    ? 0
-    : Number(selectedZone?.charge || 0);
-
-  const total = subtotal + shipping;
+  const requiresTransactionId =
+    form.paymentMethod === 'BKASH' ||
+    form.paymentMethod === 'NAGAD';
 
   function update(key, value) {
     setForm((current) => ({
@@ -105,7 +219,43 @@ export default function CheckoutView() {
     event.preventDefault();
 
     if (!items.length) {
-      setError('Your cart is empty.');
+      setError(
+        'Your cart is empty.'
+      );
+      return;
+    }
+
+    if (!form.paymentMethod) {
+      setError(
+        'Please select a payment method.'
+      );
+      return;
+    }
+
+    if (paymentLoading) {
+      setError(
+        'Please wait for payment methods to load.'
+      );
+      return;
+    }
+
+    if (!paymentOptions.length) {
+      setError(
+        'No payment method is currently available.'
+      );
+      return;
+    }
+
+    if (
+      requiresTransactionId &&
+      !form.paymentTransactionId.trim()
+    ) {
+      setError(
+        `Please enter your ${
+          selectedPayment?.name ||
+          'payment'
+        } transaction ID.`
+      );
       return;
     }
 
@@ -113,40 +263,74 @@ export default function CheckoutView() {
     setError('');
 
     try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
+      const response = await fetch(
+        '/api/orders',
+        {
+          method: 'POST',
 
-        headers: {
-          'Content-Type': 'application/json',
-        },
-
-        body: JSON.stringify({
-          ...form,
-
-          shippingAddress: {
-            address: form.address,
-            city: form.city,
-            district: form.area,
-            notes: form.notes,
+          headers: {
+            'Content-Type':
+              'application/json',
           },
-        }),
-      });
 
-      const data = await response.json();
+          body: JSON.stringify({
+            customerName:
+              form.customerName,
+
+            customerPhone:
+              form.customerPhone,
+
+            paymentMethod:
+              form.paymentMethod,
+
+            paymentTransactionId:
+              requiresTransactionId
+                ? form.paymentTransactionId.trim()
+                : '',
+
+            orderNote:
+              form.notes.trim(),
+
+            couponCode:
+              form.couponCode || '',
+
+            shippingAddress: {
+              address: form.address,
+
+              city: form.city,
+
+              district: form.area,
+
+              notes: form.notes,
+            },
+          }),
+        }
+      );
+
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.error || 'Unable to place order.'
+          data.error ||
+            'Unable to place order.'
         );
       }
 
-      localStorage.removeItem('khatibazar-coupon');
+      localStorage.removeItem(
+        'khatibazar-coupon'
+      );
+      localStorage.removeItem(
+        'khatibazar-cart'
+      );
+
       window.location.assign(
         `/order-success?order=${data.orderNumber}`
       );
     } catch (err) {
       setError(
-        err.message || 'Unable to place order.'
+        err.message ||
+          'Unable to place order.'
       );
     } finally {
       setLoading(false);
@@ -157,9 +341,16 @@ export default function CheckoutView() {
     return (
       <main className="container checkout-page">
         <div className="checkout-empty">
-          <h1>Sign in to continue</h1>
+          <h1>
+            Sign in to continue
+          </h1>
+
           <p>{error}</p>
-          <Link href="/login?next=/checkout" className="btn">
+
+          <Link
+            href="/login?next=/checkout"
+            className="btn"
+          >
             Sign in
           </Link>
         </div>
@@ -172,10 +363,15 @@ export default function CheckoutView() {
       <main className="container checkout-page">
         <div className="checkout-loading">
           <span className="checkout-spinner" />
+
           <div>
-            <h1>Preparing checkout</h1>
+            <h1>
+              Preparing checkout
+            </h1>
+
             <p className="muted">
-              {error || 'Loading your order…'}
+              {error ||
+                'Loading your order…'}
             </p>
           </div>
         </div>
@@ -187,16 +383,24 @@ export default function CheckoutView() {
     return (
       <main className="container checkout-page">
         <div className="checkout-empty">
-          <span className="checkout-empty-icon">🛒</span>
+          <span className="checkout-empty-icon">
+            🛒
+          </span>
 
-          <h1>Your cart is empty</h1>
+          <h1>
+            Your cart is empty
+          </h1>
 
           <p>
-            Add some products to your cart before proceeding
-            to checkout.
+            Add some products to your
+            cart before proceeding to
+            checkout.
           </p>
 
-          <Link href="/shop" className="btn">
+          <Link
+            href="/shop"
+            className="btn"
+          >
             Continue shopping
           </Link>
         </div>
@@ -206,6 +410,24 @@ export default function CheckoutView() {
 
   return (
     <main className="container checkout-page">
+      <div className="checkout-progress" aria-label="Checkout steps">
+        {[
+          'Shopping Cart',
+          'Checkout',
+          'Payment',
+          'Order Complete',
+        ].map((label, index) => (
+          <div
+            key={label}
+            className={`checkout-progress-step ${
+              index === 1 ? 'active' : ''
+            } ${index < 1 ? 'done' : ''}`}
+          >
+            <span>{index + 1}</span>
+            <small>{label}</small>
+          </div>
+        ))}
+      </div>
 
       <div className="checkout-title">
         <div>
@@ -216,7 +438,8 @@ export default function CheckoutView() {
           <h1>Checkout</h1>
 
           <p>
-            Complete your details to place your order.
+            Complete your details to
+            place your order.
           </p>
         </div>
 
@@ -229,72 +452,44 @@ export default function CheckoutView() {
       </div>
 
       <div className="checkout-layout">
-
         <form
           className="checkout-form"
           onSubmit={submit}
         >
-
           {/* CONTACT INFORMATION */}
 
           <section className="checkout-section">
-
             <div className="section-heading">
-              <span className="section-number">01</span>
+              <span className="section-number">
+                01
+              </span>
 
               <div>
-                <h2>Contact information</h2>
+                <h2>
+                  Contact information
+                </h2>
 
                 <p>
-                  We will use this information for your order.
-                </p>
-              </div>
-            </div>
-
-            <label className="checkout-field">
-              <span>Email address</span>
-
-              <input
-                required
-                type="email"
-                placeholder="you@example.com"
-                value={form.customerEmail}
-                onChange={(e) =>
-                  update(
-                    'customerEmail',
-                    e.target.value
-                  )
-                }
-              />
-            </label>
-
-          </section>
-
-          {/* SHIPPING ADDRESS */}
-
-          <section className="checkout-section">
-
-            <div className="section-heading">
-              <span className="section-number">02</span>
-
-              <div>
-                <h2>Shipping address</h2>
-
-                <p>
-                  Enter the address where you want your order delivered.
+                  We will use this
+                  information for your
+                  order.
                 </p>
               </div>
             </div>
 
             <div className="checkout-grid">
-
               <label className="checkout-field">
-                <span>Full name</span>
+                <span>
+                  Full name
+                </span>
 
                 <input
                   required
+                  type="text"
                   placeholder="Enter your full name"
-                  value={form.customerName}
+                  value={
+                    form.customerName
+                  }
                   onChange={(e) =>
                     update(
                       'customerName',
@@ -305,13 +500,17 @@ export default function CheckoutView() {
               </label>
 
               <label className="checkout-field">
-                <span>Phone number</span>
+                <span>
+                  Phone number
+                </span>
 
                 <input
                   required
                   type="tel"
                   placeholder="01XXXXXXXXX"
-                  value={form.customerPhone}
+                  value={
+                    form.customerPhone
+                  }
                   onChange={(e) =>
                     update(
                       'customerPhone',
@@ -320,11 +519,34 @@ export default function CheckoutView() {
                   }
                 />
               </label>
+            </div>
+          </section>
 
+          {/* SHIPPING ADDRESS */}
+
+          <section className="checkout-section">
+            <div className="section-heading">
+              <span className="section-number">
+                02
+              </span>
+
+              <div>
+                <h2>
+                  Shipping address
+                </h2>
+
+                <p>
+                  Enter the address where
+                  you want your order
+                  delivered.
+                </p>
+              </div>
             </div>
 
             <label className="checkout-field">
-              <span>Full address</span>
+              <span>
+                Full address
+              </span>
 
               <input
                 required
@@ -340,32 +562,57 @@ export default function CheckoutView() {
             </label>
 
             <div className="checkout-grid">
-
               <label className="checkout-field">
-                <span>Division</span>
+                <span>
+                  Division
+                </span>
 
                 <select
+                  required
                   value={form.city}
                   onChange={(e) => {
-                    const division = e.target.value;
-                    const firstDistrict = zones.find(
-                      (zone) => zone.division === division
-                    )?.district || '';
+                    const division =
+                      e.target.value;
+
+                    const firstDistrict =
+                      zones.find(
+                        (zone) =>
+                          zone.division ===
+                          division
+                      )?.district || '';
+
                     setForm((current) => ({
                       ...current,
+
                       city: division,
-                      area: firstDistrict,
+
+                      area:
+                        firstDistrict,
                     }));
                   }}
                 >
-                  {Array.from(new Set(zones.map((zone) => zone.division))).map((division) => (
-                    <option key={division}>{division}</option>
+                  {Array.from(
+                    new Set(
+                      zones.map(
+                        (zone) =>
+                          zone.division
+                      )
+                    )
+                  ).map((division) => (
+                    <option
+                      key={division}
+                      value={division}
+                    >
+                      {division}
+                    </option>
                   ))}
                 </select>
               </label>
 
               <label className="checkout-field">
-                <span>City / Area</span>
+                <span>
+                  City / Area
+                </span>
 
                 <select
                   required
@@ -378,35 +625,50 @@ export default function CheckoutView() {
                   }
                 >
                   {zones
-                    .filter((zone) => zone.division === form.city)
+                    .filter(
+                      (zone) =>
+                        zone.division ===
+                        form.city
+                    )
                     .map((zone) => (
-                      <option key={zone.district}>{zone.district}</option>
+                      <option
+                        key={
+                          zone.district
+                        }
+                        value={
+                          zone.district
+                        }
+                      >
+                        {zone.district}
+                      </option>
                     ))}
                 </select>
               </label>
-
             </div>
-
           </section>
 
           {/* SHIPPING */}
 
           <section className="checkout-section">
-
             <div className="section-heading">
-              <span className="section-number">03</span>
+              <span className="section-number">
+                03
+              </span>
 
               <div>
-                <h2>Shipping option</h2>
+                <h2>
+                  Shipping option
+                </h2>
 
                 <p>
-                  Delivery cost is calculated based on your location.
+                  Delivery cost is
+                  calculated based on
+                  your location.
                 </p>
               </div>
             </div>
 
             <label className="shipping-option selected">
-
               <span className="shipping-radio">
                 <input
                   type="radio"
@@ -418,10 +680,13 @@ export default function CheckoutView() {
               </span>
 
               <span className="shipping-info">
-                <strong>Standard delivery</strong>
+                <strong>
+                  Standard delivery
+                </strong>
 
                 <small>
-                  {selectedZone?.district || 'Select a delivery area'}
+                  {selectedZone?.district ||
+                    'Select a delivery area'}
                 </small>
               </span>
 
@@ -430,149 +695,377 @@ export default function CheckoutView() {
                   ? `৳${shipping.toLocaleString()}`
                   : 'Free'}
               </strong>
-
             </label>
 
             <p className="shipping-note">
-              Free delivery on orders over ৳{Number(delivery?.threshold ?? 2000).toLocaleString()}.
+              Free delivery on orders
+              over ৳
+              {Number(
+                delivery?.threshold ??
+                  2000
+              ).toLocaleString()}
+              .
             </p>
-
           </section>
 
           {/* PAYMENT */}
 
           <section className="checkout-section">
-
             <div className="section-heading">
-              <span className="section-number">04</span>
+              <span className="section-number">
+                04
+              </span>
 
               <div>
-                <h2>Payment options</h2>
+                <h2>
+                  Payment options
+                </h2>
 
                 <p>
-                  Select your preferred payment method.
+                  Select your preferred
+                  payment method.
                 </p>
               </div>
             </div>
 
-            <div className="payment-options">
+            {paymentLoading ? (
+              <div
+                style={{
+                  padding: '16px',
+                  borderRadius: '10px',
+                  background:
+                    '#f8fafc',
+                  color:
+                    'var(--muted)',
+                }}
+              >
+                Loading payment
+                methods...
+              </div>
+            ) : null}
 
-              {paymentOptions.map((option) => {
+            {!paymentLoading &&
+            paymentOptions.length === 0 ? (
+              <div
+                className="checkout-error"
+                role="alert"
+              >
+                No payment method is
+                currently available.
+              </div>
+            ) : null}
 
-                const selected =
-                  form.paymentMethod === option.id;
+            {!paymentLoading &&
+            paymentOptions.length > 0 ? (
+              <div className="payment-options">
+                {paymentOptions.map(
+                  (option) => {
+                    const selected =
+                      form.paymentMethod ===
+                      option.id;
 
-                return (
-                  <label
-                    key={option.id}
-                    className={`payment-option ${
-                      selected ? 'selected' : ''
-                    }`}
-                  >
+                    const isMobilePayment =
+                      option.id ===
+                        'BKASH' ||
+                      option.id ===
+                        'NAGAD';
 
-                    <div className="payment-option-head">
+                    const isBank =
+                      option.id ===
+                      'BANK';
 
-                      <span className="payment-radio">
-                        <input
-                          type="radio"
-                          name="payment"
-                          checked={selected}
-                          onChange={() =>
-                            update(
-                              'paymentMethod',
-                              option.id
-                            )
-                          }
-                        />
+                    return (
+                      <label
+                        key={option.id}
+                        className={`payment-option ${
+                          selected
+                            ? 'selected'
+                            : ''
+                        }`}
+                      >
+                        <div className="payment-option-head">
+                          <span className="payment-radio">
+                            <input
+                              type="radio"
+                              name="payment"
+                              checked={
+                                selected
+                              }
+                              onChange={() => {
+                                update(
+                                  'paymentMethod',
+                                  option.id
+                                );
 
-                        <span />
-                      </span>
+                                update(
+                                  'paymentTransactionId',
+                                  ''
+                                );
+                              }}
+                            />
 
-                      <span className="payment-name">
+                            <span />
+                          </span>
 
-                        <strong>
-                          {option.title}
-                        </strong>
+                          <span className="payment-name">
+                            <strong>
+                              {option.title ||
+                                option.name}
+                            </strong>
 
-                        <small>
-                          {option.short}
-                        </small>
+                            <small>
+                              {option.short ||
+                                option.code}
+                            </small>
+                          </span>
+                        </div>
 
-                      </span>
-
-                    </div>
-
-                    {selected && (
-                      <div className="payment-details">
-
-                        <p>
-                          {option.detail}
-                        </p>
-
-                        {option.id === 'MOBILE' && (
-                          <div className="mobile-payment-box">
-
-                            <div>
-                              <span>
-                                Send money to
-                              </span>
-
-                              <strong>
-                                01608069154
-                              </strong>
-                            </div>
-
-                            <label className="checkout-field">
-
-                              <span>
-                                Transaction ID
-                              </span>
-
-                              <input
-                                placeholder="Enter transaction ID in order note below"
-                                value={form.notes}
-                                onChange={(e) =>
-                                  update(
-                                    'notes',
-                                    e.target.value
-                                  )
+                        {selected ? (
+                          <div className="payment-details">
+                            {option.detail ? (
+                              <p>
+                                {
+                                  option.detail
                                 }
-                              />
+                              </p>
+                            ) : null}
 
-                            </label>
+                            {/* BKASH / NAGAD */}
 
+                            {isMobilePayment ? (
+                              <div className="mobile-payment-box">
+                                {option.accountNumber ? (
+                                  <div>
+                                    <span>
+                                      Send money to
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        option.accountNumber
+                                      }
+                                    </strong>
+                                  </div>
+                                ) : null}
+
+                                {option.accountName ? (
+                                  <div
+                                    style={{
+                                      marginTop:
+                                        8,
+                                    }}
+                                  >
+                                    <span>
+                                      Account name
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        option.accountName
+                                      }
+                                    </strong>
+                                  </div>
+                                ) : null}
+
+                                {option.instructions ? (
+                                  <p
+                                    style={{
+                                      marginTop:
+                                        10,
+                                    }}
+                                  >
+                                    {
+                                      option.instructions
+                                    }
+                                  </p>
+                                ) : null}
+
+                                <label className="checkout-field">
+                                  <span>
+                                    {option.name ||
+                                      option.title}{' '}
+                                    Transaction ID
+                                  </span>
+
+                                  <input
+                                    required
+                                    type="text"
+                                    placeholder="Enter transaction ID"
+                                    value={
+                                      form.paymentTransactionId
+                                    }
+                                    onChange={(
+                                      e
+                                    ) =>
+                                      update(
+                                        'paymentTransactionId',
+                                        e.target
+                                          .value
+                                      )
+                                    }
+                                  />
+
+                                  <small>
+                                    Enter the
+                                    transaction ID
+                                    after sending
+                                    the payment.
+                                  </small>
+                                </label>
+                              </div>
+                            ) : null}
+
+                            {/* BANK */}
+
+                            {isBank ? (
+                              <div className="mobile-payment-box">
+                                {option.bankName ? (
+                                  <div>
+                                    <span>
+                                      Bank name
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        option.bankName
+                                      }
+                                    </strong>
+                                  </div>
+                                ) : null}
+
+                                {option.branchName ? (
+                                  <div
+                                    style={{
+                                      marginTop:
+                                        8,
+                                    }}
+                                  >
+                                    <span>
+                                      Branch
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        option.branchName
+                                      }
+                                    </strong>
+                                  </div>
+                                ) : null}
+
+                                {option.accountNumber ? (
+                                  <div
+                                    style={{
+                                      marginTop:
+                                        8,
+                                    }}
+                                  >
+                                    <span>
+                                      Account number
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        option.accountNumber
+                                      }
+                                    </strong>
+                                  </div>
+                                ) : null}
+
+                                {option.accountName ? (
+                                  <div
+                                    style={{
+                                      marginTop:
+                                        8,
+                                    }}
+                                  >
+                                    <span>
+                                      Account name
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        option.accountName
+                                      }
+                                    </strong>
+                                  </div>
+                                ) : null}
+
+                                {option.routingNumber ? (
+                                  <div
+                                    style={{
+                                      marginTop:
+                                        8,
+                                    }}
+                                  >
+                                    <span>
+                                      Routing number
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        option.routingNumber
+                                      }
+                                    </strong>
+                                  </div>
+                                ) : null}
+
+                                {option.instructions ? (
+                                  <p
+                                    style={{
+                                      marginTop:
+                                        10,
+                                    }}
+                                  >
+                                    {
+                                      option.instructions
+                                    }
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
+
+                            {/* COD */}
+
+                            {option.id ===
+                              'COD' &&
+                            option.instructions ? (
+                              <p>
+                                {
+                                  option.instructions
+                                }
+                              </p>
+                            ) : null}
                           </div>
-                        )}
-
-                      </div>
-                    )}
-
-                  </label>
-                );
-              })}
-
-            </div>
-
+                        ) : null}
+                      </label>
+                    );
+                  }
+                )}
+              </div>
+            ) : null}
           </section>
 
           {/* ORDER NOTE */}
 
           <section className="checkout-section checkout-note-section">
-
             <div className="section-heading">
-              <span className="section-number">05</span>
+              <span className="section-number">
+                05
+              </span>
 
               <div>
-                <h2>Additional information</h2>
+                <h2>
+                  Additional information
+                </h2>
 
                 <p>
-                  Add delivery instructions or an order note.
+                  Add delivery instructions
+                  or an order note.
                 </p>
               </div>
             </div>
 
             <label className="checkout-field">
-
               <span>
                 Order note
                 <em>Optional</em>
@@ -589,9 +1082,7 @@ export default function CheckoutView() {
                   )
                 }
               />
-
             </label>
-
           </section>
 
           {error && (
@@ -604,9 +1095,9 @@ export default function CheckoutView() {
           )}
 
           <div className="checkout-submit-area">
-
             <p className="checkout-terms">
-              By placing your order, you agree to our{' '}
+              By placing your order, you
+              agree to our{' '}
               <Link href="/terms">
                 Terms and Conditions
               </Link>{' '}
@@ -619,15 +1110,17 @@ export default function CheckoutView() {
 
             <button
               className="btn place-order"
-              disabled={loading}
+              disabled={
+                loading ||
+                paymentLoading ||
+                !paymentOptions.length
+              }
             >
               {loading
                 ? 'Placing your order…'
                 : `Place order · ৳${total.toLocaleString()}`}
             </button>
-
           </div>
-
         </form>
 
         <OrderSummary
@@ -636,9 +1129,7 @@ export default function CheckoutView() {
           shipping={shipping}
           total={total}
         />
-
       </div>
-
     </main>
   );
 }
@@ -651,15 +1142,15 @@ function OrderSummary({
 }) {
   return (
     <aside className="checkout-summary">
-
       <div className="checkout-summary-head">
-
         <div>
           <span className="summary-label">
             Your order
           </span>
 
-          <h2>Order summary</h2>
+          <h2>
+            Order summary
+          </h2>
         </div>
 
         <span className="summary-count">
@@ -670,16 +1161,13 @@ function OrderSummary({
           )}{' '}
           items
         </span>
-
       </div>
 
       <div className="checkout-products">
-
         {items.map((item) => {
-
           const price = Number(
             item.product.salePrice ||
-            item.product.regularPrice
+              item.product.regularPrice
           );
 
           const itemTotal =
@@ -690,15 +1178,17 @@ function OrderSummary({
               className="checkout-product"
               key={item.id}
             >
-
               <div className="checkout-thumb">
-
-                {item.product.images?.[0]?.url ? (
+                {item.product.images?.[0]
+                  ?.url ? (
                   <img
                     src={
-                      item.product.images[0].url
+                      item.product
+                        .images[0].url
                     }
-                    alt={item.product.name}
+                    alt={
+                      item.product.name
+                    }
                   />
                 ) : (
                   <div className="no-product-image">
@@ -706,64 +1196,69 @@ function OrderSummary({
                   </div>
                 )}
 
-                <b>{item.quantity}</b>
-
+                <b>
+                  {item.quantity}
+                </b>
               </div>
 
               <div className="checkout-product-info">
-
                 <strong>
                   {item.product.name}
                 </strong>
 
                 <span>
-                  ৳{price.toLocaleString()} each
+                  ৳
+                  {price.toLocaleString()}{' '}
+                  each
                 </span>
-
               </div>
 
               <strong className="checkout-product-total">
-                ৳{itemTotal.toLocaleString()}
+                ৳
+                {itemTotal.toLocaleString()}
               </strong>
-
             </div>
           );
         })}
-
       </div>
 
       <div className="coupon-box">
-
         <span className="coupon-title">
           Have a coupon?
         </span>
 
         <div className="coupon-row">
-
           <input
             placeholder="Enter coupon code"
+            value=""
+            readOnly
           />
 
-          <button type="button">
+          <button
+            type="button"
+            disabled
+          >
             Apply
           </button>
-
         </div>
-
       </div>
 
       <div className="summary-calculation">
-
         <div className="summary-line">
-          <span>Subtotal</span>
+          <span>
+            Subtotal
+          </span>
 
           <strong>
-            ৳{subtotal.toLocaleString()}
+            ৳
+            {subtotal.toLocaleString()}
           </strong>
         </div>
 
         <div className="summary-line">
-          <span>Shipping</span>
+          <span>
+            Shipping
+          </span>
 
           <strong>
             {shipping
@@ -771,23 +1266,22 @@ function OrderSummary({
               : 'Free'}
           </strong>
         </div>
-
       </div>
 
       <div className="summary-total">
-
         <div>
           <span>Total</span>
 
           <small>
-            Including applicable delivery charge
+            Including applicable
+            delivery charge
           </small>
         </div>
 
         <strong>
-          ৳{total.toLocaleString()}
+          ৳
+          {total.toLocaleString()}
         </strong>
-
       </div>
 
       <Link
@@ -796,7 +1290,6 @@ function OrderSummary({
       >
         ← Edit cart
       </Link>
-
     </aside>
   );
 }

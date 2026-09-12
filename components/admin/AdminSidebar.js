@@ -26,6 +26,7 @@ import {
   faBars,
   faXmark,
   faArrowRight,
+  faMoneyBillTransfer,
 } from '@fortawesome/free-solid-svg-icons';
 
 const navigation = [
@@ -164,7 +165,12 @@ const navigation = [
     icon: faGear,
     permission: 'settings.view',
   },
-
+   {
+    label: 'Payment Methods',
+    href: '/admin/payment-methods',
+    icon: faMoneyBillTransfer,
+    permission: 'settings.view',
+   },
   {
     label: 'Users',
     href: '/admin/users',
@@ -242,8 +248,8 @@ export default function AdminSidebar({
             }
           >
             <img
-              src="/uploads/PonnoMelaLogo.webp"
-              alt="Ponnomela"
+              src="/uploads/prenaxo-logo.png"
+              alt="Prenaxo"
             />
           </Link>
 
@@ -319,7 +325,7 @@ export default function AdminSidebar({
 
             <div>
               <strong>
-                Ponnomela Store
+                Prenaxo Store
               </strong>
 
               <small>

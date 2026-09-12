@@ -36,7 +36,7 @@ export async function generateMetadata({
 
 
   const description =
-    'Browse quality products at Ponno Mela. Shop everyday essentials, trending products, great deals and reliable delivery across Bangladesh.';
+    'Browse quality products at Prenaxo. Shop everyday essentials, trending products, great deals and reliable delivery across Bangladesh.';
 
 
   return {

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowDownRight, ArrowUpRight, BarChart3, Boxes, CircleDollarSign, MapPinned, Package, RefreshCw, ShoppingCart, Sparkles, Users } from 'lucide-react';
 import styles from './AnalyticsReport.module.css';
 
-const categoryColors = ['#315efb', '#14b8a6', '#f59e0b', '#a855f7', '#ef6b5b', '#64748b'];
+const categoryColors = ['var(--brand-primary)', 'var(--brand-secondary)', 'var(--brand-primary)', 'var(--brand-accent)', 'var(--brand-secondary)', 'var(--brand-accent)'];
 
 function number(value) { return Number(value || 0).toLocaleString(); }
 function money(value) { return `৳${number(value)}`; }

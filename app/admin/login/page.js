@@ -34,9 +34,9 @@ export default function AdminLogin() {
   }
 
   return <main className="admin-login-page"><form className="admin-login-card" onSubmit={submit}>
-    <Link className="admin-login-logo" href="/"><img src="/uploads/PonnoMelaLogo.webp" alt="Ponnomela" /></Link>
+    <Link className="admin-login-logo" href="/"><img src="/uploads/prenaxo-logo.png" alt="Prenaxo" /></Link>
     <div className="admin-login-icon"><LockKeyhole size={20} /></div>
-    <p className="admin-login-eyebrow">Ponnomela Admin</p>
+    <p className="admin-login-eyebrow">Prenaxo Admin</p>
     <h1>Sign in to your account</h1>
     <label>Email Address<input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" required /></label>
     <label>Password<span className="admin-password-field"><input type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" required /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></span></label>

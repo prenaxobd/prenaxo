@@ -1,256 +1,335 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+
 import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 import {
-  requirePermission,
-  jsonError,
-} from '@/lib/admin';
+  getDeliveryConfig,
+  calculateDelivery,
+} from '@/lib/delivery';
 
-const validStatuses = [
-  'PENDING',
-  'PROCESSING',
-  'SHIPPED',
-  'DELIVERED',
-  'CANCELLED',
-];
+const schema = z.object({
+  customerName: z.string().trim().min(2),
+  customerPhone: z.string().trim().min(8),
 
-const validPaymentStatuses = [
-  'PENDING',
-  'PAID',
-  'FAILED',
-  'REFUNDED',
-];
+  shippingAddress: z.record(z.string(), z.string()),
 
-export async function GET(request) {
-  try {
-    await requirePermission('orders.view');
+  paymentMethod: z
+    .string()
+    .trim()
+    .min(1)
+    .transform((value) => value.toUpperCase()),
 
-    const { searchParams } = new URL(request.url);
+  paymentTransactionId: z
+    .string()
+    .trim()
+    .max(150)
+    .optional()
+    .or(z.literal('')),
 
-    const status = searchParams.get('status');
-    const paymentStatus = searchParams.get('paymentStatus');
-    const q = searchParams.get('q');
-    const from = searchParams.get('from');
-    const to = searchParams.get('to');
+  orderNote: z
+    .string()
+    .trim()
+    .max(2000)
+    .optional()
+    .or(z.literal('')),
 
-    const where = {
-      ...(status && validStatuses.includes(status)
-        ? { status }
-        : {}),
+  couponCode: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal('')),
+});
 
-      ...(paymentStatus &&
-      validPaymentStatuses.includes(paymentStatus)
-        ? { paymentStatus }
-        : {}),
+export async function POST(request) {
+  const user = await getCurrentUser();
 
-      ...(q
-        ? {
-            OR: [
-              {
-                orderNumber: {
-                  contains: q,
-                },
-              },
-              {
-                customerName: {
-                  contains: q,
-                },
-              },
-              {
-                customerEmail: {
-                  contains: q,
-                },
-              },
-              {
-                customerPhone: {
-                  contains: q,
-                },
-              },
-            ],
-          }
-        : {}),
-
-      ...(from || to
-        ? {
-            createdAt: {
-              ...(from
-                ? {
-                    gte: new Date(`${from}T00:00:00`),
-                  }
-                : {}),
-
-              ...(to
-                ? {
-                    lte: new Date(`${to}T23:59:59.999`),
-                  }
-                : {}),
-            },
-          }
-        : {}),
-    };
-
-    const orders = await prisma.order.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            image: true,
-          },
-        },
-
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                sku: true,
-              },
-            },
-          },
-        },
+  if (!user) {
+    return NextResponse.json(
+      {
+        error: 'Please sign in before checkout.',
       },
-
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    const serializedOrders = orders.map((order) => ({
-      ...order,
-
-      subtotal: Number(order.subtotal),
-      discount: Number(order.discount),
-      shippingCharge: Number(order.shippingCharge),
-      total: Number(order.total),
-
-      createdAt: order.createdAt.toISOString(),
-
-      items: order.items.map((item) => ({
-        ...item,
-        unitPrice: Number(item.unitPrice),
-      })),
-    }));
-
-    return Response.json(serializedOrders);
-  } catch (error) {
-    return jsonError(error);
+      {
+        status: 401,
+      }
+    );
   }
-}
 
-export async function PATCH(request) {
   try {
-    await requirePermission('orders.update_status');
-
-    const body = await request.json();
+    const data = schema.parse(await request.json());
 
     const {
-      id,
-      status,
-      paymentStatus,
-    } = body;
+      threshold,
+      zones,
+    } = await getDeliveryConfig();
 
-    // -----------------------------------------
-    // Validate Order ID
-    // -----------------------------------------
+    const order = await prisma.$transaction(async (tx) => {
+      /*
+       * ---------------------------------------------------------
+       * Validate payment method
+       * ---------------------------------------------------------
+       */
 
-    if (!id) {
-      return Response.json(
-        {
-          error: 'Order ID is required.',
+      const paymentMethod = await tx.paymentMethod.findUnique({
+        where: {
+          code: data.paymentMethod,
         },
-        {
-          status: 400,
-        }
+      });
+
+      if (!paymentMethod || !paymentMethod.active) {
+        throw new Error(
+          'The selected payment method is not available.'
+        );
+      }
+
+      /*
+       * ---------------------------------------------------------
+       * Validate transaction ID
+       * ---------------------------------------------------------
+       */
+
+      const requiresTransactionId = ['BKASH', 'NAGAD'].includes(
+        paymentMethod.code
       );
-    }
 
-    // -----------------------------------------
-    // Validate Order Status
-    // -----------------------------------------
+      const paymentTransactionId =
+        data.paymentTransactionId?.trim() || null;
 
-    if (
-      status &&
-      !validStatuses.includes(status)
-    ) {
-      return Response.json(
-        {
-          error: 'Invalid order status.',
+      if (requiresTransactionId && !paymentTransactionId) {
+        throw new Error(
+          `Please enter your ${paymentMethod.name} transaction ID.`
+        );
+      }
+
+      /*
+       * ---------------------------------------------------------
+       * Load cart
+       * ---------------------------------------------------------
+       */
+
+      const cart = await tx.cart.findUnique({
+        where: {
+          userId: user.id,
         },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    // -----------------------------------------
-    // Validate Payment Status
-    // -----------------------------------------
-
-    if (
-      paymentStatus &&
-      !validPaymentStatuses.includes(paymentStatus)
-    ) {
-      return Response.json(
-        {
-          error: 'Invalid payment status.',
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
         },
-        {
-          status: 400,
+      });
+
+      if (!cart?.items.length) {
+        throw new Error('Your cart is empty.');
+      }
+
+      /*
+       * ---------------------------------------------------------
+       * Calculate subtotal
+       * ---------------------------------------------------------
+       */
+
+      let subtotal = 0;
+
+      for (const item of cart.items) {
+        if (item.product.stock < item.quantity) {
+          throw new Error(
+            `${item.product.name} is out of stock.`
+          );
         }
+
+        const price = Number(
+          item.product.salePrice ||
+            item.product.regularPrice
+        );
+
+        subtotal += price * item.quantity;
+      }
+
+      /*
+       * ---------------------------------------------------------
+       * Coupon
+       * ---------------------------------------------------------
+       */
+
+      let discount = 0;
+
+      if (data.couponCode) {
+        const coupon = await tx.coupon.findUnique({
+          where: {
+            code: data.couponCode.toUpperCase(),
+          },
+        });
+
+        if (
+          coupon?.active &&
+          (!coupon.expiresAt ||
+            coupon.expiresAt > new Date()) &&
+          subtotal >= Number(coupon.minimumOrder || 0)
+        ) {
+          discount =
+            coupon.type === 'PERCENTAGE'
+              ? Math.min(
+                  (subtotal * Number(coupon.value)) / 100,
+                  subtotal
+                )
+              : Math.min(
+                  Number(coupon.value),
+                  subtotal
+                );
+        }
+      }
+
+      /*
+       * ---------------------------------------------------------
+       * Delivery zone
+       * ---------------------------------------------------------
+       */
+
+      const zone = zones.find(
+        (item) =>
+          item.division === data.shippingAddress.city &&
+          item.district === data.shippingAddress.district
       );
-    }
 
-    // -----------------------------------------
-    // Update Order
-    // -----------------------------------------
+      if (!zone) {
+        throw new Error(
+          'Please select a valid delivery area.'
+        );
+      }
 
-    const order = await prisma.order.update({
-      where: {
-        id,
-      },
+      const {
+        charge: shippingCharge,
+      } = calculateDelivery(
+        subtotal,
+        zone,
+        threshold
+      );
 
-      data: {
-        ...(status
-          ? {
-              status,
-            }
-          : {}),
+      /*
+       * ---------------------------------------------------------
+       * Create order
+       * ---------------------------------------------------------
+       */
 
-        ...(paymentStatus
-          ? {
-              paymentStatus,
-            }
-          : {}),
-      },
+      const created = await tx.order.create({
+        data: {
+          orderNumber: `KB-${Date.now()}`,
 
-      include: {
-        items: true,
-      },
+          userId: user.id,
+
+          customerName: data.customerName,
+
+          // Email is no longer requested from checkout.
+          // Existing signed-in user's email is stored automatically.
+          customerEmail: user.email || null,
+
+          customerPhone: data.customerPhone,
+
+          shippingAddress: data.shippingAddress,
+
+          subtotal,
+
+          discount,
+
+          shippingCharge,
+
+          total:
+            subtotal -
+            discount +
+            shippingCharge,
+
+          paymentMethod: paymentMethod.code,
+
+          paymentTransactionId,
+
+          paymentStatus: 'PENDING',
+
+          orderNote:
+            data.orderNote?.trim() || null,
+
+          items: {
+            create: cart.items.map((item) => ({
+              quantity: item.quantity,
+
+              unitPrice:
+                item.product.salePrice ||
+                item.product.regularPrice,
+
+              productName: item.product.name,
+
+              productId: item.productId,
+            })),
+          },
+        },
+      });
+
+      /*
+       * ---------------------------------------------------------
+       * Reduce stock
+       * ---------------------------------------------------------
+       */
+
+      for (const item of cart.items) {
+        const updated =
+          await tx.product.updateMany({
+            where: {
+              id: item.productId,
+              stock: {
+                gte: item.quantity,
+              },
+            },
+
+            data: {
+              stock: {
+                decrement: item.quantity,
+              },
+            },
+          });
+
+        if (updated.count !== 1) {
+          throw new Error(
+            'Stock changed; please try again.'
+          );
+        }
+      }
+
+      /*
+       * ---------------------------------------------------------
+       * Clear cart
+       * ---------------------------------------------------------
+       */
+
+      await tx.cartItem.deleteMany({
+        where: {
+          cartId: cart.id,
+        },
+      });
+
+      return created;
     });
 
-    // -----------------------------------------
-    // Return Serialized Order
-    // -----------------------------------------
-
-    return Response.json({
-      ...order,
-
-      subtotal: Number(order.subtotal),
-      discount: Number(order.discount),
-      shippingCharge: Number(order.shippingCharge),
-      total: Number(order.total),
-
-      createdAt: order.createdAt.toISOString(),
-
-      items: order.items.map((item) => ({
-        ...item,
-        unitPrice: Number(item.unitPrice),
-      })),
-    });
+    return NextResponse.json(
+      {
+        orderNumber: order.orderNumber,
+      },
+      {
+        status: 201,
+      }
+    );
   } catch (error) {
-    return jsonError(error);
+    console.error('Order creation error:', error);
+
+    return NextResponse.json(
+      {
+        error:
+          error?.message ||
+          'Unable to create order.',
+      },
+      {
+        status: 400,
+      }
+    );
   }
 }

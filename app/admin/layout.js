@@ -1,5 +1,5 @@
 export const metadata = {
-  title: 'Ponnomela Admin',
+  title: 'Prenaxo Admin',
   icons: {
     icon: '/uploads/site_icon.png',
     shortcut: '/uploads/site_icon.png',
