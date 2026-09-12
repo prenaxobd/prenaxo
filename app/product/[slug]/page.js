@@ -1,4 +1,5 @@
 import Link from 'next/link';
+
 import {
   ChevronRight,
   Truck,
@@ -9,81 +10,508 @@ import {
   MapPin,
 } from 'lucide-react';
 
-import { getProduct, getProducts } from '@/lib/products';
+import {
+  getProduct,
+  getProducts,
+} from '@/lib/products';
 
 import ProductReviews from '@/components/product/ProductReviews';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductActions from '@/components/product/ProductActions';
 import RelatedProducts from '@/components/product/RelatedProducts';
 
-export async function generateMetadata({ params }) {
+import {
+  SITE_NAME,
+  SITE_URL,
+  absoluteUrl,
+  cleanText,
+  truncate,
+  getRobots,
+  getProductPrice,
+  getProductAvailability,
+  safeJsonLd,
+} from '@/lib/seo';
+
+
+/* =====================================================
+   PRODUCT METADATA
+===================================================== */
+
+export async function generateMetadata({
+  params,
+}) {
   const { slug } = await params;
-  const product = await getProduct(slug);
+
+  const product =
+    await getProduct(slug);
+
 
   if (!product) {
     return {
-      title: 'Product not found | Ponnomela',
+      title: 'Product Not Found',
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
-  const seo = product.seo;
+
+  const seo =
+    product.seo;
+
+
+  const title =
+    seo?.metaTitle ||
+    `${product.name} | ${SITE_NAME}`;
+
+
+  const description =
+    seo?.metaDescription ||
+    truncate(
+      cleanText(
+        product.shortDescription ||
+          product.description
+      ) ||
+        `Shop ${product.name} online at ${SITE_NAME}.`,
+      160
+    );
+
+
+  const canonical =
+    seo?.canonicalUrl ||
+    absoluteUrl(
+      `/products/${product.slug}`
+    );
+
+
+  const image =
+    seo?.ogImage
+      ? absoluteUrl(
+          seo.ogImage
+        )
+      : product.images?.[0]?.url
+      ? absoluteUrl(
+          product.images[0].url
+        )
+      : absoluteUrl(
+          '/uploads/site_icon.png'
+        );
+
+
+  const ogTitle =
+    seo?.ogTitle ||
+    title;
+
+
+  const ogDescription =
+    seo?.ogDescription ||
+    description;
+
 
   return {
-    title:
-      seo?.metaTitle ||
-      product.name ||
-      'Product | Ponnomela',
+    title,
 
-    description:
-      seo?.metaDescription ||
-      product.shortDescription ||
-      product.description ||
-      `Shop ${product.name} at Ponnomela.`,
+    description,
 
-    alternates: seo?.canonicalUrl
-      ? {
-          canonical: seo.canonicalUrl,
-        }
-      : undefined,
+    keywords:
+      seo?.focusKeyword
+        ? [
+            seo.focusKeyword,
+          ]
+        : undefined,
 
-    robots: {
-      index: seo?.robotsIndex !== 'NOINDEX',
-      follow: seo?.robotsFollow !== 'NOFOLLOW',
+    alternates: {
+      canonical,
     },
 
+    robots:
+      getRobots(seo),
+
     openGraph: {
+      type: 'website',
+      locale: 'en_BD',
+      url: canonical,
+      siteName: SITE_NAME,
+      title: ogTitle,
+      description: ogDescription,
+
+      images: image
+        ? [
+            {
+              url: image,
+              width: 1200,
+              height: 1200,
+              alt: product.name,
+            },
+          ]
+        : [],
+    },
+
+    twitter: {
+      card: 'summary_large_image',
+
       title:
-        seo?.ogTitle ||
-        seo?.metaTitle ||
-        product.name,
+        seo?.twitterTitle ||
+        ogTitle,
 
       description:
-        seo?.ogDescription ||
-        seo?.metaDescription ||
-        product.shortDescription ||
-        undefined,
+        seo?.twitterDescription ||
+        ogDescription,
 
       images:
-        seo?.ogImage
-          ? [seo.ogImage]
-          : product.images?.[0]?.url
-          ? [product.images[0].url]
-          : undefined,
+        seo?.twitterImage
+          ? [
+              absoluteUrl(
+                seo.twitterImage
+              ),
+            ]
+          : image
+          ? [image]
+          : [],
     },
   };
 }
 
-export default async function ProductPage({ params }) {
+
+/* =====================================================
+   PRODUCT JSON-LD
+===================================================== */
+
+function ProductStructuredData({
+  product,
+  price,
+  inStock,
+  averageRating,
+  reviewCount,
+  approvedReviews,
+}) {
+  const productUrl =
+    absoluteUrl(
+      `/products/${product.slug}`
+    );
+
+
+  const images =
+    (product.images || [])
+      .map((image) =>
+        absoluteUrl(image.url)
+      )
+      .filter(Boolean);
+
+
+  const brandName =
+    product.brandRelation?.name ||
+    product.brand ||
+    null;
+
+
+  const categoryName =
+    product.category?.name ||
+    null;
+
+
+  const sku =
+    product.sku ||
+    `KB-${String(
+      product.id
+    ).toUpperCase()}`;
+
+
+  const description =
+    truncate(
+      cleanText(
+        product.shortDescription ||
+          product.description
+      ) ||
+        `Shop ${product.name} online at ${SITE_NAME}.`,
+      500
+    );
+
+
+  const schema = {
+    '@context':
+      'https://schema.org',
+
+    '@type':
+      'Product',
+
+    '@id':
+      `${productUrl}#product`,
+
+    name:
+      product.name,
+
+    url:
+      productUrl,
+
+    description,
+
+    sku,
+
+    ...(images.length > 0
+      ? {
+          image: images,
+        }
+      : {}),
+
+    ...(brandName
+      ? {
+          brand: {
+            '@type':
+              'Brand',
+            name:
+              brandName,
+          },
+        }
+      : {}),
+
+    ...(categoryName
+      ? {
+          category:
+            categoryName,
+        }
+      : {}),
+
+    offers: {
+      '@type':
+        'Offer',
+
+      url:
+        productUrl,
+
+      priceCurrency:
+        'BDT',
+
+      price:
+        Number(price).toFixed(2),
+
+      availability:
+        getProductAvailability(
+          product
+        ),
+
+      seller: {
+        '@type':
+          'Organization',
+
+        name:
+          SITE_NAME,
+
+        url:
+          SITE_URL,
+      },
+    },
+  };
+
+
+  /* =====================================================
+     AGGREGATE RATING
+  ===================================================== */
+
+  if (
+    reviewCount > 0 &&
+    averageRating > 0
+  ) {
+    schema.aggregateRating = {
+      '@type':
+        'AggregateRating',
+
+      ratingValue:
+        Number(
+          averageRating
+        ).toFixed(1),
+
+      reviewCount:
+        reviewCount,
+
+      bestRating:
+        '5',
+
+      worstRating:
+        '1',
+    };
+  }
+
+
+  /* =====================================================
+     REVIEWS
+  ===================================================== */
+
+  const reviewSchema =
+    approvedReviews
+      .filter(
+        (review) =>
+          review.comment &&
+          String(
+            review.comment
+          ).trim()
+      )
+      .slice(0, 20)
+      .map((review) => ({
+        '@type':
+          'Review',
+
+        reviewRating: {
+          '@type':
+            'Rating',
+
+          ratingValue:
+            Number(
+              review.rating
+            ),
+
+          bestRating:
+            '5',
+
+          worstRating:
+            '1',
+        },
+
+        author: {
+          '@type':
+            'Person',
+
+          name:
+            review.user?.name ||
+            'Customer',
+        },
+
+        reviewBody:
+          cleanText(
+            review.comment
+          ),
+
+        datePublished:
+          review.createdAt
+            ? new Date(
+                review.createdAt
+              ).toISOString()
+            : undefined,
+      }));
+
+
+  if (
+    reviewSchema.length > 0
+  ) {
+    schema.review =
+      reviewSchema;
+  }
+
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html:
+            safeJsonLd(schema),
+        }}
+      />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd({
+            '@context':
+              'https://schema.org',
+
+            '@type':
+              'BreadcrumbList',
+
+            itemListElement: [
+              {
+                '@type':
+                  'ListItem',
+
+                position: 1,
+
+                name: 'Home',
+
+                item:
+                  SITE_URL,
+              },
+
+              {
+                '@type':
+                  'ListItem',
+
+                position: 2,
+
+                name: 'Shop',
+
+                item:
+                  absoluteUrl(
+                    '/shop'
+                  ),
+              },
+
+              ...(product.category
+                ? [
+                    {
+                      '@type':
+                        'ListItem',
+
+                      position: 3,
+
+                      name:
+                        product.category
+                          .name,
+
+                      item:
+                        absoluteUrl(
+                          `/category/${product.category.slug}`
+                        ),
+                    },
+                  ]
+                : []),
+
+              {
+                '@type':
+                  'ListItem',
+
+                position:
+                  product.category
+                    ? 4
+                    : 3,
+
+                name:
+                  product.name,
+
+                item:
+                  productUrl,
+              },
+            ],
+          }),
+        }}
+      />
+    </>
+  );
+}
+
+
+/* =====================================================
+   PRODUCT PAGE
+===================================================== */
+
+export default async function ProductPage({
+  params,
+}) {
   const { slug } = await params;
 
-  const product = await getProduct(slug);
+  const product =
+    await getProduct(slug);
+
 
   if (!product) {
     return (
       <main className="single-product-page">
         <div className="container">
+
           <div className="product-not-found">
+
             <div className="product-not-found-inner">
+
               <div className="not-found-icon">
                 📦
               </div>
@@ -103,22 +531,30 @@ export default async function ProductPage({ params }) {
               >
                 Back to Shop
               </Link>
+
             </div>
+
           </div>
+
         </div>
       </main>
     );
   }
 
-  const allProducts = await getProducts();
+
+  const allProducts =
+    await getProducts();
+
 
   /* =========================================
      PRICE
   ========================================= */
 
-  const regularPrice = Number(
-    product.regularPrice || 0
-  );
+  const regularPrice =
+    Number(
+      product.regularPrice || 0
+    );
+
 
   const salePrice =
     product.salePrice !== null &&
@@ -126,64 +562,92 @@ export default async function ProductPage({ params }) {
       ? Number(product.salePrice)
       : null;
 
+
   const hasDiscount =
     salePrice !== null &&
     salePrice > 0 &&
     salePrice < regularPrice;
 
-  const price = hasDiscount
-    ? salePrice
-    : regularPrice;
+
+  const price =
+    hasDiscount
+      ? salePrice
+      : regularPrice;
+
 
   const discount =
-    hasDiscount && regularPrice > 0
+    hasDiscount &&
+    regularPrice > 0
       ? Math.round(
-          ((regularPrice - salePrice) /
-            regularPrice) *
+          (
+            (
+              regularPrice -
+              salePrice
+            ) /
+            regularPrice
+          ) *
             100
         )
       : 0;
+
 
   /* =========================================
      RELATED PRODUCTS
   ========================================= */
 
-  const sameCategory = allProducts.filter(
-    (item) =>
-      item.id !== product.id &&
-      item.categoryId === product.categoryId
-  );
+  const sameCategory =
+    allProducts.filter(
+      (item) =>
+        item.id !== product.id &&
+        item.categoryId ===
+          product.categoryId
+    );
 
-  const otherProducts = allProducts.filter(
-    (item) =>
-      item.id !== product.id &&
-      item.categoryId !== product.categoryId
-  );
+
+  const otherProducts =
+    allProducts.filter(
+      (item) =>
+        item.id !== product.id &&
+        item.categoryId !==
+          product.categoryId
+    );
+
 
   const related = [
     ...sameCategory,
     ...otherProducts,
   ].slice(0, 8);
 
+
   /* =========================================
      REVIEWS
   ========================================= */
 
-  const reviews = product.reviews || [];
+  const reviews =
+    product.reviews || [];
 
-  const approvedReviews = reviews.filter(
-    (review) => review.approved === true
-  );
+
+  const approvedReviews =
+    reviews.filter(
+      (review) =>
+        review.approved === true
+    );
+
 
   const reviewCount =
     approvedReviews.length;
 
+
   const ratingTotal =
     approvedReviews.reduce(
       (total, review) =>
-        total + Number(review.rating || 0),
+        total +
+        Number(
+          review.rating || 0
+        ),
       0
     );
+
 
   const averageRating =
     reviewCount > 0
@@ -195,6 +659,7 @@ export default async function ProductPage({ params }) {
         )
       : 0;
 
+
   const ratingDistribution = {
     5: 0,
     4: 0,
@@ -203,58 +668,92 @@ export default async function ProductPage({ params }) {
     1: 0,
   };
 
-  approvedReviews.forEach((review) => {
-    const rating = Number(
-      review.rating
-    );
 
-    if (
-      rating >= 1 &&
-      rating <= 5
-    ) {
-      ratingDistribution[rating]++;
+  approvedReviews.forEach(
+    (review) => {
+      const rating =
+        Number(
+          review.rating
+        );
+
+      if (
+        rating >= 1 &&
+        rating <= 5
+      ) {
+        ratingDistribution[
+          rating
+        ]++;
+      }
     }
-  });
+  );
+
 
   /* =========================================
      PRODUCT DATA
   ========================================= */
 
-  const images = product.images || [];
+  const images =
+    product.images || [];
+
 
   const sku =
     product.sku ||
-    `KB-${String(product.id).toUpperCase()}`;
+    `KB-${String(
+      product.id
+    ).toUpperCase()}`;
 
-  const stock = Number(
-    product.stock || 0
-  );
 
-  const inStock = stock > 0;
+  const stock =
+    Number(
+      product.stock || 0
+    );
+
+
+  const inStock =
+    stock > 0;
+
 
   const shortDescription =
-    product.shortDescription?.trim() || '';
+    product.shortDescription?.trim() ||
+    '';
+
 
   /* =========================================
      REVIEW STARS
   ========================================= */
 
-  const stars = Array.from({
-    length: 5,
-  });
+  const stars =
+    Array.from({
+      length: 5,
+    });
+
 
   return (
     <main className="single-product-page">
+
+      <ProductStructuredData
+        product={product}
+        price={price}
+        inStock={inStock}
+        averageRating={averageRating}
+        reviewCount={reviewCount}
+        approvedReviews={
+          approvedReviews
+        }
+      />
+
 
       {/* =========================================
           BREADCRUMB
       ========================================= */}
 
       <div className="container">
+
         <nav
           className="product-breadcrumb"
           aria-label="Breadcrumb"
         >
+
           <Link href="/">
             Home
           </Link>
@@ -270,7 +769,7 @@ export default async function ProductPage({ params }) {
               <ChevronRight size={14} />
 
               <Link
-                href={`/shop?category=${product.category.slug}`}
+                href={`/category/${product.category.slug}`}
               >
                 {product.category.name}
               </Link>
@@ -282,8 +781,11 @@ export default async function ProductPage({ params }) {
           <span className="current">
             {product.name}
           </span>
+
         </nav>
+
       </div>
+
 
       {/* =========================================
           PRODUCT MAIN
@@ -294,46 +796,45 @@ export default async function ProductPage({ params }) {
         className="container product-main"
       >
 
-        {/* =======================================
-            GALLERY
-        ======================================= */}
-
         <div className="product-gallery-column">
+
           <ProductGallery
             product={product}
             discount={discount}
           />
+
         </div>
 
-        {/* =======================================
-            PRODUCT INFORMATION
-        ======================================= */}
 
         <div className="product-info">
-
-          {/* TOP BADGES */}
 
           <div className="product-top-meta">
 
             <div className="quality-badge">
+
               <Check size={14} />
+
               <span>
                 Fresh & Quality
               </span>
+
             </div>
 
-            {product.brand && (
+
+            {(product.brandRelation?.name ||
+              product.brand) && (
               <span className="product-brand-pill">
-                {product.brand}
+                {product.brandRelation?.name ||
+                  product.brand}
               </span>
             )}
 
           </div>
 
-          {/* CATEGORY */}
 
           {product.category?.name && (
             <div className="product-category">
+
               <span>
                 Grocery
               </span>
@@ -343,39 +844,44 @@ export default async function ProductPage({ params }) {
               <span>
                 {product.category.name}
               </span>
+
             </div>
           )}
 
-          {/* TITLE */}
 
           <h1 className="product-title">
             {product.name}
           </h1>
 
-          {/* RATING */}
 
           <a
             href="#reviews"
             className="product-rating product-rating-link"
             aria-label="View product reviews"
           >
+
             <span className="stars">
-              {stars.map((_, index) => (
-                <span
-                  key={index}
-                  className={
-                    index <
-                    Math.round(
-                      averageRating
-                    )
-                      ? 'star filled'
-                      : 'star'
-                  }
-                >
-                  ★
-                </span>
-              ))}
+
+              {stars.map(
+                (_, index) => (
+                  <span
+                    key={index}
+                    className={
+                      index <
+                      Math.round(
+                        averageRating
+                      )
+                        ? 'star filled'
+                        : 'star'
+                    }
+                  >
+                    ★
+                  </span>
+                )
+              )}
+
             </span>
+
 
             <strong>
               {averageRating > 0
@@ -383,19 +889,21 @@ export default async function ProductPage({ params }) {
                 : '0.0'}
             </strong>
 
+
             <span className="review-count">
               {reviewCount}{' '}
               {reviewCount === 1
                 ? 'Review'
                 : 'Reviews'}
             </span>
+
           </a>
 
-          {/* SKU + STOCK */}
 
           <div className="product-meta-row">
 
             <div className="product-sku">
+
               <span>
                 SKU
               </span>
@@ -403,7 +911,9 @@ export default async function ProductPage({ params }) {
               <strong>
                 {sku}
               </strong>
+
             </div>
+
 
             <div
               className={
@@ -412,20 +922,22 @@ export default async function ProductPage({ params }) {
                   : 'product-stock unavailable'
               }
             >
+
               <span className="stock-dot" />
 
               {inStock
                 ? `${stock} available`
                 : 'Out of stock'}
+
             </div>
 
           </div>
 
-          {/* PRICE */}
 
           <div className="product-price-area">
 
             <div className="product-price-main">
+
               <span className="current-price">
                 ৳{price.toLocaleString()}
               </span>
@@ -436,7 +948,9 @@ export default async function ProductPage({ params }) {
                   {regularPrice.toLocaleString()}
                 </span>
               )}
+
             </div>
+
 
             {hasDiscount && (
               <span className="discount-badge">
@@ -446,9 +960,6 @@ export default async function ProductPage({ params }) {
 
           </div>
 
-          {/* =====================================
-              SHORT DESCRIPTION
-          ===================================== */}
 
           {shortDescription && (
             <div className="product-short-description">
@@ -464,18 +975,61 @@ export default async function ProductPage({ params }) {
             </div>
           )}
 
-          {product.productType === 'COMBO' && product.comboItems?.length > 0 && (
-            <div className="product-combo-includes">
-              <h2>This Bundle Includes</h2>
-              {product.comboItems.map(item => <div key={item.id}><span>{item.includedProduct?.images?.[0]?.url && <img src={item.includedProduct.images[0].url} alt="" />}</span><strong>{item.includedProduct?.name}</strong><b>× {item.quantity}</b></div>)}
-            </div>
-          )}
 
-          {/* =====================================
-              VARIANTS
-          ===================================== */}
+          {product.productType ===
+            'COMBO' &&
+            product.comboItems?.length >
+              0 && (
+              <div className="product-combo-includes">
 
-          {product.variants?.length > 0 && (
+                <h2>
+                  This Bundle Includes
+                </h2>
+
+                {product.comboItems.map(
+                  (item) => (
+                    <div
+                      key={item.id}
+                    >
+
+                      <span>
+                        {item.includedProduct
+                          ?.images?.[0]
+                          ?.url && (
+                          <img
+                            src={
+                              item
+                                .includedProduct
+                                .images[0]
+                                .url
+                            }
+                            alt=""
+                          />
+                        )}
+                      </span>
+
+                      <strong>
+                        {
+                          item
+                            .includedProduct
+                            ?.name
+                        }
+                      </strong>
+
+                      <b>
+                        × {item.quantity}
+                      </b>
+
+                    </div>
+                  )
+                )}
+
+              </div>
+            )}
+
+
+          {product.variants?.length >
+            0 && (
             <div className="product-variation">
 
               <div className="variation-title">
@@ -491,6 +1045,7 @@ export default async function ProductPage({ params }) {
                       key={variant.id}
                       className="variation-option"
                     >
+
                       {variant.size && (
                         <span>
                           {variant.size}
@@ -509,6 +1064,7 @@ export default async function ProductPage({ params }) {
                             Option
                           </span>
                         )}
+
                     </button>
                   )
                 )}
@@ -518,30 +1074,29 @@ export default async function ProductPage({ params }) {
             </div>
           )}
 
-          {/* =====================================
-              CART ACTIONS
-          ===================================== */}
 
           <div className="product-action-area">
+
             <ProductActions
               product={product}
               disabled={!inStock}
             />
+
           </div>
 
-          {/* =====================================
-              DELIVERY INFO
-          ===================================== */}
 
           <div className="delivery-card">
 
             <div className="delivery-card-title">
+
               <Truck size={19} />
 
               <strong>
                 Delivery Information
               </strong>
+
             </div>
+
 
             <div className="delivery-row">
 
@@ -556,6 +1111,7 @@ export default async function ProductPage({ params }) {
 
             </div>
 
+
             <div className="delivery-row">
 
               <span>
@@ -569,6 +1125,7 @@ export default async function ProductPage({ params }) {
 
             </div>
 
+
             <div className="delivery-row">
 
               <span>
@@ -581,6 +1138,7 @@ export default async function ProductPage({ params }) {
 
             </div>
 
+
             <div className="free-delivery">
               Free delivery on orders
               above ৳3,000
@@ -588,9 +1146,6 @@ export default async function ProductPage({ params }) {
 
           </div>
 
-          {/* =====================================
-              TRUST FEATURES
-          ===================================== */}
 
           <div className="trust-features">
 
@@ -627,6 +1182,7 @@ export default async function ProductPage({ params }) {
         </div>
       </section>
 
+
       {/* =========================================
           PRODUCT DETAILS
       ========================================= */}
@@ -634,10 +1190,6 @@ export default async function ProductPage({ params }) {
       <section className="container product-details-section">
 
         <div className="product-details-card">
-
-          {/* =======================================
-              DESCRIPTION
-          ======================================= */}
 
           <div className="product-description-block">
 
@@ -666,9 +1218,6 @@ export default async function ProductPage({ params }) {
 
           </div>
 
-          {/* =======================================
-              SPECIFICATIONS
-          ======================================= */}
 
           <div className="specifications">
 
@@ -682,20 +1231,26 @@ export default async function ProductPage({ params }) {
 
             <div className="spec-grid">
 
-              {product.brand && (
+              {(product.brandRelation?.name ||
+                product.brand) && (
                 <div>
+
                   <span>
                     Brand
                   </span>
 
                   <strong>
-                    {product.brand}
+                    {product.brandRelation?.name ||
+                      product.brand}
                   </strong>
+
                 </div>
               )}
 
+
               {product.category?.name && (
                 <div>
+
                   <span>
                     Category
                   </span>
@@ -703,10 +1258,13 @@ export default async function ProductPage({ params }) {
                   <strong>
                     {product.category.name}
                   </strong>
+
                 </div>
               )}
 
+
               <div>
+
                 <span>
                   SKU
                 </span>
@@ -714,9 +1272,12 @@ export default async function ProductPage({ params }) {
                 <strong>
                   {sku}
                 </strong>
+
               </div>
 
+
               <div>
+
                 <span>
                   Availability
                 </span>
@@ -732,10 +1293,14 @@ export default async function ProductPage({ params }) {
                     ? 'In Stock'
                     : 'Out of Stock'}
                 </strong>
+
               </div>
 
-              {product.variants?.length > 0 && (
+
+              {product.variants?.length >
+                0 && (
                 <div>
+
                   <span>
                     Options
                   </span>
@@ -744,6 +1309,7 @@ export default async function ProductPage({ params }) {
                     {product.variants.length}{' '}
                     options
                   </strong>
+
                 </div>
               )}
 
@@ -751,9 +1317,6 @@ export default async function ProductPage({ params }) {
 
           </div>
 
-          {/* =======================================
-              DELIVERY / RETURN
-          ======================================= */}
 
           <div className="delivery-return-section">
 
@@ -768,9 +1331,11 @@ export default async function ProductPage({ params }) {
             <div className="delivery-return-grid">
 
               <div className="delivery-return-card">
+
                 <Truck size={22} />
 
                 <div>
+
                   <h3>
                     Fast Delivery
                   </h3>
@@ -780,13 +1345,18 @@ export default async function ProductPage({ params }) {
                     packed and delivered safely
                     to your doorstep.
                   </p>
+
                 </div>
+
               </div>
 
+
               <div className="delivery-return-card">
+
                 <ShieldCheck size={22} />
 
                 <div>
+
                   <h3>
                     Quality Guarantee
                   </h3>
@@ -796,7 +1366,9 @@ export default async function ProductPage({ params }) {
                     before it leaves our
                     warehouse.
                   </p>
+
                 </div>
+
               </div>
 
             </div>
@@ -807,6 +1379,7 @@ export default async function ProductPage({ params }) {
 
       </section>
 
+
       {/* =========================================
           REVIEWS
       ========================================= */}
@@ -815,6 +1388,7 @@ export default async function ProductPage({ params }) {
         id="reviews"
         className="container product-reviews-section"
       >
+
         <ProductReviews
           productId={product.id}
           reviews={reviews}
@@ -824,7 +1398,9 @@ export default async function ProductPage({ params }) {
             ratingDistribution
           }
         />
+
       </section>
+
 
       {/* =========================================
           RELATED PRODUCTS
@@ -836,6 +1412,7 @@ export default async function ProductPage({ params }) {
           <div className="section-heading">
 
             <div>
+
               <span>
                 YOU MAY ALSO LIKE
               </span>
@@ -843,7 +1420,9 @@ export default async function ProductPage({ params }) {
               <h2>
                 Related Products
               </h2>
+
             </div>
+
 
             <Link
               href="/shop"
@@ -855,6 +1434,7 @@ export default async function ProductPage({ params }) {
 
           </div>
 
+
           <RelatedProducts
             products={related}
           />
@@ -865,4 +1445,3 @@ export default async function ProductPage({ params }) {
     </main>
   );
 }
-

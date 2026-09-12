@@ -1,170 +1,365 @@
 'use client';
 
-import Link from 'next/link';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function HeroSlider({ banners }) {
-  const [active, setActive] = useState(0);
+const AUTOPLAY_MS = 4500;
+const SWIPE_THRESHOLD = 50;
 
-  useEffect(() => {
-    if (banners.length < 2) return;
+function BannerImage({ banner, priority = false }) {
+  const image = banner?.desktopImage || banner?.image;
 
-    const timer = setInterval(() => {
-      setActive((index) => (index + 1) % banners.length);
-    }, 6000);
+  if (!image) return null;
 
-    return () => clearInterval(timer);
-  }, [banners.length]);
+  const content = (
+    <img
+      src={image}
+      alt=""
+      className="home-hero-image"
+      loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : 'auto'}
+      draggable="false"
+    />
+  );
 
-  if (!banners.length) {
-    return (
-      <section className="home-hero hero">
-        <div className="container hero-grid">
-          <div className="hero-copy">
-            <div className="eyebrow">The better everyday</div>
-
-            <h1>
-              Small joys,
-              <br />
-              delivered.
-            </h1>
-
-            <p>
-              Thoughtfully sourced pantry staples, home goods, and little
-              upgrades for life in Bangladesh.
-            </p>
-
-            <Link className="btn" href="/shop">
-              Explore the collection
-              <ArrowRight size={17} />
-            </Link>
-          </div>
-
-          <div className="hero-art">
-            <div className="basket">🧺</div>
-          </div>
-        </div>
-      </section>
-    );
+  if (!banner?.link) {
+    return content;
   }
 
-  const currentBanner = banners[active];
+  return (
+    <a
+      href={banner.link}
+      className="home-hero-image-link"
+      aria-label="Open banner"
+    >
+      {content}
+    </a>
+  );
+}
+
+function RightBanner({ banner }) {
+  if (!banner?.image) return null;
+
+  const content = (
+    <img
+      src={banner.image}
+      alt=""
+      className="home-hero-right-image"
+      loading="lazy"
+      draggable="false"
+    />
+  );
+
+  if (!banner?.link) {
+    return content;
+  }
 
   return (
-    <section className="home-hero hero">
+    <a
+      href={banner.link}
+      className="home-hero-right-link"
+      aria-label="Open promotional banner"
+    >
+      {content}
+    </a>
+  );
+}
 
-      {/* SLIDER IMAGES */}
-      <div className="hero-slider-images">
-        {banners.map((banner, index) => {
-          const image =
-            banner.desktopImage || banner.image;
+export default function HeroSlider({
+  banners = [],
+  rightBanner = null,
+}) {
+  const validBanners = banners.filter(
+    (banner) => banner?.desktopImage || banner?.image
+  );
 
-          const mobileImage =
-            banner.mobileImage ||
-            banner.desktopImage ||
-            banner.image;
+  const [active, setActive] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
-          return (
-            <picture
-              key={banner.id || index}
-              className={`hero-slide-image ${
-                index === active ? 'active' : ''
-              }`}
-              style={{
-                transform: `translateX(${(index - active) * 100}%)`,
-              }}
-            >
-              <source
-                media="(max-width: 700px)"
-                srcSet={mobileImage}
-              />
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchActive = useRef(false);
 
-              <img
-                src={image}
-                alt={banner.title || 'Banner'}
-              />
-            </picture>
-          );
-        })}
-      </div>
+  useEffect(() => {
+    if (active >= validBanners.length) {
+      setActive(0);
+    }
+  }, [active, validBanners.length]);
 
-      {/* DARK OVERLAY */}
-      <div className="home-hero-shade" />
+  const next = useCallback(() => {
+    if (validBanners.length < 2) return;
 
-      {/* CONTENT */}
-      <div className="container hero-grid">
+    setActive((current) => {
+      return (current + 1) % validBanners.length;
+    });
+  }, [validBanners.length]);
+
+  const previous = useCallback(() => {
+    if (validBanners.length < 2) return;
+
+    setActive((current) => {
+      return (
+        (current - 1 + validBanners.length) %
+        validBanners.length
+      );
+    });
+  }, [validBanners.length]);
+
+  const goTo = useCallback(
+    (index) => {
+      if (!validBanners.length) return;
+
+      setActive(
+        Math.max(
+          0,
+          Math.min(index, validBanners.length - 1)
+        )
+      );
+    },
+    [validBanners.length]
+  );
+
+  /* =========================
+     AUTOPLAY
+     ========================= */
+
+  useEffect(() => {
+    if (validBanners.length < 2 || isPaused) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      next();
+    }, AUTOPLAY_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [
+    validBanners.length,
+    isPaused,
+    next,
+  ]);
+
+  /* =========================
+     TOUCH / SWIPE
+     ========================= */
+
+  function handleTouchStart(event) {
+    if (validBanners.length < 2) return;
+
+    const touch = event.touches[0];
+
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+    touchActive.current = true;
+
+    setIsPaused(true);
+  }
+
+  function handleTouchMove(event) {
+    if (!touchActive.current) return;
+
+    const touch = event.touches[0];
+
+    const deltaX = Math.abs(
+      touch.clientX - touchStartX.current
+    );
+
+    const deltaY = Math.abs(
+      touch.clientY - touchStartY.current
+    );
+
+    if (deltaX > deltaY) {
+      event.preventDefault();
+    }
+  }
+
+  function handleTouchEnd(event) {
+    if (!touchActive.current) return;
+
+    const touch = event.changedTouches[0];
+
+    const deltaX =
+      touch.clientX - touchStartX.current;
+
+    const deltaY =
+      touch.clientY - touchStartY.current;
+
+    touchActive.current = false;
+
+    if (
+      Math.abs(deltaX) >= SWIPE_THRESHOLD &&
+      Math.abs(deltaX) > Math.abs(deltaY)
+    ) {
+      if (deltaX < 0) {
+        next();
+      } else {
+        previous();
+      }
+    }
+
+    window.setTimeout(() => {
+      setIsPaused(false);
+    }, 1200);
+  }
+
+  /* =========================
+     EMPTY STATE
+     ========================= */
+
+  if (
+    !validBanners.length &&
+    !rightBanner?.image
+  ) {
+    return null;
+  }
+
+  return (
+    <section
+      className="home-hero-layout"
+      aria-label="Homepage banners"
+    >
+      {/* =========================================
+          LEFT HERO SLIDER
+          ========================================= */}
+
+      {validBanners.length > 0 && (
         <div
-          key={currentBanner.id || active}
-          className="hero-copy"
+          className="home-hero-main"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
         >
-          <div className="eyebrow">
-            {currentBanner.subtitle || 'Featured today'}
+          <div className="home-hero-track">
+            {validBanners.map((banner, index) => {
+              const position = index - active;
+
+              return (
+                <div
+                  key={banner.id || index}
+                  className={`home-hero-slide ${
+                    index === active
+                      ? 'is-active'
+                      : ''
+                  }`}
+                  style={{
+                    transform: `translate3d(${position * 100}%, 0, 0)`,
+                  }}
+                  aria-hidden={
+                    index !== active
+                  }
+                >
+                  <BannerImage
+                    banner={banner}
+                    priority={index === 0}
+                  />
+                </div>
+              );
+            })}
           </div>
 
-          <h1>{currentBanner.title}</h1>
+          {/* =====================================
+              LEFT / RIGHT ARROWS
+              ONLY FOR LEFT SLIDER
+              ===================================== */}
 
-          <p>
-            Thoughtfully sourced pantry staples, home goods,
-            and little upgrades for life in Bangladesh.
-          </p>
-
-          <Link
-            className="btn"
-            href={currentBanner.link || '/shop'}
-          >
-            {currentBanner.buttonText || 'Shop now'}
-            <ArrowRight size={17} />
-          </Link>
-        </div>
-      </div>
-
-      {/* CONTROLS */}
-      {banners.length > 1 && (
-        <div className="hero-controls">
-
-          <button
-            aria-label="Previous banner"
-            onClick={() =>
-              setActive(
-                (index) =>
-                  (index - 1 + banners.length) %
-                  banners.length
-              )
-            }
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          <div className="hero-dots">
-            {banners.map((item, index) => (
+          {validBanners.length > 1 && (
+            <>
               <button
-                key={item.id || index}
-                aria-label={`Show banner ${index + 1}`}
-                aria-current={index === active}
-                className={
-                  index === active ? 'active' : ''
-                }
-                onClick={() => setActive(index)}
-              />
-            ))}
-          </div>
+                type="button"
+                className="home-hero-arrow home-hero-arrow-prev"
+                onClick={() => {
+                  setIsPaused(true);
+                  previous();
 
-          <button
-            aria-label="Next banner"
-            onClick={() =>
-              setActive(
-                (index) =>
-                  (index + 1) % banners.length
-              )
-            }
-          >
-            <ChevronRight size={18} />
-          </button>
+                  window.setTimeout(() => {
+                    setIsPaused(false);
+                  }, 1200);
+                }}
+                aria-label="Previous banner"
+              >
+                <ChevronLeft size={21} strokeWidth={2.2} />
+              </button>
 
+              <button
+                type="button"
+                className="home-hero-arrow home-hero-arrow-next"
+                onClick={() => {
+                  setIsPaused(true);
+                  next();
+
+                  window.setTimeout(() => {
+                    setIsPaused(false);
+                  }, 1200);
+                }}
+                aria-label="Next banner"
+              >
+                <ChevronRight size={21} strokeWidth={2.2} />
+              </button>
+
+              {/* Dots */}
+              <div className="home-hero-dots">
+                {validBanners.map(
+                  (banner, index) => (
+                    <button
+                      key={
+                        banner.id || index
+                      }
+                      type="button"
+                      className={
+                        index === active
+                          ? 'is-active'
+                          : ''
+                      }
+                      aria-label={`Show banner ${
+                        index + 1
+                      }`}
+                      aria-current={
+                        index === active
+                          ? 'true'
+                          : undefined
+                      }
+                      onClick={() => {
+                        setIsPaused(true);
+                        goTo(index);
+
+                        window.setTimeout(
+                          () => {
+                            setIsPaused(false);
+                          },
+                          1200
+                        );
+                      }}
+                    />
+                  )
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
+      {/* =========================================
+          RIGHT STATIC PROMOTIONAL BANNER
+          NO SLIDER
+          NO ARROW
+          NO DOT
+          ========================================= */}
+
+      {rightBanner?.image && (
+        <aside
+          className="home-hero-right"
+          aria-label="Promotional banner"
+        >
+          <RightBanner
+            banner={rightBanner}
+          />
+        </aside>
+      )}
     </section>
   );
 }

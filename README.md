@@ -1,11 +1,11 @@
-# Ponnomela
+# Prenaxo
 
 A full-stack Next.js App Router storefront for a modern Bangladeshi marketplace. The UI is ready for local development and the data layer uses Prisma with MySQL.
 
 ## Setup
 
 1. Copy `.env.local.example` to `.env.local` and set `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL`.
-2. Create the MySQL database: `CREATE DATABASE ponnomela;`
+2. Create the MySQL database: `CREATE DATABASE prenaxo_db;`
 3. Generate the client and apply the schema: `npx prisma generate` then `npx prisma migrate dev --name init`.
 4. Seed sample data: `npx prisma db seed`.
 5. Start development: `npm run dev`.
@@ -18,3 +18,4 @@ Storefront: `/`, `/shop`, `/product/[slug]`, `/cart`, `/checkout`, `/wishlist`, 
 Admin workspace: `/admin`, `/admin/products`, `/admin/categories`, `/admin/orders`, `/admin/customers`.
 
 Payment providers are intentionally represented by the order payment method so bKash, Nagad, or SSLCommerz can be added behind the order API without changing the storefront contract.
+# prenaxo

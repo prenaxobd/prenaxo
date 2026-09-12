@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faCartShopping, faChevronDown, faHeart, faMagnifyingGlass, faMapPin, faRightFromBracket, faUser, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faCartShopping, faChevronDown, faHeart, faLocation, faLocationArrow, faMagnifyingGlass, faRightFromBracket, faSearchLocation, faUser, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useCart } from '@/components/cart/CartProvider';
 
 const placeholderMessages = ['Search for products...', 'Search by category...', 'Search by brand...', 'Search for Honey...', 'Search for Dates...', 'Search for Rice...'];
@@ -148,7 +148,7 @@ export default function Header() {
   const searchBrands = results.brands.map((item) => ({ ...item, href: `/shop?brand=${encodeURIComponent(item.slug)}` }));
 
   return <>
-    <div className="announcement">Fast delivery across Bangladesh <span>•</span> Secure payment <span>•</span> Customer support</div>
+    {/* <div className="announcement">Fast delivery across Bangladesh <span>•</span> Secure payment <span>•</span> Customer support</div> */}
     <header className="header">
       <div className="container header-row">
         <button className="mobile-menu-button" type="button" aria-label="Open menu" aria-expanded={menuOpen} aria-controls="mobile-store-menu" onClick={() => setMenuOpen(true)}><FontAwesomeIcon icon={faBars} /></button>
@@ -159,7 +159,7 @@ export default function Header() {
           {query && (results.products.length || results.categories.length || results.brands.length) ? <div className="header-search-results"><ResultGroup title="Products" items={searchResults} children={() => setQuery('')} /><ResultGroup title="Categories" items={searchCategories} children={() => setQuery('')} /><ResultGroup title="Brands" items={searchBrands} children={() => setQuery('')} /></div> : null}
         </form>
         <div className="nav-actions">
-          <Link className="icon-link track-link" href="/track-order"><FontAwesomeIcon icon={faMapPin} /><span>Track order</span></Link>
+          <Link className="icon-link track-link" href="/track-order"><FontAwesomeIcon icon={faLocationArrow} /><span>Track order</span></Link>
           <Link className="icon-link account-link" href="/account" aria-label={user ? `Account of ${userName}` : 'Account'}><span className="header-action-icon">{user?.image ? <img src={user.image} alt={userName} className="header-profile-image" /> : <FontAwesomeIcon icon={faUser} />}</span><span className="account-text">{userLoading ? 'Account' : userName}</span></Link>
           <Link className="icon-link wishlist-link" href="/wishlist"><span className="header-action-icon"><FontAwesomeIcon icon={faHeart} /></span><span className="account-text">Wishlist</span><i className="count wishlist-count">{wishlistCount > 99 ? '99+' : wishlistCount}</i></Link>
           <button className="icon-link cart-trigger" type="button" onClick={() => cart?.open()}><span className="header-action-icon"><FontAwesomeIcon icon={faCartShopping} /></span><span className="account-text">Bag</span><i className="count">{cart?.count || 0}</i></button>
