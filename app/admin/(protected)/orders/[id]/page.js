@@ -8,7 +8,7 @@ export default async function AdminOrderDetails({ params }) {
     where: { id },
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
-      items: { include: { product: { select: { id: true, name: true, sku: true, images: { orderBy: { sortOrder: 'asc' }, take: 1 } } } } },
+      items: { include: { variant: true, product: { select: { id: true, name: true, sku: true, images: { orderBy: { sortOrder: 'asc' }, take: 1 }, attributeValues: { include: { attributeValue: { include: { attribute: true } } } } } } } },
     },
   });
   if (!order) notFound();

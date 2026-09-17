@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart } from 'lucide-react';
+import { ArrowLeft, Heart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import ProductCard from '@/components/ProductCard';
@@ -111,7 +111,17 @@ export default function Wishlist() {
           Saved things
         </div>
 
-        <h1>Wishlist</h1>
+        <div className="wishlist-page-header">
+          <h1>Wishlist</h1>
+
+          <Link
+            className="wishlist-account-button"
+            href="/account"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            Back to Account
+          </Link>
+        </div>
 
         <div
           className="form"
@@ -142,7 +152,17 @@ export default function Wishlist() {
         Saved things
       </div>
 
-      <h1>Wishlist</h1>
+      <div className="wishlist-page-header">
+        <h1>Wishlist</h1>
+
+        <Link
+          className="wishlist-account-button"
+          href="/account"
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          Back to Account
+        </Link>
+      </div>
 
 
       {products.length === 0 ? (

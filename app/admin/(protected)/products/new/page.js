@@ -18,10 +18,7 @@ export default async function NewProductPage({
         orderBy: {
           name: 'asc',
         },
-        select: {
-          id: true,
-          name: true,
-        },
+        include: { attributes: { include: { attribute: { include: { values: { where: { active: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] } } } } } },
       }),
 
       prisma.brand.findMany({
@@ -62,6 +59,8 @@ export default async function NewProductPage({
                   sortOrder: 'asc',
                 },
               },
+              variants: { include: { attributeValues: true } },
+              attributeValues: true,
             },
           })
         : null,

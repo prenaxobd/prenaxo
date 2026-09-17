@@ -52,6 +52,13 @@ const navigation = [
   },
 
   {
+    label: 'Attributes',
+    href: '/admin/attributes',
+    icon: faTags,
+    permission: 'categories.view',
+  },
+
+  {
     label: 'Brands',
     href: '/admin/brands',
     icon: faTags,

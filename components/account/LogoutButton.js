@@ -1,5 +1,8 @@
 'use client';
 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
+
 export default function LogoutButton() {
   async function logout() {
     try {
@@ -19,7 +22,7 @@ export default function LogoutButton() {
       onClick={logout}
       className="account-logout"
     >
-      <span>→</span>
+      <span><FontAwesomeIcon icon={faRightFromBracket} aria-hidden="true" /></span>
       Logout
     </button>
   );

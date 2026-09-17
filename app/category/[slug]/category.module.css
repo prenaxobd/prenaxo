@@ -1,0 +1,20 @@
+.page { padding: 28px 0 76px; background: #f8faf9; }
+.hero { position: relative; min-height: 330px; display: flex; align-items: center; overflow: hidden; margin-bottom: 28px; padding: 42px 56px; border-radius: 18px; background: #f4e8d4 url('/uploads/lamp_category_bg.webp') center / cover no-repeat; }
+.hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255, 250, 241, .97) 0%, rgba(255, 250, 241, .78) 45%, rgba(255, 250, 241, .12) 100%); }
+.heroContent { position: relative; z-index: 1; width: min(100%, 500px); }
+.eyebrow { display: inline-block; color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.hero h1 { margin: 12px 0 12px; color: #172033; font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(38px, 5vw, 62px); line-height: 1; letter-spacing: -.06em; }
+.hero h1 strong { color: var(--primary); }
+.hero p { max-width: 410px; margin: 0; color: #596575; font-size: 15px; line-height: 1.65; }
+.heroButton { display: inline-flex; align-items: center; gap: 8px; margin-top: 24px; padding: 12px 18px; border-radius: 8px; background: var(--primary); color: #fff; font-size: 12px; font-weight: 800; text-decoration: none; box-shadow: 0 10px 22px rgba(214, 40, 40, .18); }
+.heroButton:hover { background: var(--primary-strong); }
+.contentHead { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.contentHead h2 { margin: 4px 0 0; color: #172033; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; letter-spacing: -.04em; }
+.count { color: #7d8792; font-size: 12px; }
+.products :global(.shop-grid) { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 28px; }
+.pagination a, .pagination span { display: inline-flex; min-width: 34px; height: 34px; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid #e1e7e4; border-radius: 7px; background: #fff; color: #52615a; font-size: 11px; font-weight: 700; text-decoration: none; }
+.pagination a:hover, .pagination .active { border-color: var(--primary); background: var(--primary); color: #fff; }
+.pagination .disabled { color: #b5bdb9; cursor: not-allowed; }
+@media (max-width: 1000px) { .products :global(.shop-grid) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .page { padding-top: 14px; } .hero { min-height: 330px; margin-bottom: 22px; padding: 30px 24px; background-position: 62% center; } .hero::after { background: linear-gradient(90deg, rgba(255, 250, 241, .97) 0%, rgba(255, 250, 241, .76) 68%, rgba(255, 250, 241, .16) 100%); } .hero h1 { font-size: 40px; } .hero p { max-width: 280px; font-size: 13px; } .contentHead h2 { font-size: 20px; } .products :global(.shop-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .pagination { margin-top: 22px; gap: 4px; } .pagination a, .pagination span { min-width: 31px; height: 31px; padding: 0 7px; font-size: 10px; } }

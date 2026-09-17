@@ -124,14 +124,7 @@ export default function About() {
               </a>
             </div>
 
-            <div className="hero-stats">
-              {heroStats.map((stat) => (
-                <div key={stat.label} className="hero-stat">
-                  <strong>{stat.value}</strong>
-                  <small>{stat.label}</small>
-                </div>
-              ))}
-            </div>
+ 
           </div>
 
 

@@ -812,15 +812,15 @@ export default function Header() {
 
             {/* ACCOUNT */}
             <Link
-              className="icon-link account-link"
-              href="/account"
+              className="icon-link  account-link"
+              href={user ? '/account' : '/register'}
               aria-label={
                 user
                   ? `Account of ${userName}`
                   : 'Account'
               }
             >
-              <span className="header-action-icon">
+              <span className="header-action-icon account-icon">
                 {user?.image && !userImageFailed ? (
                   <img
                     src={user.image}
@@ -1176,10 +1176,10 @@ export default function Header() {
 
                 <Link
                   className="mobile-login-link"
-                  href="/login"
+                  href="/register"
                   onClick={closePanels}
                 >
-                  Login
+                  Create account
                 </Link>
               </>
             )}

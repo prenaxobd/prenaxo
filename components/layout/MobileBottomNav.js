@@ -273,7 +273,7 @@ export default function MobileBottomNav() {
 
       {/* USER */}
       <Link
-        href="/account"
+        href={isUser ? '/account' : '/register'}
         className={isUser ? 'active' : ''}
         aria-label="Account"
       >

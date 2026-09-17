@@ -6,14 +6,7 @@ export default async function PaymentMethodsPage() {
   await ensureDefaultPaymentMethods();
 
   const methods = await prisma.paymentMethod.findMany({
-    orderBy: [
-      {
-        sortOrder: 'asc',
-      },
-      {
-        createdAt: 'asc',
-      },
-    ],
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
   });
 
   const initialMethods = methods.map((method) => ({
@@ -35,22 +28,14 @@ export default async function PaymentMethodsPage() {
 
   return (
     <>
-      <div className="eyebrow" style={{ color: 'var(--coral)' }}>
-        Store control
+      <div className="admin-page-heading payment-methods-heading">
+        <div>
+          <div className="eyebrow">Store control</div>
+          <h1>Payment Methods</h1>
+          <p className="muted">Manage payment options and account details shown at checkout.</p>
+        </div>
+        <span className="payment-methods-count">{initialMethods.length} methods</span>
       </div>
-
-      <h1>Payment Methods</h1>
-
-      <p
-        style={{
-          marginBottom: 24,
-          color: 'var(--muted)',
-        }}
-      >
-        Manage Cash on Delivery, bKash, Nagad and bank payment details shown at
-        checkout.
-      </p>
-
       <PaymentMethodsManager initialMethods={initialMethods} />
     </>
   );

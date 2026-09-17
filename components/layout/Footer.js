@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getSiteSettings } from '@/lib/seo';
+import { DEFAULT_CONTACT_EMAIL, getSiteSettings, normalizeSiteSettings } from '@/lib/seo';
 import { prisma } from '@/lib/prisma';
 
 async function getTrustedPurposeMessage() {
@@ -18,10 +18,11 @@ export default async function Footer() {
     }).catch(() => []),
   ]);
 
-  const siteName = settings?.siteName || 'Prenaxo';
-  const contactPhone = settings?.contactPhone || '+880 1608069154';
-  const contactEmail = settings?.contactEmail || 'hello@prenaxo.com';
-  const logoUrl = settings?.logo || '/uploads/prenaxo-logo.png';
+  const normalizedSettings = normalizeSiteSettings(settings);
+  const siteName = normalizedSettings?.siteName || 'Prenaxo';
+  const contactPhone = normalizedSettings?.contactPhone || '+880 1608069154';
+  const contactEmail = normalizedSettings?.contactEmail || DEFAULT_CONTACT_EMAIL;
+  const logoUrl = normalizedSettings?.logo || '/uploads/prenaxo-logo.png';
   const year = new Date().getFullYear();
 
   const trustMessage = await getTrustedPurposeMessage();

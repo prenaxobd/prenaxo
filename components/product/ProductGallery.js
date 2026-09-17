@@ -6,6 +6,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize2,
+  Copy,
+  MessageCircle,
+  X,
 } from 'lucide-react';
 
 import { useState } from 'react';
@@ -18,6 +21,8 @@ export default function ProductGallery({
 
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const current =
     images[active]?.url || null;
@@ -38,13 +43,44 @@ export default function ProductGallery({
     );
   }
 
-  async function shareProduct() {
+  function productUrl() {
+    return `${window.location.origin}/product/${product.slug}`;
+  }
+
+  function openFacebook() {
+    const url = encodeURIComponent(productUrl());
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'noopener,noreferrer');
+    setShareOpen(false);
+  }
+
+  function openWhatsApp() {
+    const message = `${product.name}\n\n${productUrl()}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+    setShareOpen(false);
+  }
+
+  async function copyProductUrl() {
     try {
+      await navigator.clipboard.writeText(productUrl());
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  async function nativeShare() {
+    try {
+      if (typeof navigator.share !== 'function') {
+        await copyProductUrl();
+        return;
+      }
+
       await navigator.share({
         title: product.name,
-        text: product.shortDescription || product.name,
-        url: window.location.href,
+        url: productUrl(),
       });
+      setShareOpen(false);
     } catch {
       // User cancelled sharing.
     }
@@ -89,7 +125,7 @@ export default function ProductGallery({
             type="button"
             className="gallery-share"
             aria-label="Share product"
-            onClick={shareProduct}
+            onClick={() => setShareOpen(true)}
           >
             <Share2 size={18} />
           </button>
@@ -128,6 +164,36 @@ export default function ProductGallery({
           )}
 
         </div>
+
+        {shareOpen && (
+          <div className="product-share-popup" role="dialog" aria-label="Share product">
+            <div className="product-share-preview">
+              {product.images?.[0]?.url && (
+                <img src={product.images[0].url} alt="" />
+              )}
+              <strong>{product.name}</strong>
+            </div>
+
+            <button type="button" className="product-share-close" onClick={() => setShareOpen(false)} aria-label="Close share options">
+              <X size={16} />
+            </button>
+
+            <div className="product-share-options">
+              <button type="button" onClick={openFacebook}>
+                <Share2 size={17} /> Facebook
+              </button>
+              <button type="button" onClick={openWhatsApp}>
+                <MessageCircle size={17} /> WhatsApp
+              </button>
+              <button type="button" onClick={copyProductUrl}>
+                <Copy size={17} /> {copied ? 'Copied' : 'Copy Link'}
+              </button>
+              <button type="button" onClick={nativeShare}>
+                <Share2 size={17} /> More
+              </button>
+            </div>
+          </div>
+        )}
 
 
         {/* THUMBNAILS */}

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import StickyCartButton from '@/components/StickyCartButton';
-import StickyWhatsAppButton from '@/components/layout/StickyWhatsAppButton';
+import HelpCenterButton from '@/components/layout/HelpCenterButton';
 import { CartProvider } from '@/components/cart/CartProvider';
 
 export default function StorefrontShell({ children, footer }) {
@@ -29,8 +29,8 @@ export default function StorefrontShell({ children, footer }) {
       {footer}
       <MobileBottomNav />
 
-      {/* Sticky WhatsApp button - appears on all customer pages */}
-      <StickyWhatsAppButton />
+      {/* Help center appears on all customer-facing pages */}
+      <HelpCenterButton />
 
       {/* Sticky cart checkout page-এ দেখাবে না */}
       {!isCheckout && <StickyCartButton />}

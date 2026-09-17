@@ -578,153 +578,27 @@ export default function PaymentMethodsManager({
             No payment methods found.
           </div>
         ) : (
-          <div className={styles.list}>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Method</th>
+                  <th>Account details</th>
+                  <th>Order</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
             {methods.map((method) => (
-              <div
+              <tr
                 key={method.id}
-                className={styles.card}
               >
-                <div className={styles.cardTop}>
-                  <div className={styles.cardInfo}>
-                    <div
-                      className={styles.cardTitleRow}
-                    >
-                      <h3>
-                        {method.name}
-                      </h3>
-
-                      <span
-                        className={styles.code}
-                      >
-                        {method.code}
-                      </span>
-
-                      <span
-                        className={
-                          method.active
-                            ? `${styles.status} ${styles.activeStatus}`
-                            : `${styles.status} ${styles.disabledStatus}`
-                        }
-                      >
-                        {method.active
-                          ? 'Active'
-                          : 'Disabled'}
-                      </span>
-                    </div>
-
-                    {method.description && (
-                      <p
-                        className={
-                          styles.description
-                        }
-                      >
-                        {method.description}
-                      </p>
-                    )}
-
-                    <div
-                      className={
-                        styles.details
-                      }
-                    >
-                      {method.accountNumber && (
-                        <div
-                          className={
-                            styles.detail
-                          }
-                        >
-                          <strong>
-                            Account:
-                          </strong>{' '}
-                          {method.accountNumber}
-                        </div>
-                      )}
-
-                      {method.accountName && (
-                        <div
-                          className={
-                            styles.detail
-                          }
-                        >
-                          <strong>
-                            Name:
-                          </strong>{' '}
-                          {method.accountName}
-                        </div>
-                      )}
-
-                      {method.bankName && (
-                        <div
-                          className={
-                            styles.detail
-                          }
-                        >
-                          <strong>
-                            Bank:
-                          </strong>{' '}
-                          {method.bankName}
-                        </div>
-                      )}
-
-                      {method.branchName && (
-                        <div
-                          className={
-                            styles.detail
-                          }
-                        >
-                          <strong>
-                            Branch:
-                          </strong>{' '}
-                          {method.branchName}
-                        </div>
-                      )}
-
-                      {method.routingNumber && (
-                        <div
-                          className={
-                            styles.detail
-                          }
-                        >
-                          <strong>
-                            Routing:
-                          </strong>{' '}
-                          {method.routingNumber}
-                        </div>
-                      )}
-
-                      <div
-                        className={
-                          styles.detail
-                        }
-                      >
-                        <strong>
-                          Sort:
-                        </strong>{' '}
-                        {method.sortOrder}
-                      </div>
-                    </div>
-
-                    {method.instructions && (
-                      <div
-                        className={
-                          styles.instructions
-                        }
-                      >
-                        <strong>
-                          Instructions:
-                        </strong>{' '}
-                        {method.instructions}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* ACTIONS */}
-
-                  <div
-                    className={
-                      styles.cardActions
-                    }
-                  >
+                <td><div className={styles.methodIdentity}><strong>{method.name}</strong><span className={styles.code}>{method.code}</span>{method.description && <small>{method.description}</small>}</div></td>
+                <td><div className={styles.accountSummary}>{method.accountNumber && <span><b>Account</b>{method.accountNumber}</span>}{method.accountName && <span><b>Name</b>{method.accountName}</span>}{method.bankName && <span><b>Bank</b>{method.bankName}</span>}{!method.accountNumber && !method.accountName && !method.bankName && <em>No account details</em>}</div></td>
+                <td><span className={styles.sortBadge}>#{String(method.sortOrder).padStart(2, '0')}</span></td>
+                <td><span className={method.active ? `${styles.status} ${styles.activeStatus}` : `${styles.status} ${styles.disabledStatus}`}>{method.active ? 'Active' : 'Disabled'}</span></td>
+                <td><div className={styles.tableActions}>
                     <button
                       type="button"
                       className={`${styles.button} ${styles.secondary}`}
@@ -761,10 +635,11 @@ export default function PaymentMethodsManager({
                         Disable
                       </button>
                     )}
-                  </div>
-                </div>
-              </div>
+                  </div></td>
+              </tr>
             ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

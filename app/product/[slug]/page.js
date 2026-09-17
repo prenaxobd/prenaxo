@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import './product-page.css';
 
 import {
   ChevronRight,
@@ -19,6 +20,8 @@ import ProductReviews from '@/components/product/ProductReviews';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductActions from '@/components/product/ProductActions';
 import RelatedProducts from '@/components/product/RelatedProducts';
+import DeliveryChecker from '@/components/product/DeliveryChecker';
+import ProductDetailsTabs from '@/components/product/ProductDetailsTabs';
 
 import {
   SITE_NAME,
@@ -61,65 +64,24 @@ export async function generateMetadata({
     product.seo;
 
 
-  const title =
-    seo?.metaTitle ||
-    `${product.name} | ${SITE_NAME}`;
-
-
-  const description =
-    seo?.metaDescription ||
-    truncate(
-      cleanText(
-        product.shortDescription ||
-          product.description
-      ) ||
-        `Shop ${product.name} online at ${SITE_NAME}.`,
-      160
-    );
+  const title = product.name;
 
 
   const canonical =
-    seo?.canonicalUrl ||
     absoluteUrl(
-      `/products/${product.slug}`
+      `/product/${product.slug}`
     );
 
 
-  const image =
-    seo?.ogImage
-      ? absoluteUrl(
-          seo.ogImage
-        )
-      : product.images?.[0]?.url
+  const image = product.images?.[0]?.url
       ? absoluteUrl(
           product.images[0].url
         )
-      : absoluteUrl(
-          '/uploads/site_icon.png'
-        );
-
-
-  const ogTitle =
-    seo?.ogTitle ||
-    title;
-
-
-  const ogDescription =
-    seo?.ogDescription ||
-    description;
+      : undefined;
 
 
   return {
     title,
-
-    description,
-
-    keywords:
-      seo?.focusKeyword
-        ? [
-            seo.focusKeyword,
-          ]
-        : undefined,
 
     alternates: {
       canonical,
@@ -133,8 +95,8 @@ export async function generateMetadata({
       locale: 'en_BD',
       url: canonical,
       siteName: SITE_NAME,
-      title: ogTitle,
-      description: ogDescription,
+      title,
+      description: null,
 
       images: image
         ? [
@@ -151,24 +113,10 @@ export async function generateMetadata({
     twitter: {
       card: 'summary_large_image',
 
-      title:
-        seo?.twitterTitle ||
-        ogTitle,
-
-      description:
-        seo?.twitterDescription ||
-        ogDescription,
+      title,
 
       images:
-        seo?.twitterImage
-          ? [
-              absoluteUrl(
-                seo.twitterImage
-              ),
-            ]
-          : image
-          ? [image]
-          : [],
+        image ? [image] : [],
     },
   };
 }
@@ -710,7 +658,9 @@ export default async function ProductPage({
 
 
   const inStock =
-    stock > 0;
+    product.variants?.length > 0
+      ? product.variants.some((variant) => Number(variant.stock || 0) > 0)
+      : stock > 0;
 
 
   const shortDescription =
@@ -854,6 +804,21 @@ export default async function ProductPage({
           </h1>
 
 
+          {shortDescription && (
+            <div className="product-short-description">
+
+              <div className="short-description-title">
+                About this product
+              </div>
+
+              <p>
+                {shortDescription}
+              </p>
+
+            </div>
+          )}
+
+
           <a
             href="#reviews"
             className="product-rating product-rating-link"
@@ -961,21 +926,6 @@ export default async function ProductPage({
           </div>
 
 
-          {shortDescription && (
-            <div className="product-short-description">
-
-              <div className="short-description-title">
-                About this product
-              </div>
-
-              <p>
-                {shortDescription}
-              </p>
-
-            </div>
-          )}
-
-
           {product.productType ===
             'COMBO' &&
             product.comboItems?.length >
@@ -1026,53 +976,6 @@ export default async function ProductPage({
 
               </div>
             )}
-
-
-          {product.variants?.length >
-            0 && (
-            <div className="product-variation">
-
-              <div className="variation-title">
-                Available Options
-              </div>
-
-              <div className="variation-options">
-
-                {product.variants.map(
-                  (variant) => (
-                    <button
-                      type="button"
-                      key={variant.id}
-                      className="variation-option"
-                    >
-
-                      {variant.size && (
-                        <span>
-                          {variant.size}
-                        </span>
-                      )}
-
-                      {variant.color && (
-                        <span>
-                          {variant.color}
-                        </span>
-                      )}
-
-                      {!variant.size &&
-                        !variant.color && (
-                          <span>
-                            Option
-                          </span>
-                        )}
-
-                    </button>
-                  )
-                )}
-
-              </div>
-
-            </div>
-          )}
 
 
           <div className="product-action-area">
@@ -1146,6 +1049,8 @@ export default async function ProductPage({
 
           </div>
 
+          <DeliveryChecker />
+
 
           <div className="trust-features">
 
@@ -1188,195 +1093,7 @@ export default async function ProductPage({
       ========================================= */}
 
       <section className="container product-details-section">
-
-        <div className="product-details-card">
-
-          <div className="product-description-block">
-
-            <div className="details-eyebrow">
-              PRODUCT INFORMATION
-            </div>
-
-            <h2>
-              Product Description
-            </h2>
-
-            {product.description ? (
-              <div
-                className="full-product-description"
-                dangerouslySetInnerHTML={{
-                  __html:
-                    product.description,
-                }}
-              />
-            ) : (
-              <p className="muted">
-                Product description is
-                not available yet.
-              </p>
-            )}
-
-          </div>
-
-
-          <div className="specifications">
-
-            <div className="details-eyebrow">
-              PRODUCT DETAILS
-            </div>
-
-            <h2>
-              Specifications
-            </h2>
-
-            <div className="spec-grid">
-
-              {(product.brandRelation?.name ||
-                product.brand) && (
-                <div>
-
-                  <span>
-                    Brand
-                  </span>
-
-                  <strong>
-                    {product.brandRelation?.name ||
-                      product.brand}
-                  </strong>
-
-                </div>
-              )}
-
-
-              {product.category?.name && (
-                <div>
-
-                  <span>
-                    Category
-                  </span>
-
-                  <strong>
-                    {product.category.name}
-                  </strong>
-
-                </div>
-              )}
-
-
-              <div>
-
-                <span>
-                  SKU
-                </span>
-
-                <strong>
-                  {sku}
-                </strong>
-
-              </div>
-
-
-              <div>
-
-                <span>
-                  Availability
-                </span>
-
-                <strong
-                  className={
-                    inStock
-                      ? 'spec-in-stock'
-                      : 'spec-out-stock'
-                  }
-                >
-                  {inStock
-                    ? 'In Stock'
-                    : 'Out of Stock'}
-                </strong>
-
-              </div>
-
-
-              {product.variants?.length >
-                0 && (
-                <div>
-
-                  <span>
-                    Options
-                  </span>
-
-                  <strong>
-                    {product.variants.length}{' '}
-                    options
-                  </strong>
-
-                </div>
-              )}
-
-            </div>
-
-          </div>
-
-
-          <div className="delivery-return-section">
-
-            <div className="details-eyebrow">
-              CUSTOMER CARE
-            </div>
-
-            <h2>
-              Delivery & Return
-            </h2>
-
-            <div className="delivery-return-grid">
-
-              <div className="delivery-return-card">
-
-                <Truck size={22} />
-
-                <div>
-
-                  <h3>
-                    Fast Delivery
-                  </h3>
-
-                  <p>
-                    Your order is carefully
-                    packed and delivered safely
-                    to your doorstep.
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              <div className="delivery-return-card">
-
-                <ShieldCheck size={22} />
-
-                <div>
-
-                  <h3>
-                    Quality Guarantee
-                  </h3>
-
-                  <p>
-                    Every product is checked
-                    before it leaves our
-                    warehouse.
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
+        <ProductDetailsTabs product={product} sku={sku} inStock={inStock} />
       </section>
 
 
@@ -1399,6 +1116,29 @@ export default async function ProductPage({
           }
         />
 
+      </section>
+
+      <section className="container product-faq-section" aria-labelledby="product-faq-title">
+        <div className="section-heading">
+          <div>
+            <span>NEED TO KNOW</span>
+            <h2 id="product-faq-title">Frequently Asked Questions</h2>
+          </div>
+        </div>
+        <div className="product-faq-list">
+          <details>
+            <summary>What sizes and colors are available?</summary>
+            <p>Select from the options shown above when they are configured for this product.</p>
+          </details>
+          <details>
+            <summary>How can I check delivery availability?</summary>
+            <p>Enter your area or district in the delivery checker to see the available delivery information.</p>
+          </details>
+          <details>
+            <summary>What is the return policy?</summary>
+            <p>Returns are handled according to the Prenaxo return policy. Contact customer support if there is a problem with your order.</p>
+          </details>
+        </div>
       </section>
 
 

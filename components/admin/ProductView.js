@@ -8,6 +8,7 @@ import {
   Package,
   Tag,
   Layers,
+  SlidersHorizontal,
   CheckCircle2,
   XCircle,
   CalendarDays,
@@ -47,6 +48,29 @@ export default function ProductView({
           product.reviews.length
         ).toFixed(1)
       : '0.0';
+
+  const attributeGroups = Object.values(
+    (product.attributeValues || []).reduce(
+      (groups, item) => {
+        const attribute = item.attributeValue?.attribute;
+        const key = attribute?.id || 'options';
+
+        if (!groups[key]) {
+          groups[key] = {
+            name: attribute?.name || 'Options',
+            values: [],
+          };
+        }
+
+        if (item.attributeValue?.name) {
+          groups[key].values.push(item.attributeValue.name);
+        }
+
+        return groups;
+      },
+      {}
+    )
+  );
 
   return (
     <div className={styles.page}>
@@ -288,6 +312,77 @@ export default function ProductView({
               value={`${averageRating} / 5`}
             />
           </div>
+        </section>
+
+        {/* VARIANTS */}
+
+        <section className={styles.fullCard}>
+          <div className={styles.sectionTitle}>
+            <span />
+            <SlidersHorizontal size={15} />
+            Options &amp; Variants
+            <small className={styles.sectionMeta}>
+              {product.variants?.length || 0} configured variants
+            </small>
+          </div>
+
+          {attributeGroups.length > 0 && (
+            <div className={styles.attributeSummary}>
+              {attributeGroups.map((group) => (
+                <div className={styles.attributeGroup} key={group.name}>
+                  <strong>{group.name}</strong>
+                  <div className={styles.optionChips}>
+                    {[...new Set(group.values)].map((value) => (
+                      <span className={styles.optionChip} key={value}>
+                        {value}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {product.variants?.length > 0 ? (
+            <div className={styles.variantGrid}>
+              {product.variants.map((variant, index) => {
+                const relationLabels = (variant.attributeValues || [])
+                  .map((item) => {
+                    const name = item.attributeValue?.name;
+                    const attribute = item.attributeValue?.attribute?.name;
+                    return name ? `${attribute || 'Option'}: ${name}` : null;
+                  })
+                  .filter(Boolean);
+                const legacyLabels = [
+                  variant.color ? `Color: ${variant.color}` : null,
+                  variant.size ? `Size: ${variant.size}` : null,
+                ].filter(Boolean);
+                const labels = relationLabels.length > 0 ? relationLabels : legacyLabels;
+
+                return (
+                  <div className={styles.variantCard} key={variant.id}>
+                    <div className={styles.variantHeading}>
+                      <strong>Variant {String(index + 1).padStart(2, '0')}</strong>
+                      <span className={variant.stock > 0 ? styles.variantInStock : styles.variantOutStock}>
+                        {variant.stock > 0 ? `${variant.stock} in stock` : 'Out of stock'}
+                      </span>
+                    </div>
+                    <div className={styles.optionChips}>
+                      {labels.length > 0 ? labels.map((label) => (
+                        <span className={styles.optionChip} key={label}>{label}</span>
+                      )) : <span className={styles.mutedChip}>Base product</span>}
+                    </div>
+                    <div className={styles.variantFooter}>
+                      <span>SKU {variant.sku || '—'}</span>
+                      <strong>৳{Number(variant.price ?? price).toLocaleString('en-BD')}</strong>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={styles.emptyVariants}>No separate variants configured for this product.</div>
+          )}
         </section>
 
         {/* DESCRIPTION */}

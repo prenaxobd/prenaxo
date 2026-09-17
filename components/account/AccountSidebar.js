@@ -1,4 +1,15 @@
 import Link from 'next/link';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faBoxOpen,
+  faHeart,
+  faHouse,
+  faLocationDot,
+  faLock,
+  faCircleQuestion,
+  faStar,
+  faUser,
+} from '@fortawesome/free-solid-svg-icons';
 import LogoutButton from './LogoutButton';
 
 export default function AccountSidebar({ user }) {
@@ -11,7 +22,7 @@ export default function AccountSidebar({ user }) {
           href="/account"
           className="account-nav-item active"
         >
-          <span>⌂</span>
+          <span><FontAwesomeIcon icon={faHouse} aria-hidden="true" /></span>
           Dashboard
         </Link>
 
@@ -19,7 +30,7 @@ export default function AccountSidebar({ user }) {
           href="/account/profile"
           className="account-nav-item"
         >
-          <span>◉</span>
+          <span><FontAwesomeIcon icon={faUser} aria-hidden="true" /></span>
           Profile Information
         </Link>
 
@@ -27,7 +38,7 @@ export default function AccountSidebar({ user }) {
           href="/account/orders"
           className="account-nav-item"
         >
-          <span>▣</span>
+          <span><FontAwesomeIcon icon={faBoxOpen} aria-hidden="true" /></span>
           My Orders
         </Link>
 
@@ -35,7 +46,7 @@ export default function AccountSidebar({ user }) {
           href="/wishlist"
           className="account-nav-item"
         >
-          <span>♡</span>
+          <span><FontAwesomeIcon icon={faHeart} aria-hidden="true" /></span>
           Wishlist
         </Link>
 
@@ -43,7 +54,7 @@ export default function AccountSidebar({ user }) {
           href="/account/addresses"
           className="account-nav-item"
         >
-          <span>⌖</span>
+          <span><FontAwesomeIcon icon={faLocationDot} aria-hidden="true" /></span>
           Addresses
         </Link>
 
@@ -51,7 +62,7 @@ export default function AccountSidebar({ user }) {
           href="/account/password"
           className="account-nav-item"
         >
-          <span>▣</span>
+          <span><FontAwesomeIcon icon={faLock} aria-hidden="true" /></span>
           Change Password
         </Link>
 
@@ -59,7 +70,7 @@ export default function AccountSidebar({ user }) {
           href="/account/reviews"
           className="account-nav-item"
         >
-          <span>☆</span>
+          <span><FontAwesomeIcon icon={faStar} aria-hidden="true" /></span>
           My Reviews
         </Link>
 
@@ -70,7 +81,9 @@ export default function AccountSidebar({ user }) {
       </nav>
 
       <div className="account-help-card">
-        <div className="help-icon">?</div>
+        <div className="help-icon">
+          <FontAwesomeIcon icon={faCircleQuestion} aria-hidden="true" />
+        </div>
 
         <h3>Need Help?</h3>
 

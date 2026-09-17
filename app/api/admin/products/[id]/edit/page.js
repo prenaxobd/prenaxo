@@ -22,7 +22,8 @@ export default async function EditProductPage({
               sortOrder: 'asc',
             },
           },
-          variants: true,
+          variants: { include: { attributeValues: true } },
+          attributeValues: { include: { attributeValue: true } },
         },
       }),
 
@@ -33,9 +34,19 @@ export default async function EditProductPage({
         orderBy: {
           name: 'asc',
         },
-        select: {
-          id: true,
-          name: true,
+        include: {
+          attributes: {
+            include: {
+              attribute: {
+                include: {
+                  values: {
+                    where: { active: true },
+                    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+                  },
+                },
+              },
+            },
+          },
         },
       }),
 

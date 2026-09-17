@@ -325,6 +325,121 @@
   word-break: break-word;
 }
 
+.sectionMeta {
+  margin-left: auto;
+  color: #8b98a9;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.attributeSummary {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 13px;
+  border: 1px solid #edf1f5;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.attributeGroup {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.attributeGroup > strong {
+  min-width: 70px;
+  color: #58677c;
+  font-size: 10px;
+}
+
+.optionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.optionChip,
+.mutedChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 0 8px;
+  border: 1px solid #d7e8df;
+  border-radius: 5px;
+  background: #f0faf5;
+  color: #087a4b;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mutedChip {
+  border-color: #e2e7ed;
+  background: #f7f9fb;
+  color: #8491a1;
+}
+
+.variantGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.variantCard {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #e5ebf0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.variantHeading,
+.variantFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.variantHeading strong {
+  color: #26364c;
+  font-size: 11px;
+}
+
+.variantInStock,
+.variantOutStock {
+  color: #078955;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.variantOutStock {
+  color: #bd5861;
+}
+
+.variantFooter {
+  padding-top: 10px;
+  border-top: 1px solid #edf1f5;
+  color: #8a96a6;
+  font-size: 9px;
+}
+
+.variantFooter strong {
+  color: #07965a;
+  font-size: 13px;
+}
+
+.emptyVariants {
+  padding: 16px;
+  border: 1px dashed #dbe3ea;
+  border-radius: 8px;
+  color: #8995a6;
+  font-size: 11px;
+  text-align: center;
+}
+
 @media (max-width: 950px) {
   .grid {
     grid-template-columns: 1fr;
@@ -355,5 +470,15 @@
 
   .stats {
     grid-template-columns: 1fr;
+  }
+
+  .attributeGroup {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .sectionMeta {
+    display: none;
   }
 }

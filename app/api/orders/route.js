@@ -33,7 +33,7 @@ export async function POST(request) {
     const order = await prisma.$transaction(async (tx) => {
       const cart = await tx.cart.findUnique({
         where: { userId: user.id },
-        include: { items: { include: { product: true } } },
+        include: { items: { include: { product: true, variant: true } } },
       });
 
       if (!cart?.items.length) {
@@ -43,11 +43,12 @@ export async function POST(request) {
       let subtotal = 0;
 
       for (const item of cart.items) {
-        if (item.product.stock < item.quantity) {
+        const stock = item.variant?.stock ?? item.product.stock;
+        if (stock < item.quantity) {
           throw new Error(`${item.product.name} is out of stock.`);
         }
 
-        subtotal += Number(item.product.salePrice || item.product.regularPrice) * item.quantity;
+        subtotal += Number(item.variant?.price ?? item.product.salePrice ?? item.product.regularPrice) * item.quantity;
       }
 
       let discount = 0;
@@ -98,15 +99,22 @@ export async function POST(request) {
           items: {
             create: cart.items.map((item) => ({
               quantity: item.quantity,
-              unitPrice: item.product.salePrice || item.product.regularPrice,
+              unitPrice: item.variant?.price ?? item.product.salePrice ?? item.product.regularPrice,
               productName: item.product.name,
               productId: item.productId,
+              variantId: item.variantId,
+              variantLabel: item.variant ? [item.variant.color, item.variant.size].filter(Boolean).join(' / ') || null : null,
+              attributeValueIds: item.attributeValueIds,
             })),
           },
         },
       });
 
       for (const item of cart.items) {
+        if (item.variant) {
+          const updatedVariant = await tx.productVariant.updateMany({ where: { id: item.variant.id, stock: { gte: item.quantity } }, data: { stock: { decrement: item.quantity } } });
+          if (updatedVariant.count === 0) throw new Error(`${item.product.name} option is out of stock.`);
+        }
         const updated = await tx.product.updateMany({
           where: { id: item.productId, stock: { gte: item.quantity } },
           data: { stock: { decrement: item.quantity } },

@@ -307,6 +307,8 @@ model Category {
 
   products Product[]
 
+  attributes CategoryAttribute[]
+
   seo CategorySEO?
 
   analyticsEvents AnalyticsEvent[]
@@ -393,6 +395,8 @@ model Product {
 
   variants ProductVariant[]
 
+  attributeValues ProductAttributeValue[]
+
   orderItems OrderItem[]
 
   reviews Review[]
@@ -473,6 +477,85 @@ model ProductVariant {
   productId String
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  attributeValues ProductVariantAttributeValue[]
+
+  cartItems CartItem[]
+
+  orderItems OrderItem[]
+}
+
+/**
+ * =========================================================
+ * GLOBAL PRODUCT ATTRIBUTES
+ * =========================================================
+ */
+
+model Attribute {
+  id String @id @default(cuid())
+
+  name String
+  slug String @unique
+  kind String @default("TEXT")
+  active Boolean @default(true)
+  sortOrder Int @default(0)
+
+  values AttributeValue[]
+  categories CategoryAttribute[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AttributeValue {
+  id String @id @default(cuid())
+
+  attributeId String
+  name String
+  slug String
+  hexValue String?
+  active Boolean @default(true)
+  sortOrder Int @default(0)
+
+  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  products ProductAttributeValue[]
+  variants ProductVariantAttributeValue[]
+
+  @@unique([attributeId(length: 64), slug(length: 64)])
+  @@index([attributeId, active])
+}
+
+model CategoryAttribute {
+  categoryId String
+  attributeId String
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@id([categoryId(length: 64), attributeId(length: 64)])
+  @@index([attributeId])
+}
+
+model ProductAttributeValue {
+  productId String
+  attributeValueId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeValue AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Cascade)
+
+  @@id([productId(length: 64), attributeValueId(length: 64)])
+  @@index([attributeValueId])
+}
+
+model ProductVariantAttributeValue {
+  variantId String
+  attributeValueId String
+
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  attributeValue AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Cascade)
+
+  @@id([variantId(length: 64), attributeValueId(length: 64)])
+  @@index([attributeValueId])
 }
 
 /**
@@ -504,6 +587,9 @@ model CartItem {
 
   quantity Int @default(1)
 
+  attributeValueIds Json?
+  attributeSelectionKey String @default("")
+
   cartId String
 
   cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
@@ -514,7 +600,9 @@ model CartItem {
 
   variantId String?
 
-  @@unique([cartId(length: 64), productId(length: 64)])
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@unique([cartId(length: 32), productId(length: 32), variantId(length: 32), attributeSelectionKey(length: 128)])
 }
 
 /**
@@ -620,6 +708,14 @@ model OrderItem {
   productId String
 
   product Product @relation(fields: [productId], references: [id])
+
+  variantId String?
+
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  variantLabel String?
+
+  attributeValueIds Json?
 }
 
 /**
@@ -757,7 +853,7 @@ model HomepageSection {
 model SiteSettings {
   id String @id @default(cuid())
 
-  siteName String @default("Khatibazar")
+  siteName String @default("Prenaxo")
 
   logo String?
 

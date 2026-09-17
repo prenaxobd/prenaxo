@@ -260,6 +260,7 @@ export async function POST(request) {
               productName: item.product.name,
 
               productId: item.productId,
+              attributeValueIds: item.attributeValueIds,
             })),
           },
         },

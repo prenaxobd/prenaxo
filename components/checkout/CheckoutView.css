@@ -7,10 +7,10 @@
    ========================================================= */
 
 .checkout-page {
-  --checkout-green: #159447;
-  --checkout-green-dark: #11783a;
-  --checkout-green-soft: #eef9f1;
-  --checkout-green-border: #bfe6ca;
+  --checkout-green: var(--primary);
+  --checkout-green-dark: var(--primary-strong);
+  --checkout-green-soft: var(--primary-soft);
+  --checkout-green-border: color-mix(in srgb, var(--primary) 28%, white);
   --checkout-text: #172033;
   --checkout-muted: #6b7280;
   --checkout-border: #e5e9ee;
@@ -701,12 +701,42 @@
   border-bottom: 1px solid #edf0f2;
 }
 
+.checkout-products-table {
+  gap: 0;
+  padding-top: 0;
+}
+
+.checkout-products-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px 64px;
+  align-items: center;
+  gap: 9px;
+  min-height: 30px;
+  border-bottom: 1px solid #edf0f2;
+  color: #98a2b3;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.checkout-products-head span:nth-child(2),
+.checkout-products-head span:nth-child(3) {
+  text-align: right;
+}
+
 .checkout-product {
   display: grid;
   grid-template-columns: 58px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
   min-width: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f2f4;
+}
+
+.checkout-product:last-child {
+  border-bottom: 0;
 }
 
 .checkout-thumb {
@@ -829,6 +859,26 @@
 
 .coupon-row button:hover {
   background: var(--checkout-green-dark);
+}
+
+.coupon-row button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.coupon-message {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.coupon-message.is-success,
+.coupon-discount {
+  color: var(--checkout-green);
+}
+
+.coupon-message.is-error {
+  color: var(--checkout-danger);
 }
 
 /* ---------------------------------------------------------

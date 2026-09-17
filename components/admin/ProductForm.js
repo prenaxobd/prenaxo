@@ -69,6 +69,8 @@ const emptyForm = (categories = []) => ({
   brandId: '',
   productType: 'SINGLE',
   comboItems: [],
+  variants: [],
+  attributeValueIds: [],
 
   /*
    * SHORT DESCRIPTION
@@ -152,6 +154,8 @@ function normalizeProduct(
 
     productType: product.productType || 'SINGLE',
     comboItems: Array.isArray(product.comboItems) ? product.comboItems.map(item => ({ productId: item.includedProductId || item.productId, quantity: Number(item.quantity || 1), product: item.includedProduct || item.product || null })) : [],
+    variants: Array.isArray(product.variants) ? product.variants.map((variant) => ({ id: variant.id, size: variant.size || '', color: variant.color || '', price: variant.price == null ? '' : String(variant.price), stock: Number(variant.stock || 0), sku: variant.sku || '', attributeValueIds: variant.attributeValues?.map((item) => item.attributeValueId) || [] })) : [],
+    attributeValueIds: Array.isArray(product.attributeValues) ? product.attributeValues.map((item) => item.attributeValueId) : [],
 
     /*
      * SHORT DESCRIPTION
@@ -286,6 +290,46 @@ export default function ProductForm({
     setForm((current) => ({
       ...current,
       [name]: value,
+    }));
+  }
+
+  function updateVariant(index, name, value) {
+    setForm((current) => ({ ...current, variants: current.variants.map((variant, variantIndex) => variantIndex === index ? { ...variant, [name]: value } : variant) }));
+  }
+
+  const selectedCategory = categories.find((category) => category.id === form.categoryId);
+  const configuredAttributes = (selectedCategory?.attributes || [])
+    .map((categoryAttribute) => categoryAttribute?.attribute)
+    .filter((attribute) => attribute && attribute.active !== false)
+    .map((attribute) => ({
+      ...attribute,
+      values: Array.isArray(attribute.values)
+        ? attribute.values.filter((value) => value.active)
+        : [],
+    }));
+
+  function handleCategoryChange(categoryId) {
+    const category = categories.find((item) => item.id === categoryId);
+    const categoryValueIds = new Set(
+      (category?.attributes || []).flatMap((categoryAttribute) => (
+        Array.isArray(categoryAttribute?.attribute?.values)
+          ? categoryAttribute.attribute.values.map((value) => value.id)
+          : []
+      ))
+    );
+    setForm((current) => ({
+      ...current,
+      categoryId,
+      attributeValueIds: current.attributeValueIds.filter((valueId) => categoryValueIds.has(valueId)),
+    }));
+  }
+
+  function toggleAttributeValue(valueId, checked) {
+    setForm((current) => ({
+      ...current,
+      attributeValueIds: checked
+        ? [...new Set([...current.attributeValueIds, valueId])]
+        : current.attributeValueIds.filter((id) => id !== valueId),
     }));
   }
 
@@ -469,6 +513,18 @@ export default function ProductForm({
                 ),
             }
           : {}),
+
+        variants: form.variants.map((variant) => ({
+          ...(variant.id ? { id: variant.id } : {}),
+          size: variant.size?.trim() || null,
+          color: variant.color?.trim() || null,
+          price: variant.price === '' ? null : Number(variant.price),
+          stock: Number(variant.stock || 0),
+          sku: variant.sku.trim(),
+          attributeValueIds: variant.attributeValueIds,
+        })),
+
+        attributeValueIds: form.attributeValueIds,
 
         images:
           form.images.map(
@@ -1153,6 +1209,24 @@ export default function ProductForm({
                 PRODUCT ATTRIBUTES
             ================================================= */}
 
+            <section className={styles.card}>
+              <SectionTitle>Product Options</SectionTitle>
+              <p className={styles.cardDescription}>Select available values for this product from the attributes configured for its category.</p>
+
+              {configuredAttributes.length > 0 && configuredAttributes.map((attribute) => <Field key={attribute.id} label={`${attribute.name} (optional)`} className={styles.fullWidth}>
+                <div className={styles.attributeOptions}>
+                  {attribute.values.map((value) => <label className={styles.attributeOption} key={value.id}>
+                    <input className={styles.attributeOptionInput} type="checkbox" checked={form.attributeValueIds.includes(value.id)} onChange={(event) => toggleAttributeValue(value.id, event.target.checked)} />
+                    <span className={styles.attributeOptionMark} aria-hidden="true" />
+                    <span>{value.name}</span>
+                  </label>)}
+                </div>
+              </Field>)}
+
+              {configuredAttributes.length === 0 && <p className={styles.cardDescription}>This category has no configured product attributes.</p>}
+
+            </section>
+
             <section
               className={
                 styles.card
@@ -1498,11 +1572,8 @@ export default function ProductForm({
                   onChange={(
                     event
                   ) =>
-                    update(
-                      'categoryId',
-                      event
-                        .target
-                        .value
+                    handleCategoryChange(
+                      event.target.value
                     )
                   }
                 >

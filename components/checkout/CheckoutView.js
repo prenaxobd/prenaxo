@@ -12,6 +12,9 @@ export default function CheckoutView() {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponMessage, setCouponMessage] = useState('');
 
   const [form, setForm] = useState({
     customerName: '',
@@ -195,7 +198,43 @@ export default function CheckoutView() {
         );
 
   const total =
-    subtotal + shipping;
+    Math.max(0, subtotal - couponDiscount) + shipping;
+
+  async function applyCoupon() {
+    const code = form.couponCode.trim().toUpperCase();
+    setCouponMessage('');
+
+    if (!code) {
+      setCouponDiscount(0);
+      setCouponMessage('Enter a coupon code first.');
+      return;
+    }
+
+    setCouponLoading(true);
+
+    try {
+      const response = await fetch('/api/cart/coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, subtotal }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setCouponDiscount(0);
+        throw new Error(data.error || 'This coupon is not valid.');
+      }
+
+      update('couponCode', data.code);
+      setCouponDiscount(Number(data.discount || 0));
+      setCouponMessage(`Coupon applied. You saved ৳${Number(data.discount || 0).toLocaleString('en-BD')}.`);
+      localStorage.setItem('khatibazar-coupon', data.code);
+    } catch (couponError) {
+      setCouponMessage(couponError.message);
+    } finally {
+      setCouponLoading(false);
+    }
+  }
 
   const selectedPayment =
     paymentOptions.find(
@@ -1127,6 +1166,16 @@ export default function CheckoutView() {
           items={items}
           subtotal={subtotal}
           shipping={shipping}
+          couponCode={form.couponCode}
+          couponDiscount={couponDiscount}
+          couponMessage={couponMessage}
+          couponLoading={couponLoading}
+          updateCoupon={(value) => {
+            update('couponCode', value);
+            setCouponDiscount(0);
+            setCouponMessage('');
+          }}
+          applyCoupon={applyCoupon}
           total={total}
         />
       </div>
@@ -1138,6 +1187,12 @@ function OrderSummary({
   items,
   subtotal,
   shipping,
+  couponCode,
+  couponDiscount,
+  couponMessage,
+  couponLoading,
+  updateCoupon,
+  applyCoupon,
   total,
 }) {
   return (
@@ -1163,10 +1218,16 @@ function OrderSummary({
         </span>
       </div>
 
-      <div className="checkout-products">
+      <div className="checkout-products checkout-products-table">
+        <div className="checkout-products-head" aria-hidden="true">
+          <span>Product</span>
+          <span>Qty</span>
+          <span>Price</span>
+        </div>
         {items.map((item) => {
           const price = Number(
-            item.product.salePrice ||
+            item.variant?.price ||
+              item.product.salePrice ||
               item.product.regularPrice
           );
 
@@ -1230,17 +1291,29 @@ function OrderSummary({
         <div className="coupon-row">
           <input
             placeholder="Enter coupon code"
-            value=""
-            readOnly
+            value={couponCode}
+            onChange={(event) => updateCoupon(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                applyCoupon();
+              }
+            }}
           />
 
           <button
             type="button"
-            disabled
+            onClick={applyCoupon}
+            disabled={couponLoading || !couponCode.trim()}
           >
-            Apply
+            {couponLoading ? 'Checking…' : 'Apply'}
           </button>
         </div>
+        {couponMessage && (
+          <p className={`coupon-message ${couponDiscount ? 'is-success' : 'is-error'}`} role="status">
+            {couponMessage}
+          </p>
+        )}
       </div>
 
       <div className="summary-calculation">
@@ -1254,6 +1327,11 @@ function OrderSummary({
             {subtotal.toLocaleString()}
           </strong>
         </div>
+
+        {couponDiscount > 0 && <div className="summary-line">
+          <span>Discount</span>
+          <strong className="coupon-discount">-৳{couponDiscount.toLocaleString('en-BD')}</strong>
+        </div>}
 
         <div className="summary-line">
           <span>

@@ -7,6 +7,16 @@ const comboItemSchema = z.object({
   quantity: z.coerce.number().int().positive(),
 });
 
+const variantSchema = z.object({
+  id: z.string().optional(),
+  size: z.string().nullable().optional(),
+  color: z.string().nullable().optional(),
+  price: z.preprocess((value) => value === '' || value === null || value === undefined ? null : value, z.coerce.number().nonnegative().nullable()).optional(),
+  stock: z.coerce.number().int().nonnegative(),
+  sku: z.preprocess((value) => typeof value === 'string' && value.trim() === '' ? undefined : value, z.string().min(1).optional()),
+  attributeValueIds: z.array(z.string()).default([]),
+});
+
 const productSchema = z.object({
   name: z.string().min(2, 'Product name must be at least 2 characters'),
 
@@ -75,6 +85,10 @@ const productSchema = z.object({
 
   comboItems: z.array(comboItemSchema).default([]),
 
+  variants: z.array(variantSchema).default([]),
+
+  attributeValueIds: z.array(z.string()).default([]),
+
   images: z.array(
     z.object({
       id: z.string().optional(),
@@ -103,6 +117,14 @@ const detailInclude = {
             },
           },
         },
+      },
+    },
+  },
+  variants: true,
+  attributeValues: {
+    include: {
+      attributeValue: {
+        include: { attribute: true },
       },
     },
   },
@@ -141,6 +163,15 @@ async function generateUniqueSku(tx) {
   }
 
   throw new Error('Unable to generate a unique SKU. Please try again.');
+}
+
+async function generateUniqueVariantSku(tx, productSku) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const sku = `${productSku}-OPT-${attempt + 1}`;
+    const exists = await tx.productVariant.findUnique({ where: { sku }, select: { id: true } });
+    if (!exists) return sku;
+  }
+  throw new Error('Unable to generate a unique variant SKU.');
 }
 
 /**
@@ -203,6 +234,26 @@ async function validateComboItems(
 
   if (comboInsideCombo) {
     throw new Error('A combo product cannot contain another combo product.');
+  }
+}
+
+async function validateAttributeSelections(tx, categoryId, attributeValueIds, variants = []) {
+  const selectedIds = [...new Set(attributeValueIds)];
+  if (!selectedIds.length && !variants.length) return;
+
+  const values = await tx.attributeValue.findMany({
+    where: { id: { in: [...new Set([...selectedIds, ...variants.flatMap((variant) => variant.attributeValueIds || [])])] }, active: true },
+    select: { id: true, attribute: { select: { categories: { where: { categoryId }, select: { categoryId: true } } } } },
+  });
+  const categoryValueIds = new Set(values.filter((value) => value.attribute.categories.length > 0).map((value) => value.id));
+  if (selectedIds.some((valueId) => !categoryValueIds.has(valueId))) {
+    throw new Error('One or more selected product options are not configured for this category.');
+  }
+
+  for (const variant of variants) {
+    if ((variant.attributeValueIds || []).some((valueId) => !selectedIds.includes(valueId))) {
+      throw new Error('Each combination must use selected product options.');
+    }
   }
 }
 
@@ -286,6 +337,8 @@ export async function POST(request) {
     const {
       images,
       comboItems,
+      variants,
+      attributeValueIds,
       ...data
     } = parsed;
 
@@ -306,6 +359,8 @@ export async function POST(request) {
         null
       );
 
+      await validateAttributeSelections(tx, data.categoryId, attributeValueIds, variants);
+
       /**
        * IMPORTANT:
        *
@@ -319,8 +374,16 @@ export async function POST(request) {
           images: {
             create: imageRows(images),
           },
+          attributeValues: {
+            create: attributeValueIds.map((attributeValueId) => ({ attributeValueId })),
+          },
         },
       });
+
+      for (const { id, attributeValueIds: variantValueIds = [], ...variant } of variants) {
+        const createdVariant = await tx.productVariant.create({ data: { ...variant, sku: variant.sku || await generateUniqueVariantSku(tx, sku), productId: created.id } });
+        if (variantValueIds.length) await tx.productVariantAttributeValue.createMany({ data: variantValueIds.map((attributeValueId) => ({ variantId: createdVariant.id, attributeValueId })) });
+      }
 
       /**
        * Combo relation is stored separately.
@@ -367,6 +430,8 @@ export async function PATCH(request) {
       id,
       images,
       comboItems: submittedComboItems,
+      variants: submittedVariants,
+      attributeValueIds: submittedAttributeValueIds,
       ...input
     } = body;
 
@@ -384,6 +449,8 @@ export async function PATCH(request) {
       .omit({
         comboItems: true,
         images: true,
+        variants: true,
+        attributeValueIds: true,
       })
       .partial()
       .parse(input);
@@ -396,6 +463,7 @@ export async function PATCH(request) {
         select: {
           productType: true,
           sku: true,
+          categoryId: true,
         },
       });
 
@@ -419,6 +487,11 @@ export async function PATCH(request) {
               submittedComboItems
             );
 
+      const variants = submittedVariants === undefined ? null : z.array(variantSchema).parse(submittedVariants);
+      const attributeValueIds = submittedAttributeValueIds === undefined ? null : z.array(z.string()).parse(submittedAttributeValueIds);
+
+      const categoryId = data.categoryId || existing.categoryId;
+
       /**
        * Validate only when comboItems were submitted.
        */
@@ -429,6 +502,10 @@ export async function PATCH(request) {
           items,
           id
         );
+      }
+
+      if (attributeValueIds !== null || variants !== null || data.categoryId) {
+        await validateAttributeSelections(tx, categoryId, attributeValueIds || [], variants || []);
       }
 
       /**
@@ -533,6 +610,21 @@ export async function PATCH(request) {
             });
           }
         }
+      }
+
+      if (variants !== null) {
+        await tx.productVariant.deleteMany({ where: { productId: id } });
+        if (variants.length) {
+          for (const { id: variantId, attributeValueIds: variantValueIds = [], ...variant } of variants) {
+            const createdVariant = await tx.productVariant.create({ data: { ...variant, sku: variant.sku || await generateUniqueVariantSku(tx, existing.sku), productId: id } });
+            if (variantValueIds.length) await tx.productVariantAttributeValue.createMany({ data: variantValueIds.map((attributeValueId) => ({ variantId: createdVariant.id, attributeValueId })) });
+          }
+        }
+      }
+
+      if (attributeValueIds !== null) {
+        await tx.productAttributeValue.deleteMany({ where: { productId: id } });
+        if (attributeValueIds.length) await tx.productAttributeValue.createMany({ data: attributeValueIds.map((attributeValueId) => ({ productId: id, attributeValueId })) });
       }
 
       /**

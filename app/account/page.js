@@ -1,5 +1,25 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faArrowRight,
+  faBagShopping,
+  faBoxOpen,
+  faCheck,
+  faCircleCheck,
+  faCircleQuestion,
+  faEnvelope,
+  faHeart,
+  faHouse,
+  faLocationDot,
+  faLock,
+  faPen,
+  faRightFromBracket,
+  faRotateLeft,
+  faStar,
+  faTruckFast,
+  faUser,
+} from '@fortawesome/free-solid-svg-icons';
 
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -83,7 +103,7 @@ export default async function AccountPage() {
               href="/account"
               className="account-nav-item active"
             >
-              <span className="account-nav-icon">⌂</span>
+              <span className="account-nav-icon"><FontAwesomeIcon icon={faHouse} aria-hidden="true" /></span>
               <span>Dashboard</span>
             </Link>
 
@@ -91,7 +111,7 @@ export default async function AccountPage() {
               href="/account/profile"
               className="account-nav-item"
             >
-              <span className="account-nav-icon">◉</span>
+              <span className="account-nav-icon"><FontAwesomeIcon icon={faUser} aria-hidden="true" /></span>
               <span>Profile Information</span>
             </Link>
 
@@ -99,7 +119,7 @@ export default async function AccountPage() {
               href="/account/orders"
               className="account-nav-item"
             >
-              <span className="account-nav-icon">▣</span>
+              <span className="account-nav-icon"><FontAwesomeIcon icon={faBoxOpen} aria-hidden="true" /></span>
               <span>My Orders</span>
             </Link>
 
@@ -107,7 +127,7 @@ export default async function AccountPage() {
               href="/wishlist"
               className="account-nav-item"
             >
-              <span className="account-nav-icon">♡</span>
+              <span className="account-nav-icon"><FontAwesomeIcon icon={faHeart} aria-hidden="true" /></span>
               <span>Wishlist</span>
 
               {wishlistCount > 0 && (
@@ -121,7 +141,7 @@ export default async function AccountPage() {
               href="/account/addresses"
               className="account-nav-item"
             >
-              <span className="account-nav-icon">⌖</span>
+              <span className="account-nav-icon"><FontAwesomeIcon icon={faLocationDot} aria-hidden="true" /></span>
               <span>Addresses</span>
             </Link>
 
@@ -129,7 +149,7 @@ export default async function AccountPage() {
               href="/account/password"
               className="account-nav-item"
             >
-              <span className="account-nav-icon">▣</span>
+              <span className="account-nav-icon"><FontAwesomeIcon icon={faLock} aria-hidden="true" /></span>
               <span>Change Password</span>
             </Link>
 
@@ -137,7 +157,7 @@ export default async function AccountPage() {
               href="/account/reviews"
               className="account-nav-item"
             >
-              <span className="account-nav-icon">☆</span>
+              <span className="account-nav-icon"><FontAwesomeIcon icon={faStar} aria-hidden="true" /></span>
               <span>My Reviews</span>
             </Link>
 
@@ -147,7 +167,7 @@ export default async function AccountPage() {
               href="/api/auth/logout"
               className="account-nav-item logout"
             >
-              <span className="account-nav-icon">→</span>
+              <span className="account-nav-icon"><FontAwesomeIcon icon={faRightFromBracket} aria-hidden="true" /></span>
               <span>Logout</span>
             </a>
 
@@ -159,7 +179,7 @@ export default async function AccountPage() {
           <div className="account-help-card">
 
             <div className="account-help-icon">
-              ?
+              <FontAwesomeIcon icon={faCircleQuestion} aria-hidden="true" />
             </div>
 
             <h3>
@@ -172,7 +192,7 @@ export default async function AccountPage() {
             </p>
 
             <Link href="/contact">
-              Contact Support →
+              Contact Support <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
             </Link>
 
           </div>
@@ -226,13 +246,13 @@ export default async function AccountPage() {
                   </h1>
 
                   <span className="verified-badge">
-                    ✓ Verified Account
+                    <FontAwesomeIcon icon={faCircleCheck} aria-hidden="true" /> Verified Account
                   </span>
 
                 </div>
 
                 <p>
-                  ✉ {user.email}
+                  <FontAwesomeIcon icon={faEnvelope} aria-hidden="true" /> {user.email}
                 </p>
 
                 <div className="account-motivation">
@@ -248,7 +268,7 @@ export default async function AccountPage() {
               href="/account/profile"
               className="account-edit-button"
             >
-              ✎ Edit Profile
+              <FontAwesomeIcon icon={faPen} aria-hidden="true" /> Edit Profile
             </Link>
 
           </div>
@@ -263,7 +283,7 @@ export default async function AccountPage() {
             <div className="account-stat-card">
 
               <div className="account-stat-icon">
-                🛍
+                <FontAwesomeIcon icon={faBagShopping} aria-hidden="true" />
               </div>
 
               <div>
@@ -277,7 +297,7 @@ export default async function AccountPage() {
             <div className="account-stat-card">
 
               <div className="account-stat-icon pending">
-                🚚
+                <FontAwesomeIcon icon={faTruckFast} aria-hidden="true" />
               </div>
 
               <div>
@@ -291,7 +311,7 @@ export default async function AccountPage() {
             <div className="account-stat-card">
 
               <div className="account-stat-icon completed">
-                ✓
+                <FontAwesomeIcon icon={faCheck} aria-hidden="true" />
               </div>
 
               <div>
@@ -305,7 +325,7 @@ export default async function AccountPage() {
             <div className="account-stat-card">
 
               <div className="account-stat-icon wishlist">
-                ♡
+                <FontAwesomeIcon icon={faHeart} aria-hidden="true" />
               </div>
 
               <div>
@@ -343,7 +363,7 @@ export default async function AccountPage() {
               </div>
 
               <Link href="/account/orders">
-                View All Orders →
+                View All Orders <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
               </Link>
 
             </div>
@@ -354,7 +374,7 @@ export default async function AccountPage() {
               <div className="account-empty-orders">
 
                 <div>
-                  🛍
+                  <FontAwesomeIcon icon={faBagShopping} aria-hidden="true" />
                 </div>
 
                 <h3>
@@ -366,7 +386,7 @@ export default async function AccountPage() {
                 </p>
 
                 <Link href="/shop">
-                  Start Shopping →
+                  Start Shopping <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
                 </Link>
 
               </div>
@@ -448,7 +468,7 @@ export default async function AccountPage() {
                             ) : (
 
                               <span>
-                                🛍
+                                <FontAwesomeIcon icon={faBagShopping} aria-hidden="true" />
                               </span>
 
                             )}
@@ -596,7 +616,7 @@ export default async function AccountPage() {
               >
 
                 <div className="quick-link-icon">
-                  🚚
+                  <FontAwesomeIcon icon={faTruckFast} aria-hidden="true" />
                 </div>
 
                 <div>
@@ -612,7 +632,7 @@ export default async function AccountPage() {
                 </div>
 
                 <b>
-                  →
+                  <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
                 </b>
 
               </Link>
@@ -624,7 +644,7 @@ export default async function AccountPage() {
               >
 
                 <div className="quick-link-icon">
-                  ↩
+                  <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
                 </div>
 
                 <div>
@@ -640,7 +660,7 @@ export default async function AccountPage() {
                 </div>
 
                 <b>
-                  →
+                  <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
                 </b>
 
               </Link>
@@ -652,7 +672,7 @@ export default async function AccountPage() {
               >
 
                 <div className="quick-link-icon">
-                  ☆
+                  <FontAwesomeIcon icon={faStar} aria-hidden="true" />
                 </div>
 
                 <div>
@@ -668,7 +688,7 @@ export default async function AccountPage() {
                 </div>
 
                 <b>
-                  →
+                  <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
                 </b>
 
               </Link>
@@ -680,7 +700,7 @@ export default async function AccountPage() {
               >
 
                 <div className="quick-link-icon">
-                  ?
+                  <FontAwesomeIcon icon={faCircleQuestion} aria-hidden="true" />
                 </div>
 
                 <div>
@@ -696,7 +716,7 @@ export default async function AccountPage() {
                 </div>
 
                 <b>
-                  →
+                  <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
                 </b>
 
               </Link>

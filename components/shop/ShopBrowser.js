@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import {
   ChevronDown,
+  ArrowUpDown,
   SlidersHorizontal,
   X,
   ChevronLeft,
   ChevronRight,
+  LayoutGrid,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -45,14 +47,45 @@ const priceRanges = [
    PRODUCTS PER PAGE
 ========================================================= */
 
-const PRODUCTS_PER_PAGE = 12;
+const PRODUCTS_PER_PAGE = 16;
+
+const sortOptions = [
+  {
+    value: 'best-sellers',
+    label: 'Best Sellers',
+  },
+  {
+    value: 'newest',
+    label: 'Newest Arrivals',
+  },
+  {
+    value: 'price-low',
+    label: 'Price: Low to High',
+  },
+  {
+    value: 'price-high',
+    label: 'Price: High to Low',
+  },
+  {
+    value: 'top-rated',
+    label: 'Top Rated',
+  },
+  {
+    value: 'featured',
+    label: 'Featured',
+  },
+];
 
 
 /* =========================================================
    SHOP BROWSER
 ========================================================= */
 
-export default function ShopBrowser({ products = [], brands: availableBrands = [] }) {
+export default function ShopBrowser({
+  products = [],
+  brands: availableBrands = [],
+  categories: availableCategories = [],
+}) {
 
   const [category, setCategory] = useState('all');
 
@@ -70,8 +103,49 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
   const [sort, setSort] =
     useState('newest');
 
+  const [sortMenuOpen, setSortMenuOpen] =
+    useState(false);
+
   const [filtersOpen, setFiltersOpen] =
     useState(false);
+
+  const [viewMode, setViewMode] =
+    useState('grid');
+
+  const selectedSortLabel =
+    sortOptions.find(
+      option => option.value === sort
+    )?.label || 'Best Sellers';
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        !event.target.closest('.shop-toolbar-sort') &&
+        sortMenuOpen
+      ) {
+        setSortMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [sortMenuOpen]);
+
+  useEffect(() => {
+    if (!filtersOpen) return undefined;
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setFiltersOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [filtersOpen]);
 
   const [currentPage, setCurrentPage] =
     useState(1);
@@ -88,25 +162,63 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
 
   const categories = useMemo(() => {
 
-    return Array.from(
-      new Set(
-        products
-          .map(
-            product =>
-              product.category?.name
-          )
+    const namesFromCategories = Array.isArray(availableCategories)
+      ? availableCategories
+          .map((item) => item?.name)
           .filter(Boolean)
-      )
-    ).sort();
+      : [];
 
-  }, [products]);
+    const namesFromProducts = Array.isArray(products)
+      ? products
+          .map((product) => product.category?.name)
+          .filter(Boolean)
+      : [];
+
+    return Array.from(
+      new Set([
+        ...namesFromCategories,
+        ...namesFromProducts,
+      ])
+    ).sort((a, b) => a.localeCompare(b));
+
+  }, [availableCategories, products]);
 
 
   /* =======================================================
      BRANDS
   ======================================================= */
 
-  const brands = useMemo(() => availableBrands, [availableBrands]);
+  const brands = useMemo(() => {
+
+    const byKey = new Map();
+
+    const registerBrand = (rawName) => {
+      if (!rawName || typeof rawName !== 'string') return;
+
+      const normalized = rawName.trim();
+      if (!normalized) return;
+
+      const key = normalized.toLowerCase();
+      if (!byKey.has(key)) {
+        byKey.set(key, {
+          id: normalized,
+          name: normalized,
+        });
+      }
+    };
+
+    for (const brandItem of availableBrands || []) {
+      if (!brandItem?.name) continue;
+      registerBrand(brandItem.name);
+    }
+
+    for (const product of products || []) {
+      const productBrandName = product?.brandRelation?.name || product?.brand;
+      registerBrand(productBrandName);
+    }
+
+    return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [availableBrands, products]);
 
 
   /* =======================================================
@@ -124,10 +236,12 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
       )
 
       /* BRAND */
-      .filter(product =>
-        brand === 'all' ||
-        product.brandRelation?.name === brand
-      )
+      .filter(product => {
+        if (brand === 'all') return true;
+
+        const productBrandName = (product.brandRelation?.name || product.brand || '').trim();
+        return productBrandName.toLowerCase() === brand.toLowerCase();
+      })
 
       /* PRICE */
       .filter(product => {
@@ -185,51 +299,74 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
       /* SORT */
       .sort((first, second) => {
 
-        if (sort === 'price-low') {
-
-          return (
-            Number(
-              first.salePrice ||
-              first.regularPrice ||
-              0
-            ) -
-
-            Number(
-              second.salePrice ||
-              second.regularPrice ||
-              0
-            )
-          );
-
-        }
-
-
-        if (sort === 'price-high') {
-
-          return (
-            Number(
-              second.salePrice ||
-              second.regularPrice ||
-              0
-            ) -
-
-            Number(
-              first.salePrice ||
-              first.regularPrice ||
-              0
-            )
-          );
-
-        }
-
-
-        /* NEWEST */
-
-        return (
-          new Date(second.createdAt) -
-          new Date(first.createdAt)
+        const firstPrice = Number(
+          first.salePrice ||
+          first.regularPrice ||
+          0
         );
 
+        const secondPrice = Number(
+          second.salePrice ||
+          second.regularPrice ||
+          0
+        );
+
+        const firstRating = Number(
+          first.rating || 0
+        );
+
+        const secondRating = Number(
+          second.rating || 0
+        );
+
+        const firstReviewCount = Number(
+          first.reviewCount || 0
+        );
+
+        const secondReviewCount = Number(
+          second.reviewCount || 0
+        );
+
+        const firstPopularity =
+          firstReviewCount * 12 +
+          firstRating * 10 +
+          Number(first.featured ? 30 : 0);
+
+        const secondPopularity =
+          secondReviewCount * 12 +
+          secondRating * 10 +
+          Number(second.featured ? 30 : 0);
+
+        if (sort === 'best-sellers') {
+          return secondPopularity - firstPopularity ||
+            secondRating - firstRating ||
+            new Date(second.createdAt) - new Date(first.createdAt);
+        }
+
+        if (sort === 'price-low') {
+          return firstPrice - secondPrice ||
+            new Date(second.createdAt) - new Date(first.createdAt);
+        }
+
+        if (sort === 'price-high') {
+          return secondPrice - firstPrice ||
+            new Date(second.createdAt) - new Date(first.createdAt);
+        }
+
+        if (sort === 'top-rated') {
+          return secondRating - firstRating ||
+            secondReviewCount - firstReviewCount ||
+            new Date(second.createdAt) - new Date(first.createdAt);
+        }
+
+        if (sort === 'featured') {
+          return Number(second.featured) - Number(first.featured) ||
+            secondRating - firstRating ||
+            new Date(second.createdAt) - new Date(first.createdAt);
+        }
+
+        /* NEWEST */
+        return new Date(second.createdAt) - new Date(first.createdAt);
       });
 
   }, [
@@ -478,15 +615,17 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
           aria-label="Breadcrumb"
         >
 
-          <Link href="/">
+          <span className="shop-breadcrumb-item">
             Home
-          </Link>
+          </span>
 
-          <span>/</span>
+          <span className="shop-breadcrumb-separator">
+            /
+          </span>
 
-          <strong>
-            Shop
-          </strong>
+          <span className="shop-breadcrumb-current">
+            Shop All
+          </span>
 
         </nav>
 
@@ -497,35 +636,17 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
 
         <header className="shop-heading">
 
-          <div>
-
-            <p className="shop-kicker">
-              The Prenaxo collection
-            </p>
-
-            <h1>
-              Prenaxo - Online Shopping
-            </h1>
-
-            <p>
-              Find practical essentials,
-              thoughtful gifts, and everyday
-              favourites in one easy-to-browse
-              collection.
-            </p>
-
-          </div>
-
+          <h1>
+            Shop All
+          </h1>
 
           <span className="shop-result-pill">
 
             {filteredProducts.length}
-
             {' '}
-
-            {filteredProducts.length === 1
-              ? 'result'
-              : 'results'}
+            products
+            {' • '}
+            Page {currentPage} of {Math.max(totalPages, 1)}
 
           </span>
 
@@ -540,55 +661,90 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
 
           <button
             type="button"
+            className="shop-mobile-filter-button"
             onClick={() =>
               setFiltersOpen(true)
             }
+            aria-label="Open product filters"
+            title="Filters"
           >
-
-            <SlidersHorizontal
-              size={16}
-            />
-
-            Filters
-
+            <SlidersHorizontal size={17} strokeWidth={1.7} aria-hidden="true" />
           </button>
 
-
-          <label>
-
-            <span>
-              Sort
-            </span>
-
-            <select
-              value={sort}
-              onChange={event =>
-                setSort(
-                  event.target.value
-                )
-              }
+          <div className={`shop-toolbar-sort shop-mobile-sort-wrap ${sortMenuOpen ? 'is-open' : ''}`}>
+            <button
+              type="button"
+              className="shop-sort-trigger"
+              onClick={() => setSortMenuOpen(currentValue => !currentValue)}
+              aria-haspopup="listbox"
+              aria-expanded={sortMenuOpen}
               aria-label="Sort products"
             >
+              <ArrowUpDown className="shop-sort-control-icon" size={14} strokeWidth={1.7} aria-hidden="true" />
+              <span className="shop-sort-value">{selectedSortLabel}</span>
+              <span className="shop-sort-icon">
+                <ChevronDown size={14} />
+              </span>
+            </button>
 
-              <option value="newest">
-                Newest
-              </option>
+            {sortMenuOpen && (
+              <div className="shop-sort-menu" role="listbox" aria-label="Sort options">
+                {sortOptions.map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`shop-sort-option ${sort === option.value ? 'is-selected' : ''}`}
+                    onClick={() => {
+                      setSort(option.value);
+                      setSortMenuOpen(false);
+                    }}
+                    aria-selected={sort === option.value}
+                  >
+                    <span>{option.label}</span>
+                    {sort === option.value && <span className="shop-sort-dot" aria-hidden="true" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-              <option value="price-low">
-                Price low to high
-              </option>
+          <div className="shop-mobile-view-toggle" aria-label="Choose product view">
+            <button
+              type="button"
+              className={viewMode === 'grid' ? 'active' : ''}
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+            >
+              <LayoutGrid size={16} />
+            </button>
 
-              <option value="price-high">
-                Price high to low
-              </option>
-
-            </select>
-
-            <ChevronDown
-              size={15}
-            />
-
-          </label>
+            <button
+              type="button"
+              className={viewMode === 'list' ? 'active' : ''}
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="10" y1="6" x2="21" y2="6"></line>
+                <line x1="10" y1="12" x2="21" y2="12"></line>
+                <line x1="10" y1="18" x2="21" y2="18"></line>
+                <circle cx="4" cy="6" r="1" fill="currentColor"></circle>
+                <circle cx="4" cy="12" r="1" fill="currentColor"></circle>
+                <circle cx="4" cy="18" r="1" fill="currentColor"></circle>
+              </svg>
+            </button>
+          </div>
 
         </div>
 
@@ -625,6 +781,9 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
             availability={availability}
             setAvailability={setAvailability}
 
+            sort={sort}
+            setSort={setSort}
+
             clearFilters={clearFilters}
 
             mobile={filtersOpen}
@@ -652,60 +811,81 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
 
             <div className="shop-toolbar">
 
-              <span>
+              <div className={`shop-toolbar-sort ${sortMenuOpen ? 'is-open' : ''}`}>
 
-                Showing{' '}
-
-                {showingStart}
-
-                -
-
-                {showingEnd}
-
-                {' '}of{' '}
-
-                {filteredProducts.length}
-
-                {' '}products
-
-              </span>
-
-
-              <label>
-
-                <span>
-                  Sort by
-                </span>
-
-                <select
-                  value={sort}
-                  onChange={event =>
-                    setSort(
-                      event.target.value
+                <button
+                  type="button"
+                  className="shop-sort-trigger"
+                  onClick={() =>
+                    setSortMenuOpen(
+                      currentValue => !currentValue
                     )
                   }
+                  aria-haspopup="listbox"
+                  aria-expanded={sortMenuOpen}
                   aria-label="Sort products"
                 >
+                  <span className="shop-sort-label">Sort by</span>
 
-                  <option value="newest">
-                    Newest
-                  </option>
+                  <span className="shop-sort-value">
+                    {selectedSortLabel}
+                  </span>
 
-                  <option value="price-low">
-                    Price low to high
-                  </option>
+                  <span className="shop-sort-icon">
+                    <ChevronDown size={16} />
+                  </span>
+                </button>
 
-                  <option value="price-high">
-                    Price high to low
-                  </option>
+                {sortMenuOpen && (
+                  <div className="shop-sort-menu" role="listbox" aria-label="Sort options">
+                    {sortOptions.map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`shop-sort-option ${sort === option.value ? 'is-selected' : ''}`}
+                        onClick={() => {
+                          setSort(option.value);
+                          setSortMenuOpen(false);
+                        }}
+                        aria-selected={sort === option.value}
+                      >
+                        <span>{option.label}</span>
+                        {sort === option.value && <span className="shop-sort-dot" aria-hidden="true" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-                </select>
+              </div>
 
-                <ChevronDown
-                  size={15}
-                />
+              <div className="shop-view-toggle" aria-label="Choose product view">
 
-              </label>
+                <button
+                  type="button"
+                  className={viewMode === 'grid' ? 'active' : ''}
+                  onClick={() => setViewMode('grid')}
+                  aria-label="Grid view"
+                >
+                  <LayoutGrid size={18} />
+                </button>
+
+                <button
+                  type="button"
+                  className={viewMode === 'list' ? 'active' : ''}
+                  onClick={() => setViewMode('list')}
+                  aria-label="List view"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <line x1="10" y1="6" x2="21" y2="6"></line>
+                    <line x1="10" y1="12" x2="21" y2="12"></line>
+                    <line x1="10" y1="18" x2="21" y2="18"></line>
+                    <circle cx="4" cy="6" r="1" fill="currentColor"></circle>
+                    <circle cx="4" cy="12" r="1" fill="currentColor"></circle>
+                    <circle cx="4" cy="18" r="1" fill="currentColor"></circle>
+                  </svg>
+                </button>
+
+              </div>
 
             </div>
 
@@ -718,7 +898,7 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
 
               <>
 
-                <div className="shop-grid">
+                <div className={`shop-grid ${viewMode === 'list' ? 'list-view' : ''}`}>
 
                   {paginatedProducts.map(
                     product => (
@@ -726,6 +906,7 @@ export default function ShopBrowser({ products = [], brands: availableBrands = [
                       <ProductCard
                         key={product.id}
                         product={product}
+                        viewMode={viewMode}
                       />
 
                     )
@@ -932,6 +1113,9 @@ function FilterPanel({
   availability,
   setAvailability,
 
+  sort,
+  setSort,
+
   clearFilters,
 
   mobile,
@@ -962,6 +1146,7 @@ function FilterPanel({
         className={`shop-filters ${
           mobile ? 'is-open' : ''
         }`}
+        aria-label="Product filters"
       >
 
 
@@ -976,21 +1161,12 @@ function FilterPanel({
           </h2>
 
           <button
-            type="button"
-            onClick={clearFilters}
-          >
-            Clear all
-          </button>
-
-          <button
             className="shop-filter-close"
             type="button"
             aria-label="Close filters"
             onClick={close}
           >
-
             <X size={19} />
-
           </button>
 
         </div>
@@ -1215,6 +1391,29 @@ function FilterPanel({
           />
 
         </FilterSection>
+
+        {mobile && (
+          <div className="shop-filter-actions">
+            <button
+              type="button"
+              className="shop-filter-clear-btn"
+              onClick={() => {
+                clearFilters();
+                close();
+              }}
+            >
+              Clear All
+            </button>
+
+            <button
+              type="button"
+              className="shop-filter-apply-btn"
+              onClick={() => close()}
+            >
+              Apply Filters
+            </button>
+          </div>
+        )}
 
       </aside>
 

@@ -1,7 +1,9 @@
 import './globals.css';
+import '@/components/flash-sale/FlashSalePage.css';
 
 import StorefrontShell from '@/components/layout/StorefrontShell';
 import Footer from '@/components/layout/Footer';
+import AuthSessionProvider from '@/components/auth/SessionProvider';
 import {
   SITE_NAME,
   SITE_URL,
@@ -58,8 +60,6 @@ export async function generateMetadata() {
       template: `%s | ${siteName}`,
     },
 
-    description,
-
     keywords,
 
     alternates: {
@@ -96,7 +96,6 @@ export async function generateMetadata() {
       url: canonical,
       siteName,
       title: ogTitle,
-      description: ogDescription,
       images: ogImage
         ? [
             {
@@ -122,9 +121,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <StorefrontShell footer={<Footer />}>
-          {children}
-        </StorefrontShell>
+        <AuthSessionProvider>
+          <StorefrontShell footer={<Footer />}>
+            {children}
+          </StorefrontShell>
+        </AuthSessionProvider>
       </body>
     </html>
   );

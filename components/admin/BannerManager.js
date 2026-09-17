@@ -540,13 +540,13 @@ export default function BannerManager({
         </form>
       )}
 
-      <div className="admin-table-wrap">
-        <table className="table">
+      <div className="admin-table-wrap admin-banner-table-wrap">
+        <table className="table admin-banner-table">
           <thead>
             <tr>
-              <th>Image</th>
-              <th>Link</th>
-              <th>Order</th>
+              <th>Banner</th>
+              <th>Destination</th>
+              <th>Priority</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -556,21 +556,34 @@ export default function BannerManager({
             {banners.map((banner) => (
               <tr key={banner.id}>
                 <td>
-                  <BannerPreview
-                    src={
-                      banner.image ||
-                      banner.desktopImage
-                    }
-                    alt="Hero banner"
-                  />
+                  <div className="admin-banner-product-cell">
+                    <div className="admin-banner-thumb">
+                      <BannerPreview
+                        src={banner.image || banner.desktopImage}
+                        alt="Hero banner"
+                      />
+                    </div>
+                    <div>
+                      <strong>Hero banner</strong>
+                      <small>{banner.id}</small>
+                    </div>
+                  </div>
                 </td>
 
                 <td>
-                  {banner.link || '—'}
+                  {banner.link ? (
+                    <span className="admin-banner-link-pill">
+                      {banner.link}
+                    </span>
+                  ) : (
+                    <span className="admin-banner-no-link">No destination</span>
+                  )}
                 </td>
 
                 <td>
-                  {banner.sortOrder}
+                  <span className="admin-banner-order-badge">
+                    #{String(banner.sortOrder).padStart(2, '0')}
+                  </span>
                 </td>
 
                 <td>
@@ -692,48 +705,44 @@ export default function BannerManager({
         )}
 
         {rightBanner?.image && (
-          <div className="admin-right-banner-card">
-            <BannerPreview
-              src={rightBanner.image}
-              alt="Right promotional banner"
-            />
-
-            <div className="admin-right-banner-info">
-              <div>
-                <strong>
-                  {rightBanner.isActive
-                    ? 'Active'
-                    : 'Inactive'}
-                </strong>
-
-                <span>
-                  {rightBanner.link ||
-                    'No link'}
-                </span>
-              </div>
-
-              <div className="admin-right-banner-actions">
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={
-                    openRightForm
-                  }
-                >
-                  Edit
-                </button>
-
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={
-                    deleteRightBanner
-                  }
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
+          <div className="admin-table-wrap admin-banner-table-wrap admin-right-banner-table-wrap">
+            <table className="table admin-banner-table admin-right-banner-table">
+              <thead>
+                <tr>
+                  <th>Banner</th>
+                  <th>Destination</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div className="admin-banner-product-cell">
+                      <div className="admin-banner-thumb">
+                        <BannerPreview src={rightBanner.image} alt="Right promotional banner" />
+                      </div>
+                      <div>
+                        <strong>Right promotional banner</strong>
+                        <small>{rightBanner.id || 'Homepage promotion'}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {rightBanner.link ? <span className="admin-banner-link-pill">{rightBanner.link}</span> : <span className="admin-banner-no-link">No destination</span>}
+                  </td>
+                  <td>
+                    <span className={rightBanner.isActive ? 'status active' : 'status'}>{rightBanner.isActive ? 'Active' : 'Inactive'}</span>
+                  </td>
+                  <td>
+                    <div className="admin-right-banner-actions">
+                      <button type="button" className="btn" onClick={openRightForm}>Edit</button>
+                      <button type="button" className="btn btn-danger" onClick={deleteRightBanner}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         )}
 

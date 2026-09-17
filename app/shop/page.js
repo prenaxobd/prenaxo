@@ -115,18 +115,23 @@ export default async function Shop() {
   const [
     products,
     brands,
+    categories,
   ] = await Promise.all([
     getProducts(),
 
     prisma.brand.findMany({
       where: {
         active: true,
+      },
 
-        products: {
-          some: {
-            active: true,
-          },
-        },
+      orderBy: {
+        name: 'asc',
+      },
+    }),
+
+    prisma.category.findMany({
+      where: {
+        active: true,
       },
 
       orderBy: {
@@ -140,6 +145,7 @@ export default async function Shop() {
     <ShopBrowser
       products={products}
       brands={brands}
+      categories={categories}
     />
   );
 }

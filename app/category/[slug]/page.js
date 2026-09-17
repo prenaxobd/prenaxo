@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 
 import ProductCard from '@/components/ProductCard';
 import { prisma } from '@/lib/prisma';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import styles from './category.module.css';
 
 import {
   SITE_NAME,
@@ -162,8 +164,12 @@ export async function generateMetadata({
 
 export default async function CategoryPage({
   params,
+  searchParams,
 }) {
   const { slug } = await params;
+  const query = await searchParams;
+  const currentPage = Math.max(1, Number(query?.page) || 1);
+  const productsPerPage = 12;
 
 
   const category =
@@ -201,6 +207,18 @@ export default async function CategoryPage({
   if (!category) {
     notFound();
   }
+
+  const totalPages = Math.max(1, Math.ceil(category.products.length / productsPerPage));
+  const page = Math.min(currentPage, totalPages);
+  const visibleProducts = category.products.slice((page - 1) * productsPerPage, page * productsPerPage);
+  const serializedProducts = visibleProducts.map((product) => ({
+    ...product,
+    regularPrice: product.regularPrice?.toString() || null,
+    salePrice: product.salePrice?.toString() || null,
+    costPrice: product.costPrice?.toString() || null,
+    createdAt: product.createdAt?.toISOString?.() || product.createdAt,
+    updatedAt: product.updatedAt?.toISOString?.() || product.updatedAt,
+  }));
 
 
   const categoryUrl =
@@ -332,45 +350,34 @@ export default async function CategoryPage({
       />
 
 
-      <main className="container">
+      <main className={styles.page}>
+        <div className="container">
+          <section className={styles.hero}>
+            <div className={styles.heroContent}>
+              <span className={styles.eyebrow}>LIGHT UP YOUR EVERYDAY</span>
+              <h1>{category.name} <strong>Collection</strong></h1>
+              <p>{category.description || 'Warm, thoughtful lighting pieces to make every corner of your home feel brighter.'}</p>
+              <a className={styles.heroButton} href="#category-products">Explore the collection <ArrowRight size={16} /></a>
+            </div>
+          </section>
 
-        <div className="page-title">
-
-          <div
-            className="eyebrow"
-            style={{
-              color:
-                'var(--coral)',
-            }}
-          >
-            Collection
+          <div className={styles.contentHead} id="category-products">
+            <div><span className={styles.eyebrow}>CURATED FOR YOU</span><h2>Shop {category.name}</h2></div>
+            <span className={styles.count}>{category.products.length} products</span>
           </div>
 
-          <h1>
-            {category.name}
-          </h1>
+          <div className={styles.products}>
+            <div className="shop-grid">
+              {serializedProducts.map((product) => <ProductCard key={product.id} product={product} />)}
+            </div>
+          </div>
 
-          <p className="muted">
-            {category.description ||
-              'Thoughtful picks for your everyday.'}
-          </p>
-
+          {totalPages > 1 && <nav className={styles.pagination} aria-label="Category pagination">
+            {page > 1 ? <a href={`/category/${category.slug}?page=${page - 1}`} aria-label="Previous page"><ChevronLeft size={15} /></a> : <span className={styles.disabled}><ChevronLeft size={15} /></span>}
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => number === page ? <span className={styles.active} key={number}>{number}</span> : <a href={`/category/${category.slug}?page=${number}`} key={number}>{number}</a>)}
+            {page < totalPages ? <a href={`/category/${category.slug}?page=${page + 1}`} aria-label="Next page"><ChevronRight size={15} /></a> : <span className={styles.disabled}><ChevronRight size={15} /></span>}
+          </nav>}
         </div>
-
-
-        <div className="shop-grid">
-
-          {category.products.map(
-            (product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-              />
-            )
-          )}
-
-        </div>
-
       </main>
     </>
   );

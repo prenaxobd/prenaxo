@@ -7,6 +7,7 @@ import {
   ShoppingCart,
   Star,
   Check,
+  Eye,
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
@@ -91,7 +92,7 @@ function RatingStars({ rating }) {
 |--------------------------------------------------------------------------
 */
 
-export default function ProductCard({ product, flashSale = false }) {
+export default function ProductCard({ product, flashSale = false, maxStock = 0, viewMode = 'grid' }) {
 
   const cart = useCart();
 
@@ -625,57 +626,113 @@ export default function ProductCard({ product, flashSale = false }) {
 
         {flashSale && product.stock > 0 && (
           <div className="flash-card-stock">
-            <div><span>স্টক: {product.stock} টি বাকি</span><span>{Math.min(100, Math.max(8, product.stock))}%</span></div>
-            <span className="flash-card-stock-bar"><i style={{ width: `${Math.min(100, Math.max(8, product.stock))}%` }} /></span>
+            <div><span>Only {product.stock} left</span><span>{Math.round((Number(product.stock) / Math.max(1, maxStock)) * 100)}%</span></div>
+            <span className="flash-card-stock-bar" role="progressbar" aria-label="Stock remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round((Number(product.stock) / Math.max(1, maxStock)) * 100)}><i style={{ width: `${Math.min(100, Math.max(0, Math.round((Number(product.stock) / Math.max(1, maxStock)) * 100)))}%` }} /></span>
           </div>
         )}
 
 
-        {/* ADD TO CART */}
+        {/* ACTIONS */}
 
-        <button
-          type="button"
-          className="product-add-cart"
-          onClick={addCart}
-          disabled={
-            adding ||
-            product.stock <= 0
-          }
-        >
+        {viewMode === 'list' ? (
+          <div className="product-card-actions product-card-actions-list">
+            <Link
+              href={`/product/${product.slug}`}
+              className="product-card-view-btn"
+            >
+              <Eye size={16} />
+              {flashSale ? 'বিস্তারিত' : 'Details'}
+            </Link>
 
-          {adding ? (
+            <button
+              type="button"
+              className="product-add-cart"
+              onClick={addCart}
+              disabled={
+                adding ||
+                product.stock <= 0
+              }
+            >
 
-            <>
+              {adding ? (
 
-              <span className="cart-spinner" />
+                <>
 
-              {flashSale ? 'যোগ হচ্ছে...' : 'Adding...'}
+                  <span className="cart-spinner" />
 
-            </>
+                  {flashSale ? 'যোগ হচ্ছে...' : 'Adding...'}
 
-          ) : product.stock <= 0 ? (
+                </>
 
-            <>
+              ) : product.stock <= 0 ? (
 
-              <ShoppingCart size={17} />
+                <>
 
-              {flashSale ? 'স্টক শেষ' : 'Out of Stock'}
+                  <ShoppingCart size={17} />
 
-            </>
+                  {flashSale ? 'স্টক শেষ' : 'Out of Stock'}
 
-          ) : (
+                </>
 
-            <>
+              ) : (
 
-              <ShoppingCart size={17} />
+                <>
 
-              {flashSale ? 'কার্টে যোগ করুন' : 'Add to Cart'}
+                  <ShoppingCart size={17} />
 
-            </>
+                  {flashSale ? 'কার্টে যোগ করুন' : 'Add to Cart'}
 
-          )}
+                </>
 
-        </button>
+              )}
+
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="product-add-cart product-add-cart-grid"
+            onClick={addCart}
+            disabled={
+              adding ||
+              product.stock <= 0
+            }
+          >
+
+            {adding ? (
+
+              <>
+
+                <span className="cart-spinner" />
+
+                {flashSale ? 'যোগ হচ্ছে...' : 'Adding...'}
+
+              </>
+
+            ) : product.stock <= 0 ? (
+
+              <>
+
+                <ShoppingCart size={17} />
+
+                {flashSale ? 'স্টক শেষ' : 'Out of Stock'}
+
+              </>
+
+            ) : (
+
+              <>
+
+                <ShoppingCart size={17} />
+
+                {flashSale ? 'কার্টে যোগ করুন' : 'Add to Cart'}
+
+              </>
+
+            )}
+
+          </button>
+        )}
 
 
         {/* MESSAGE */}
