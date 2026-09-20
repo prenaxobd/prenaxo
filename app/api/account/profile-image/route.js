@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-
-import fs from 'fs/promises';
-import path from 'path';
 import crypto from 'crypto';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 export const runtime = 'nodejs';
 
@@ -95,56 +93,8 @@ export async function POST(request) {
       );
     }
 
-    // =====================================================
-    // UPLOAD DIRECTORY
-    // =====================================================
-
-    const uploadDir = path.join(
-      process.cwd(),
-      'public',
-      'uploads',
-      'users'
-    );
-
-    await fs.mkdir(uploadDir, {
-      recursive: true,
-    });
-
-    // =====================================================
-    // FILE NAME
-    // =====================================================
-
-    const randomName = crypto
-      .randomBytes(12)
-      .toString('hex');
-
-    const fileName =
-      `${user.id}-${Date.now()}-${randomName}.${extension}`;
-
-    const filePath = path.join(
-      uploadDir,
-      fileName
-    );
-
-    // =====================================================
-    // SAVE FILE
-    // =====================================================
-
-    const buffer = Buffer.from(
-      await file.arrayBuffer()
-    );
-
-    await fs.writeFile(
-      filePath,
-      buffer
-    );
-
-    // =====================================================
-    // IMAGE URL
-    // =====================================================
-
-    const imageUrl =
-      `/uploads/users/${fileName}`;
+    const publicId = `${user.id}-${Date.now()}-${crypto.randomBytes(12).toString('hex')}`;
+    const imageUrl = await uploadToCloudinary(file, 'prenaxo/user', publicId);
 
     // =====================================================
     // DATABASE
