@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+
 import crypto from 'crypto';
-import { uploadToCloudinary } from '@/lib/cloudinary';
+import { deleteImage, publicIdFromCloudinaryUrl, uploadImage } from '@/lib/cloudinary';
 
 export const runtime = 'nodejs';
 
@@ -93,8 +94,24 @@ export async function POST(request) {
       );
     }
 
-    const publicId = `${user.id}-${Date.now()}-${crypto.randomBytes(12).toString('hex')}`;
-    const imageUrl = await uploadToCloudinary(file, 'prenaxo/user', publicId);
+    // =====================================================
+    // UPLOAD DIRECTORY
+    // =====================================================
+
+    // =====================================================
+    // FILE NAME
+    // =====================================================
+
+    const randomName = crypto
+      .randomBytes(12)
+      .toString('hex');
+
+    const fileName =
+      `${user.id}-${Date.now()}-${randomName}.${extension}`;
+
+    const uploaded = await uploadImage(file, 'prenaxo/user', fileName.replace(`.${extension}`, ''));
+    const imageUrl = uploaded.url;
+    const previousImage = user.image;
 
     // =====================================================
     // DATABASE
@@ -123,6 +140,11 @@ export async function POST(request) {
     // =====================================================
     // RESPONSE
     // =====================================================
+
+    const previousPublicId = publicIdFromCloudinaryUrl(previousImage);
+    if (previousPublicId && previousPublicId !== uploaded.publicId) {
+      await deleteImage(previousPublicId).catch(() => {});
+    }
 
     return NextResponse.json(
       {

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { requirePermission, jsonError } from '@/lib/admin';
 import { z } from 'zod';
+import { deleteImage, publicIdFromCloudinaryUrl } from '@/lib/cloudinary';
 
 const schema = z.object({
   name: z.string().trim().min(2),
@@ -109,6 +110,7 @@ export async function PATCH(request) {
           : rawInput.website,
     });
 
+    const existing = await prisma.brand.findUnique({ where: { id }, select: { logo: true, image: true } });
     const brand = await prisma.brand.update({
       where: {
         id,
@@ -123,6 +125,14 @@ export async function PATCH(request) {
       },
     });
 
+    if (existing?.logo && existing.logo !== brand.logo) {
+      const publicId = publicIdFromCloudinaryUrl(existing.logo);
+      if (publicId) await deleteImage(publicId).catch(() => {});
+    }
+    if (existing?.image && existing.image !== brand.image) {
+      const publicId = publicIdFromCloudinaryUrl(existing.image);
+      if (publicId) await deleteImage(publicId).catch(() => {});
+    }
     return Response.json(brand);
   } catch (error) {
     return jsonError(error);

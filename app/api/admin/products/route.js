@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requirePermission, jsonError } from '@/lib/admin';
+import { deleteImage, publicIdFromCloudinaryUrl } from '@/lib/cloudinary';
 import { z } from 'zod';
 
 const comboItemSchema = z.object({
@@ -455,6 +456,7 @@ export async function PATCH(request) {
       .partial()
       .parse(input);
 
+    const removedImageUrls = new Set();
     const product = await prisma.$transaction(async (tx) => {
       const existing = await tx.product.findUnique({
         where: {
@@ -574,7 +576,7 @@ export async function PATCH(request) {
 
         const existingImages = await tx.productImage.findMany({
           where: { productId: id },
-          select: { id: true },
+          select: { id: true, url: true },
         });
         const existingImageIds = new Set(existingImages.map((image) => image.id));
         const submittedExistingIds = new Set(
@@ -582,6 +584,10 @@ export async function PATCH(request) {
             .map((image) => image.id)
             .filter((imageId) => imageId && existingImageIds.has(imageId))
         );
+
+        for (const image of existingImages) {
+          if (!submittedExistingIds.has(image.id)) removedImageUrls.add(image.url);
+        }
 
         await tx.productImage.deleteMany({
           where: {
@@ -673,6 +679,11 @@ export async function PATCH(request) {
         include: detailInclude,
       });
     });
+
+    for (const imageUrl of removedImageUrls) {
+      const publicId = publicIdFromCloudinaryUrl(imageUrl);
+      if (publicId) await deleteImage(publicId).catch(() => {});
+    }
 
     return Response.json(product);
   } catch (error) {

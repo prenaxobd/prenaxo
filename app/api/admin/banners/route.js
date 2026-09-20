@@ -4,6 +4,7 @@ import {
   jsonError,
 } from '@/lib/admin';
 import { z } from 'zod';
+import { deleteImage, publicIdFromCloudinaryUrl } from '@/lib/cloudinary';
 
 const schema = z.object({
   image: z.string().min(1),
@@ -157,12 +158,21 @@ export async function PATCH(request) {
         input.active;
     }
 
+    const existing = await prisma.banner.findUnique({ where: { id }, select: { image: true, desktopImage: true } });
     const banner =
       await prisma.banner.update({
         where: { id },
         data,
       });
 
+    const previousUrls = new Set([existing?.image, existing?.desktopImage].filter(Boolean));
+    const nextUrls = new Set([banner.image, banner.desktopImage].filter(Boolean));
+    for (const previousUrl of previousUrls) {
+      if (!nextUrls.has(previousUrl)) {
+        const publicId = publicIdFromCloudinaryUrl(previousUrl);
+        if (publicId) await deleteImage(publicId).catch(() => {});
+      }
+    }
     return Response.json(banner);
   } catch (error) {
     return jsonError(error);
@@ -187,11 +197,18 @@ export async function DELETE(request) {
     }
 
     const banner =
+      await prisma.banner.findUnique({ where: { id }, select: { image: true, desktopImage: true } });
+    const deleted =
       await prisma.banner.delete({
         where: { id },
       });
 
-    return Response.json(banner);
+    for (const imageUrl of new Set([banner?.image, banner?.desktopImage].filter(Boolean))) {
+      const publicId = publicIdFromCloudinaryUrl(imageUrl);
+      if (publicId) await deleteImage(publicId).catch(() => {});
+    }
+
+    return Response.json(deleted);
   } catch (error) {
     return jsonError(error);
   }
