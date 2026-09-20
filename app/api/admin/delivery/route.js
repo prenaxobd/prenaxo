@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { requireAdmin, jsonError } from '@/lib/admin';
+import { requirePermission, jsonError } from '@/lib/admin';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -9,13 +9,13 @@ const schema = z.object({
 });
 
 export async function GET() {
-  try { await requireAdmin(); return Response.json(await prisma.deliveryZone.findMany({ orderBy: [{ division: 'asc' }, { district: 'asc' }] })); }
+  try { await requirePermission('settings.view'); return Response.json(await prisma.deliveryZone.findMany({ orderBy: [{ division: 'asc' }, { district: 'asc' }] })); }
   catch (error) { return jsonError(error); }
 }
 
 export async function PUT(request) {
   try {
-    await requireAdmin();
+    await requirePermission('settings.edit');
     const { id, ...data } = schema.parse(await request.json());
     const zone = id
       ? await prisma.deliveryZone.update({ where: { id }, data })

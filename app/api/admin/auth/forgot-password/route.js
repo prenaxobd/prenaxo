@@ -7,8 +7,12 @@ export async function POST(request) {
   const generic = { message: 'If an account matches that email, password reset instructions will be sent.' };
   try {
     const { email } = await request.json();
-    const user = await prisma.user.findUnique({ where: { email: String(email || '').trim().toLowerCase() } });
-    if (!user || user.adminAuthRole !== 'main_admin') return Response.json(generic);
+    const user = await prisma.user.findUnique({
+      where: { email: String(email || '').trim().toLowerCase() },
+      include: { adminRoles: { where: { isActive: true }, include: { role: { select: { isActive: true } } } } },
+    });
+    const hasActiveRole = user?.adminRoles?.some(assignment => assignment.role?.isActive);
+    if (!user || user.role !== 'ADMIN' || !user.adminAuthRole || !user.adminActive || !hasActiveRole) return Response.json(generic);
     const rawToken = crypto.randomBytes(32).toString('base64url');
     await prisma.adminPasswordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } });
     await prisma.adminPasswordResetToken.create({ data: { userId: user.id, tokenHash: hashToken(rawToken), expiresAt: new Date(Date.now() + 30 * 60 * 1000) } });

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { requireAdmin, jsonError } from '@/lib/admin';
+import { requirePermission, jsonError } from '@/lib/admin';
 import { z } from 'zod';
 
 const adjustmentSchema = z.object({
@@ -11,7 +11,7 @@ const adjustmentSchema = z.object({
 
 export async function PATCH(request) {
   try {
-    const admin = await requireAdmin();
+    const admin = await requirePermission('inventory.adjust');
     const input = adjustmentSchema.parse(await request.json());
     const result = await prisma.$transaction(async transaction => {
       const product = await transaction.product.findUnique({ where: { id: input.productId }, select: { stock: true } });

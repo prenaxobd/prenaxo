@@ -24,3 +24,17 @@ Thumbs.db
 
 # Local uploads
 public/uploads/*
+
+# Local database backups
+backups/*
+
+# Prisma / local repair files
+prisma/schema.prisma.aiven
+prisma/schema.prisma.original
+prisma/schema.prisma.current-backup
+prisma/schema.prisma.backup-*
+prisma/aiven-delegate-rename-report.txt
+
+# Accidental local files
+nul
+{const

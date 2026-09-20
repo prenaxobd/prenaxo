@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { requireAdmin, jsonError } from '@/lib/admin';
+import { requirePermission, jsonError } from '@/lib/admin';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -17,7 +17,7 @@ const schema = z.object({
 
 export async function GET() {
   try {
-    await requireAdmin();
+    await requirePermission('seo.view');
     const products = await prisma.product.findMany({
       where: { active: true },
       select: { id: true, name: true, slug: true },
@@ -33,7 +33,7 @@ export async function GET() {
 
 export async function PUT(request) {
   try {
-    await requireAdmin();
+    await requirePermission('seo.edit');
     const input = schema.parse(await request.json());
     const { productId, ...data } = input;
     return Response.json(await prisma.productSEO.upsert({

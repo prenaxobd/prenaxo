@@ -1,6 +1,8 @@
 
 import { redirect } from 'next/navigation';
-import { requireAdmin, getUserPermissions } from '@/lib/admin';
+import { notFound } from 'next/navigation';
+import { getCurrentUser } from '@/lib/auth';
+import { requireAdmin, getUserPermissions, isAuthorizedAdminIdentity } from '@/lib/admin';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 
@@ -10,14 +12,8 @@ export default async function AdminLayout({ children }) {
   try {
     user = await requireAdmin();
   } catch (error) {
-    if (error?.message === 'AUTHENTICATION_REQUIRED') {
-      redirect('/admin/login?next=/admin');
-    }
-
-    if (error?.message === 'ADMIN_REQUIRED') {
-      redirect('/admin/login?error=permission');
-    }
-
+    const identity = await getCurrentUser();
+    if (!await isAuthorizedAdminIdentity(identity)) notFound();
     redirect('/admin/login?next=/admin');
   }
 

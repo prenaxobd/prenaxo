@@ -320,7 +320,7 @@ export default function OrderManager({
     setUpdatingId(id);
 
     try {
-      const response = await fetch('/api/admin/orders', {
+      const response = await fetch(`/api/admin/orders/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -448,7 +448,7 @@ export default function OrderManager({
     try {
       const responses = await Promise.all(
         selectedIds.map((id) =>
-          fetch('/api/admin/orders', {
+          fetch(`/api/admin/orders/${id}`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -792,7 +792,7 @@ export default function OrderManager({
 
         {/* Table */}
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
+          <table className={`${styles.table} admin-data-table`}>
             <thead>
               <tr>
                 <th className={styles.checkboxCell}>

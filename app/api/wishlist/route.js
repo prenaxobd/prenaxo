@@ -29,17 +29,17 @@ async function currentUser() { return getCurrentUser(); }
 	      create: { userId: user.id },
 	      update: {},
 	    });
-	    const existing = await prisma.wishlistItem.findUnique({
+		const existing = await prisma.wishlistItem.findUnique({
 	      where: { wishlistId_productId: { wishlistId: wishlist.id, productId } },
 	    });
 
 	    if (existing) {
-	      await prisma.wishlistItem.delete({ where: { id: existing.id } });
+		await prisma.wishlistItem.delete({ where: { id: existing.id } });
 	    } else {
-	      await prisma.wishlistItem.create({ data: { wishlistId: wishlist.id, productId } });
+		await prisma.wishlistItem.create({ data: { wishlistId: wishlist.id, productId } });
 	    }
 
-	    const count = await prisma.wishlistItem.count({ where: { wishlistId: wishlist.id } });
+		const count = await prisma.wishlistItem.count({ where: { wishlistId: wishlist.id } });
 	    return NextResponse.json({ saved: !existing, count });
 	  } catch {
 	    return NextResponse.json({ error: 'উইশলিস্ট আপডেট করা যায়নি।' }, { status: 400 });

@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import OrderManager from '@/components/admin/OrderManager';
+import { requirePermission } from '@/lib/admin';
+import { redirect } from 'next/navigation';
 
 function serializeOrder(order) {
   return {
@@ -17,6 +19,7 @@ function serializeOrder(order) {
 }
 
 export default async function OrdersPage() {
+  try { await requirePermission('orders.view'); } catch { redirect('/admin'); }
   const [
     orders,
     totalOrders,

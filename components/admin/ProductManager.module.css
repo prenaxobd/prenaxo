@@ -187,9 +187,34 @@
 
 .tableScroll table {
   width: 100%;
+  table-layout: fixed;
   min-width: 1160px;
   border-collapse: collapse;
 }
+.tableScroll table th:nth-child(1),
+.tableScroll table td:nth-child(1) { width: 40px; }
+.tableScroll table th:nth-child(2),
+.tableScroll table td:nth-child(2) { width: 260px; }
+.tableScroll table th:nth-child(3),
+.tableScroll table td:nth-child(3) { width: 105px; }
+.tableScroll table th:nth-child(4),
+.tableScroll table td:nth-child(4) { width: 125px; }
+.tableScroll table th:nth-child(5),
+.tableScroll table td:nth-child(5) { width: 95px; }
+.tableScroll table th:nth-child(6),
+.tableScroll table td:nth-child(6) { width: 85px; }
+.tableScroll table th:nth-child(7),
+.tableScroll table td:nth-child(7) { width: 90px; }
+.tableScroll table th:nth-child(8),
+.tableScroll table td:nth-child(8) { width: 85px; }
+.tableScroll table th:nth-child(9),
+.tableScroll table td:nth-child(9) { width: 85px; }
+.tableScroll table th:nth-child(10),
+.tableScroll table td:nth-child(10) { width: 85px; }
+.tableScroll table th:nth-child(11),
+.tableScroll table td:nth-child(11) { width: 110px; }
+.tableScroll table th:nth-child(12),
+.tableScroll table td:nth-child(12) { width: 70px; }
 
 .tableScroll thead th {
   height: 48px;
@@ -231,9 +256,15 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  min-width: 210px;
+  width: 100%;
+  min-width: 0;
   color: inherit;
   text-decoration: none;
+}
+
+.productCell > div:last-child {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .thumbnail {
@@ -258,7 +289,8 @@
 
 .productCell strong {
   display: block;
-  max-width: 205px;
+  width: 100%;
+  max-width: none;
   overflow: hidden;
   color: #1f2d42;
   text-overflow: ellipsis;
@@ -268,14 +300,20 @@
 
 .productCell small {
   display: block;
+  overflow: hidden;
   margin-top: 3px;
   color: #96a1b0;
   font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .categoryPill {
   display: inline-flex;
+  box-sizing: border-box;
+  max-width: 100%;
   align-items: center;
+  overflow: hidden;
   min-height: 22px;
   padding: 0 8px;
   border-radius: 5px;
@@ -283,6 +321,7 @@
   background: #edf2ff;
   font-size: 9px;
   font-weight: 700;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

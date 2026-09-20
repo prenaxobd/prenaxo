@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requireAdmin, jsonError } from '@/lib/admin';
+import { requirePermission, jsonError } from '@/lib/admin';
 
 const schema = z.object({
   type: z.enum(['FEATURED', 'TOP_SELLING', 'DEALS', 'NEW_ARRIVALS', 'CATEGORY']),
@@ -16,7 +16,7 @@ const schema = z.object({
 
 export async function GET() {
   try {
-    await requireAdmin();
+    await requirePermission('marketing.view');
     return Response.json(await prisma.homepageSection.findMany({ include: { category: true }, orderBy: { sortOrder: 'asc' } }));
   } catch (error) {
     return jsonError(error);
@@ -25,7 +25,7 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    await requireAdmin();
+    await requirePermission('marketing.create');
     return Response.json(await prisma.homepageSection.create({ data: schema.parse(await request.json()), include: { category: true } }), { status: 201 });
   } catch (error) {
     return jsonError(error);
@@ -34,7 +34,7 @@ export async function POST(request) {
 
 export async function PATCH(request) {
   try {
-    await requireAdmin();
+    await requirePermission('marketing.edit');
     const { id, ...input } = await request.json();
     return Response.json(await prisma.homepageSection.update({ where: { id }, data: schema.partial().parse(input), include: { category: true } }));
   } catch (error) {
@@ -44,7 +44,7 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    await requireAdmin();
+    await requirePermission('marketing.delete');
     const id = new URL(request.url).searchParams.get('id');
     return Response.json(await prisma.homepageSection.update({ where: { id }, data: { active: false } }));
   } catch (error) {

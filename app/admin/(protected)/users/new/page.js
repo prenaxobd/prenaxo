@@ -9,18 +9,20 @@ const initialForm = {
   phone: '',
   password: '',
   role: 'ADMIN',
-  roleKey: 'ADMINISTRATOR',
+  roleKey: 'STAFF',
 };
 
 export default function NewUser() {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [inviteUrl, setInviteUrl] = useState('');
 
   async function submit(event) {
     event.preventDefault();
     setLoading(true);
     setMessage('');
+    setInviteUrl('');
 
     try {
       const response = await fetch('/api/admin/users', {
@@ -33,6 +35,7 @@ export default function NewUser() {
       if (!response.ok) throw new Error(data.error || 'Unable to create user.');
 
       setMessage('Worker account created successfully.');
+      setInviteUrl(data.inviteUrl || '');
       setForm(initialForm);
     } catch (error) {
       setMessage(error.message || 'Unable to create user.');
@@ -46,13 +49,14 @@ export default function NewUser() {
       <div className="admin-page-heading">
         <div>
           <div className="eyebrow">People</div>
-          <h1>Create worker</h1>
+          <h1>Add New Admin User</h1>
           <p className="muted">Create a secure admin account without exposing any password to the store team.</p>
         </div>
       </div>
 
       <form className="admin-form" onSubmit={submit}>
         {message ? <p className="admin-message">{message}</p> : null}
+        {inviteUrl ? <p className="admin-message">Share this one-time admin invite link with the new user: <a href={inviteUrl}>{inviteUrl}</a></p> : null}
 
         <div className="admin-form-grid">
           <div>
@@ -82,7 +86,6 @@ export default function NewUser() {
               Role
               <select value={form.roleKey} onChange={event => setForm({ ...form, role: event.target.value === 'USER' ? 'USER' : 'ADMIN', roleKey: event.target.value })}>
                 {Object.entries(ADMIN_ROLE_TEMPLATES).map(([key, role]) => <option key={key} value={key}>{role.label}</option>)}
-                <option value="USER">Customer / general user</option>
               </select>
             </label>
           </div>

@@ -579,7 +579,7 @@ export default function PaymentMethodsManager({
           </div>
         ) : (
           <div className={styles.tableWrap}>
-            <table className={styles.table}>
+            <table className={`${styles.table} admin-data-table`}>
               <thead>
                 <tr>
                   <th>Method</th>

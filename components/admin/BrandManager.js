@@ -42,12 +42,15 @@ export default function BrandManager({ initialBrands = [] }) {
   const [form, setForm] = useState(null);
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [actionId, setActionId] = useState(null);
 
   const visible = brands.filter((brand) =>
     `${brand.name || ''} ${brand.slug || ''}`
       .toLowerCase()
       .includes(query.toLowerCase())
+  ).filter((brand) =>
+    statusFilter === 'ALL' || (statusFilter === 'ACTIVE' ? brand.active : !brand.active)
   );
 
   async function save(event) {
@@ -192,7 +195,7 @@ export default function BrandManager({ initialBrands = [] }) {
       )}
 
       {form && (
-        <form className="admin-form" onSubmit={save}>
+        <form className="admin-form brand-form" onSubmit={save}>
           <div className="admin-form-head">
             <h2>{form.id ? 'Edit brand' : 'Add brand'}</h2>
 
@@ -349,17 +352,21 @@ export default function BrandManager({ initialBrands = [] }) {
           onChange={(event) => setQuery(event.target.value)}
         />
 
-        <select aria-label="Filter brands by status">
-          <option>All statuses</option>
-          <option>Active</option>
-          <option>Archived</option>
+        <select
+          aria-label="Filter brands by status"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+        >
+          <option value="ALL">All statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="ARCHIVED">Archived</option>
         </select>
 
         <span>{visible.length} brands</span>
       </div>
 
-      <div className="admin-table-wrap">
-        <table className="table">
+      <div className="admin-table-wrap brand-table-wrap">
+        <table className="table brand-table">
           <thead>
             <tr>
               <th>Brand</th>

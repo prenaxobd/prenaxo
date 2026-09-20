@@ -7,7 +7,7 @@ export default async function RolesPage() {
   try {
     await requirePermission('admin_users.manage_permissions');
   } catch {
-    redirect('/login?next=/admin/roles');
+    redirect('/admin/login?next=/admin/roles');
   }
 
   const roles = Object.entries(ADMIN_ROLE_TEMPLATES);

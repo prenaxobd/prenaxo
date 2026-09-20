@@ -646,7 +646,7 @@ export default function ProductManager({
             styles.tableScroll
           }
         >
-          <table>
+          <table className="admin-data-table">
             <thead>
               <tr>
                 <th

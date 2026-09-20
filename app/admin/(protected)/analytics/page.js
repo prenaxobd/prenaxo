@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import AnalyticsReport from '@/components/admin/AnalyticsReport';
+import { requirePermission } from '@/lib/admin';
+import { redirect } from 'next/navigation';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -244,6 +246,7 @@ const productSelect = {
 const orderInclude = { items: { include: { product: { select: productSelect } } } };
 
 export default async function Analytics({ searchParams }) {
+  try { await requirePermission('analytics.view'); } catch { redirect('/admin'); }
   const params = await searchParams;
   const { from, to, label, range: activeRange } = getDateRange(params?.range || '30days', params?.from, params?.to);
   const comparison = getComparisonRange(from, to);

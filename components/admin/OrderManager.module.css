@@ -346,13 +346,25 @@
 
 .table {
   width: 100%;
+  table-layout: fixed;
   min-width: 1180px;
   border-collapse: collapse;
 }
 
+.table th:nth-child(1), .table td:nth-child(1) { width: 45px; }
+.table th:nth-child(2), .table td:nth-child(2) { width: 125px; }
+.table th:nth-child(3), .table td:nth-child(3) { width: 220px; }
+.table th:nth-child(4), .table td:nth-child(4) { width: 125px; }
+.table th:nth-child(5), .table td:nth-child(5) { width: 105px; }
+.table th:nth-child(6), .table td:nth-child(6) { width: 145px; }
+.table th:nth-child(7), .table td:nth-child(7) { width: 145px; }
+.table th:nth-child(8), .table td:nth-child(8) { width: 125px; }
+.table th:nth-child(9), .table td:nth-child(9) { width: 125px; }
+.table th:nth-child(10), .table td:nth-child(10) { width: 70px; }
+
 .table thead th {
   height: 50px;
-  padding: 0 12px;
+  padding: 0 14px;
   border-bottom: 1px solid #edf1f5;
   background: #fbfcfe;
   color: #65738a;
@@ -363,7 +375,8 @@
 }
 
 .table tbody td {
-  padding: 13px 12px;
+  height: 68px;
+  padding: 11px 14px;
   border-bottom: 1px solid #edf1f5;
   vertical-align: middle;
   color: #334155;
@@ -416,7 +429,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  min-width: 170px;
+  min-width: 0;
 }
 
 .customerAvatar {
@@ -441,15 +454,22 @@
 }
 
 .customerName {
+  overflow: hidden;
   color: #233147;
   font-size: 12px;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .customerEmail {
+  max-width: 155px;
+  overflow: hidden;
   margin-top: 3px;
   color: #9ba5b3;
   font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .phone {
@@ -520,9 +540,12 @@
 }
 
 .paymentMethod {
+  max-width: 115px;
+  overflow: hidden;
   margin-top: 4px;
   color: #8f9bac;
   font-size: 10px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

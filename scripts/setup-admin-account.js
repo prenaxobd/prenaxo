@@ -2,8 +2,10 @@ import readline from 'node:readline';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma.js';
 import { ALL_ADMIN_PERMISSIONS } from '../lib/permissions.js';
+import { createAdminInvite } from '../lib/admin-invites.js';
 
-const email = (process.env.ADMIN_EMAIL || 'admin@prenaxo.com').trim().toLowerCase();
+const email = (process.env.ADMIN_EMAIL || 'prenaxo@gmail.com').trim().toLowerCase();
+const legacyEmail = 'ponnomela5@gmail.com';
 
 if (!email) {
   throw new Error('ADMIN_EMAIL is required.');
@@ -78,11 +80,11 @@ async function main() {
   const user = existing
     ? await prisma.user.update({
         where: { id: existing.id },
-        data: { passwordHash, role: 'ADMIN', adminAuthRole: 'main_admin' },
+        data: { passwordHash, role: 'ADMIN', adminAuthRole: 'main_admin', adminActive: true },
         select: { id: true, email: true, role: true },
       })
     : await prisma.user.create({
-        data: { name: 'Prenaxo Admin', email, passwordHash, role: 'ADMIN', adminAuthRole: 'main_admin' },
+        data: { name: 'Prenaxo Admin', email, passwordHash, role: 'ADMIN', adminAuthRole: 'main_admin', adminActive: true },
         select: { id: true, email: true, role: true },
       });
 
@@ -92,6 +94,17 @@ async function main() {
     create: { userId: user.id, adminRoleId: superAdminRole.id, isActive: true },
   });
 
+  const inviteToken = await createAdminInvite(user.id);
+
+  if (legacyEmail !== email) {
+    const legacy = await prisma.user.findUnique({ where: { email: legacyEmail } });
+    if (legacy) {
+      await prisma.user.update({ where: { id: legacy.id }, data: { role: 'USER', adminAuthRole: null, adminActive: false } });
+      await prisma.adminUserRole.updateMany({ where: { userId: legacy.id }, data: { isActive: false } });
+      await prisma.adminAuthSession.updateMany({ where: { userId: legacy.id, revokedAt: null }, data: { revokedAt: new Date() } });
+    }
+  }
+
   console.log(JSON.stringify({
     existsBeforeSetup: Boolean(existing),
     userExists: true,
@@ -99,6 +112,7 @@ async function main() {
     role: user.role,
     accountActive: true,
     adminRoleAssigned: true,
+    inviteUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/login?invite=${encodeURIComponent(inviteToken)}`,
   }));
 }
 

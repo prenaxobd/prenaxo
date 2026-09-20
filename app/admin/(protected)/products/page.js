@@ -1,7 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import ProductManager from '@/components/admin/ProductManager';
+import { requirePermission } from '@/lib/admin';
+import { redirect } from 'next/navigation';
 
 export default async function ProductsPage() {
+  try { await requirePermission('products.view'); } catch { redirect('/admin'); }
   const [products, categories, brands] = await Promise.all([
     prisma.product.findMany({
       include: {

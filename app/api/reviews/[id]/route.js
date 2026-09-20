@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
+import { requirePermission } from '@/lib/admin';
 
 /*
 |--------------------------------------------------------------------------
@@ -19,21 +19,7 @@ import { getCurrentUser } from '@/lib/auth';
 
 export async function PATCH(request, { params }) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required.' },
-        { status: 401 }
-      );
-    }
-
-    if (user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Admin access required.' },
-        { status: 403 }
-      );
-    }
+    await requirePermission('reviews.approve');
 
     const { id } = await params;
 
@@ -98,21 +84,7 @@ export async function PATCH(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required.' },
-        { status: 401 }
-      );
-    }
-
-    if (user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Admin access required.' },
-        { status: 403 }
-      );
-    }
+    await requirePermission('reviews.delete');
 
     const { id } = await params;
 

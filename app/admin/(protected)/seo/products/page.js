@@ -1,7 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import ProductSEOManager from '@/components/admin/ProductSEOManager';
+import { requirePermission } from '@/lib/admin';
+import { redirect } from 'next/navigation';
 
 export default async function ProductSEO() {
+	try { await requirePermission('seo.view'); } catch { redirect('/admin'); }
 	const products = await prisma.product.findMany({ where: { active: true }, select: { id: true, name: true, slug: true }, orderBy: { name: 'asc' } });
 	const seoRows = await prisma.productSEO.findMany({ where: { productId: { in: products.map(product => product.id) } } });
 	const seoByProduct = new Map(seoRows.map(row => [row.productId, row]));
