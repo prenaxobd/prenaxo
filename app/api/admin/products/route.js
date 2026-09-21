@@ -343,7 +343,7 @@ export async function POST(request) {
       ...data
     } = parsed;
 
-    const product = await prisma.$transaction(async (tx) => {
+    const productId = await prisma.$transaction(async (tx) => {
       /**
        * SKU OPTIONAL
        *
@@ -402,12 +402,15 @@ export async function POST(request) {
         });
       }
 
-      return tx.product.findUnique({
-        where: {
-          id: created.id,
-        },
-        include: detailInclude,
-      });
+      return created.id;
+    }, {
+      maxWait: 10000,
+      timeout: 15000,
+    });
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: detailInclude,
     });
 
     return Response.json(product, {
@@ -457,7 +460,7 @@ export async function PATCH(request) {
       .parse(input);
 
     const removedImageUrls = new Set();
-    const product = await prisma.$transaction(async (tx) => {
+    const productId = await prisma.$transaction(async (tx) => {
       const existing = await tx.product.findUnique({
         where: {
           id,
@@ -672,12 +675,15 @@ export async function PATCH(request) {
         });
       }
 
-      return tx.product.findUnique({
-        where: {
-          id,
-        },
-        include: detailInclude,
-      });
+      return id;
+    }, {
+      maxWait: 10000,
+      timeout: 15000,
+    });
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: detailInclude,
     });
 
     for (const imageUrl of removedImageUrls) {
