@@ -30,56 +30,85 @@ export async function POST(request) {
     const { threshold, zones } = await getDeliveryConfig();
     const customerEmail = (data.customerEmail || '').trim() || user.email || null;
 
-    const order = await prisma.$transaction(async (tx) => {
-      const cart = await tx.cart.findUnique({
-        where: { userId: user.id },
-        include: { items: { include: { product: true, variant: true } } },
+    const cart = await prisma.cart.findUnique({
+      where: { userId: user.id },
+      include: { items: { include: { product: true, variant: true } } },
+    });
+
+    if (!cart?.items.length) {
+      throw new Error('Your cart is empty.');
+    }
+
+    let subtotal = 0;
+
+    for (const item of cart.items) {
+      const stock = item.variant?.stock ?? item.product.stock;
+      if (stock < item.quantity) {
+        throw new Error(`${item.product.name} is out of stock.`);
+      }
+
+      subtotal += Number(item.variant?.price ?? item.product.salePrice ?? item.product.regularPrice) * item.quantity;
+    }
+
+    let discount = 0;
+
+    if (data.couponCode) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { code: data.couponCode.toUpperCase() },
       });
 
-      if (!cart?.items.length) {
-        throw new Error('Your cart is empty.');
+      if (
+        coupon?.active &&
+        (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
+        subtotal >= Number(coupon.minimumOrder || 0)
+      ) {
+        discount = coupon.type === 'PERCENTAGE'
+          ? Math.min((subtotal * Number(coupon.value)) / 100, subtotal)
+          : Math.min(Number(coupon.value), subtotal);
       }
+    }
 
-      let subtotal = 0;
+    const zone = zones.find(
+      (item) =>
+        item.division === data.shippingAddress.city &&
+        item.district === data.shippingAddress.district
+    );
 
-      for (const item of cart.items) {
-        const stock = item.variant?.stock ?? item.product.stock;
-        if (stock < item.quantity) {
-          throw new Error(`${item.product.name} is out of stock.`);
-        }
+    if (!zone) {
+      throw new Error('Please select a valid delivery area.');
+    }
 
-        subtotal += Number(item.variant?.price ?? item.product.salePrice ?? item.product.regularPrice) * item.quantity;
+    const { charge: shippingCharge } = calculateDelivery(subtotal, zone, threshold);
+    const productQuantities = new Map();
+    const variantQuantities = new Map();
+
+    for (const item of cart.items) {
+      productQuantities.set(item.productId, (productQuantities.get(item.productId) || 0) + item.quantity);
+      if (item.variantId) {
+        variantQuantities.set(item.variantId, (variantQuantities.get(item.variantId) || 0) + item.quantity);
       }
+    }
 
-      let discount = 0;
+    const order = await prisma.$transaction(async (tx) => {
+      const variantUpdates = [...variantQuantities].map(([id, quantity]) => tx.productVariant.updateMany({
+        where: { id, stock: { gte: quantity } },
+        data: { stock: { decrement: quantity } },
+      }));
+      const productUpdates = [...productQuantities].map(([id, quantity]) => tx.product.updateMany({
+        where: { id, stock: { gte: quantity } },
+        data: { stock: { decrement: quantity } },
+      }));
+      const [updatedVariants, updatedProducts] = await Promise.all([
+        Promise.all(variantUpdates),
+        Promise.all(productUpdates),
+      ]);
 
-      if (data.couponCode) {
-        const coupon = await tx.coupon.findUnique({
-          where: { code: data.couponCode.toUpperCase() },
-        });
-
-        if (
-          coupon?.active &&
-          (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
-          subtotal >= Number(coupon.minimumOrder || 0)
-        ) {
-          discount = coupon.type === 'PERCENTAGE'
-            ? Math.min((subtotal * Number(coupon.value)) / 100, subtotal)
-            : Math.min(Number(coupon.value), subtotal);
-        }
+      if (updatedVariants.some((result) => result.count === 0)) {
+        throw new Error('A selected product option is out of stock.');
       }
-
-      const zone = zones.find(
-        (item) =>
-          item.division === data.shippingAddress.city &&
-          item.district === data.shippingAddress.district
-      );
-
-      if (!zone) {
-        throw new Error('Please select a valid delivery area.');
+      if (updatedProducts.some((result) => result.count === 0)) {
+        throw new Error('A product in your cart is out of stock.');
       }
-
-      const { charge: shippingCharge } = calculateDelivery(subtotal, zone, threshold);
 
       const created = await tx.order.create({
         data: {
@@ -96,41 +125,28 @@ export async function POST(request) {
           paymentMethod: data.paymentMethod,
           paymentTransactionId: data.paymentTransactionId || null,
           orderNote: data.orderNote || null,
-          items: {
-            create: cart.items.map((item) => ({
-              quantity: item.quantity,
-              unitPrice: item.variant?.price ?? item.product.salePrice ?? item.product.regularPrice,
-              productName: item.product.name,
-              productId: item.productId,
-              variantId: item.variantId,
-              variantLabel: item.variant ? [item.variant.color, item.variant.size].filter(Boolean).join(' / ') || null : null,
-              attributeValueIds: item.attributeValueIds,
-            })),
-          },
         },
       });
 
-      for (const item of cart.items) {
-        if (item.variant) {
-          const updatedVariant = await tx.productVariant.updateMany({ where: { id: item.variant.id, stock: { gte: item.quantity } }, data: { stock: { decrement: item.quantity } } });
-          if (updatedVariant.count === 0) throw new Error(`${item.product.name} option is out of stock.`);
-        }
-        const updated = await tx.product.updateMany({
-          where: { id: item.productId, stock: { gte: item.quantity } },
-          data: { stock: { decrement: item.quantity } },
-        });
-
-        if (updated.count === 0) {
-          throw new Error(`${item.product.name} is out of stock.`);
-        }
-      }
+      await tx.orderItem.createMany({
+        data: cart.items.map((item) => ({
+          quantity: item.quantity,
+          unitPrice: item.variant?.price ?? item.product.salePrice ?? item.product.regularPrice,
+          productName: item.product.name,
+          orderId: created.id,
+          productId: item.productId,
+          variantId: item.variantId,
+          variantLabel: item.variant ? [item.variant.color, item.variant.size].filter(Boolean).join(' / ') || null : null,
+          attributeValueIds: item.attributeValueIds,
+        })),
+      });
 
       await tx.cart.delete({
         where: { userId: user.id },
       });
 
       return created;
-    }, { maxWait: 10000, timeout: 15000 });
+    }, { maxWait: 10000, timeout: 30000 });
 
     return NextResponse.json({ orderNumber: order.orderNumber }, { status: 201 });
   } catch (error) {
