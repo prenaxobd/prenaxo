@@ -1,7 +1,7 @@
 'use client';
 import OptimizedImage from '@/components/OptimizedImage';
 
-import { useEffect, useMemo, useState } from 'react';
+import { startTransition, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -187,6 +187,7 @@ function normalizeProduct(
       )
         ? product.images.map(
             (image, index) => ({
+                id: image.id,
               url: image.url,
               alt:
                 image.alt || '',
@@ -234,6 +235,7 @@ export default function ProductForm({
 
   useEffect(() => {
     if (form.productType !== 'COMBO' || comboSearch.trim().length < 2) {
+      startTransition(() => setComboResults([]));
       return undefined;
     }
     const controller = new AbortController();
@@ -418,6 +420,10 @@ export default function ProductForm({
       const shortDescription =
         form.shortDescription
           ?.trim() || null;
+
+      if (shortDescription && shortDescription.length > 191) {
+        throw new Error('Short description must be 191 characters or fewer.');
+      }
 
       /*
        * FULL DESCRIPTION
@@ -1006,6 +1012,7 @@ export default function ProductForm({
                       )
                     }
                     placeholder="Write a short description of this product..."
+                    maxLength={191}
                     rows={4}
                   />
                 </Field>

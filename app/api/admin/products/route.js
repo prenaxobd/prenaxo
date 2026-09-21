@@ -69,7 +69,7 @@ const productSchema = z.object({
 
   shortDescription: z.preprocess(
     (value) => typeof value === 'string' && value.trim() === '' ? null : value,
-    z.string().nullable().optional()
+    z.string().max(191, 'Short description must be 191 characters or fewer.').nullable().optional()
   ),
 
   description: z.preprocess(
