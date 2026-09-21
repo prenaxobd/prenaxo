@@ -141,6 +141,10 @@ export async function POST(request) {
         })),
       });
 
+      await tx.cartItem.deleteMany({
+        where: { cartId: cart.id },
+      });
+
       await tx.cart.delete({
         where: { userId: user.id },
       });

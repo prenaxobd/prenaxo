@@ -502,9 +502,7 @@ export default async function ProductPage({
     );
   }
 
-
-  const related =
-    await getRelatedProducts(product.id, product.categoryId);
+  const related = await getRelatedProducts(product.id, product.categoryId);
 
 
   /* =========================================

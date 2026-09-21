@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { requirePermission, jsonError } from '@/lib/admin';
 import { z } from 'zod';
+import { invalidatePublicCache } from '@/lib/cache-tags';
 
 const schema = z.object({
   productId: z.string().min(1),
@@ -36,11 +37,13 @@ export async function PUT(request) {
     await requirePermission('seo.edit');
     const input = schema.parse(await request.json());
     const { productId, ...data } = input;
-    return Response.json(await prisma.productSEO.upsert({
+    const seo = await prisma.productSEO.upsert({
       where: { productId },
       create: { productId, ...data },
       update: data,
-    }));
+    });
+    invalidatePublicCache('seo', 'products', 'homepage');
+    return Response.json(seo);
   } catch (error) {
     return jsonError(error);
   }

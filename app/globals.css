@@ -42,6 +42,34 @@
   --shadow: 0 10px 30px rgba(15, 23, 42, .07);
 }
 
+.route-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, .96);
+  color: var(--brand-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.route-loading-spinner {
+  width: 42px;
+  height: 42px;
+  border: 3px solid #dcebe2;
+  border-top-color: var(--brand-primary);
+  border-right-color: var(--brand-primary);
+  border-radius: 50%;
+  animation: route-loading-spin .75s linear infinite;
+}
+
+@keyframes route-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Restored marketplace surfaces */
 .product-image img {
   width: 100%;
@@ -10512,9 +10540,9 @@ body.header-menu-open {
 .related-slide .product-image img,
 .related-slide .product-card-image img,
 .related-slide .card-image img {
-  object-fit: contain !important;
+  object-fit: cover !important;
 
-  padding: 10px;
+  padding: 0px;
 }
 
 

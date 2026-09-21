@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requirePermission, jsonError } from '@/lib/admin';
+import { invalidatePublicCache } from '@/lib/cache-tags';
 
 const schema = z.object({
   type: z.enum(['FEATURED', 'TOP_SELLING', 'DEALS', 'NEW_ARRIVALS', 'CATEGORY']),
@@ -26,7 +27,9 @@ export async function GET() {
 export async function POST(request) {
   try {
     await requirePermission('marketing.create');
-    return Response.json(await prisma.homepageSection.create({ data: schema.parse(await request.json()), include: { category: true } }), { status: 201 });
+    const section = await prisma.homepageSection.create({ data: schema.parse(await request.json()), include: { category: true } });
+    invalidatePublicCache('homepage', 'categories');
+    return Response.json(section, { status: 201 });
   } catch (error) {
     return jsonError(error);
   }
@@ -36,7 +39,9 @@ export async function PATCH(request) {
   try {
     await requirePermission('marketing.edit');
     const { id, ...input } = await request.json();
-    return Response.json(await prisma.homepageSection.update({ where: { id }, data: schema.partial().parse(input), include: { category: true } }));
+    const section = await prisma.homepageSection.update({ where: { id }, data: schema.partial().parse(input), include: { category: true } });
+    invalidatePublicCache('homepage', 'categories');
+    return Response.json(section);
   } catch (error) {
     return jsonError(error);
   }
@@ -46,7 +51,9 @@ export async function DELETE(request) {
   try {
     await requirePermission('marketing.delete');
     const id = new URL(request.url).searchParams.get('id');
-    return Response.json(await prisma.homepageSection.update({ where: { id }, data: { active: false } }));
+    const section = await prisma.homepageSection.update({ where: { id }, data: { active: false } });
+    invalidatePublicCache('homepage', 'categories');
+    return Response.json(section);
   } catch (error) {
     return jsonError(error);
   }

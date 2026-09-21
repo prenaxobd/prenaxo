@@ -26,27 +26,49 @@ function normalizeSearchTokens(rawQuery) {
 }
 
 export default async function SearchPage({ searchParams }) {
-  const query = (await searchParams).q || '';
+  const params = await searchParams;
+  const query = params.q || '';
+  const page = Math.max(1, Number(params.page) || 1);
+  const productsPerPage = 24;
   const tokens = normalizeSearchTokens(query);
 
+  const where = {
+    active: true,
+    ...(tokens.length
+      ? {
+          OR: [
+            ...tokens.map((token) => ({ name: { contains: token } })),
+            ...tokens.map((token) => ({ sku: { contains: token } })),
+            ...tokens.map((token) => ({ brand: { contains: token } })),
+            ...tokens.map((token) => ({ shortDescription: { contains: token } })),
+            ...tokens.map((token) => ({ description: { contains: token } })),
+            ...tokens.map((token) => ({ category: { is: { name: { contains: token } } } })),
+          ],
+        }
+      : {}),
+  };
+
+  const total = await prisma.product.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / productsPerPage));
+  const safePage = Math.min(page, totalPages);
   const products = await prisma.product.findMany({
     where: {
-      active: true,
-      ...(tokens.length
-        ? {
-            OR: [
-              ...tokens.map((token) => ({ name: { contains: token } })),
-              ...tokens.map((token) => ({ sku: { contains: token } })),
-              ...tokens.map((token) => ({ brand: { contains: token } })),
-              ...tokens.map((token) => ({ shortDescription: { contains: token } })),
-              ...tokens.map((token) => ({ description: { contains: token } })),
-              ...tokens.map((token) => ({ category: { is: { name: { contains: token } } } })),
-            ],
-          }
-        : {}),
+      ...where,
     },
-    include: { category: true, images: true },
+    include: {
+      category: true,
+      images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+    },
+    orderBy: { name: 'asc' },
+    skip: (safePage - 1) * productsPerPage,
+    take: productsPerPage,
   });
+  const searchHref = (nextPage) => {
+    const nextParams = new URLSearchParams();
+    if (query) nextParams.set('q', query);
+    if (nextPage > 1) nextParams.set('page', String(nextPage));
+    return `/search?${nextParams.toString()}`;
+  };
 
   return (
     <main className="container">
@@ -63,6 +85,14 @@ export default async function SearchPage({ searchParams }) {
         </div>
       ) : (
         <p className="muted">No products matched your search.</p>
+      )}
+
+      {totalPages > 1 && (
+        <nav aria-label="Search pagination">
+          {safePage > 1 && <a href={searchHref(safePage - 1)}>Previous</a>}
+          <span> Page {safePage} of {totalPages} </span>
+          {safePage < totalPages && <a href={searchHref(safePage + 1)}>Next</a>}
+        </nav>
       )}
     </main>
   );

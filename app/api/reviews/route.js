@@ -16,6 +16,8 @@ export async function GET(request) {
 
     const productId =
       searchParams.get('productId');
+    const page = Math.max(1, Number(searchParams.get('page')) || 1);
+    const limit = Math.min(50, Math.max(1, Number(searchParams.get('limit')) || 20));
 
     if (!productId) {
       return NextResponse.json(
@@ -28,13 +30,11 @@ export async function GET(request) {
       );
     }
 
-    const reviews =
-      await prisma.review.findMany({
-        where: {
-          productId,
-          approved: true,
-        },
-
+    const where = { productId, approved: true };
+    const [total, reviews] = await Promise.all([
+      prisma.review.count({ where }),
+      prisma.review.findMany({
+        where,
         include: {
           user: {
             select: {
@@ -44,14 +44,17 @@ export async function GET(request) {
             },
           },
         },
-
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
 
     return NextResponse.json({
       reviews,
+      total,
+      page,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     });
 
   } catch (error) {

@@ -29,7 +29,9 @@
   width: min(1400px, calc(100% - 48px));
   margin-inline: auto;
 }
-
+.single-product-page{
+  padding-bottom: 10px;
+}
 /* =========================================================
    BREADCRUMB
    ========================================================= */
@@ -547,10 +549,10 @@
 .single-product-page .current-price {
   color: var(--product-red);
 
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1;
 
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: -0.03em;
 }
 
@@ -1546,7 +1548,9 @@
     grid-template-columns: 1fr;
     gap: 25px;
   }
-
+  .single-product-page{
+    padding-bottom: 30px;
+  }
   .single-product-page .product-image-box {
     min-height: auto;
     aspect-ratio: 1 / 0.86;
@@ -1759,7 +1763,9 @@
   }
 
   .single-product-page .current-price {
-    font-size: 27px;
+    font-size: 16px;
+    font-weight: 700;
+    font: optional;
   }
 
   .single-product-page .old-price {
@@ -1980,6 +1986,7 @@
   .single-product-page .product-faq-section,
   .single-product-page .related-products {
     margin-top: 15px;
+    margin-bottom: 0px;
   }
 
   .single-product-page .related-carousel {
@@ -2039,11 +2046,11 @@
   }
 
   .single-product-page .product-title {
-    font-size: 21px;
+    font-size: 16px;
   }
 
   .single-product-page .current-price {
-    font-size: 25px;
+    font-size: 15px;
   }
 
   .single-product-page .variation-options button {

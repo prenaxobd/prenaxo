@@ -1,5 +1,5 @@
-import { getProducts } from '@/lib/products';
-import { prisma } from '@/lib/prisma';
+import { getShopProducts } from '@/lib/products';
+import { getPublicBrands, getPublicCategories } from '@/lib/public-data';
 import ShopBrowser from '@/components/shop/ShopBrowser';
 
 import {
@@ -111,39 +111,47 @@ export async function generateMetadata({
    SHOP PAGE
 ===================================================== */
 
-export default async function Shop() {
+export default async function Shop({ searchParams }) {
+  const params = await searchParams;
+  const priceRange = {
+    min: params?.min || '',
+    max: params?.max || '',
+  };
+  const filters = {
+    category: params?.category || 'all',
+    brand: params?.brand || 'all',
+    priceRange,
+    ratingFilter: Number(params?.rating || 0),
+    availability: params?.availability || 'all',
+    sort: params?.sort || 'newest',
+    page: Math.max(1, Number(params?.page) || 1),
+  };
+
   const [
-    products,
+    productData,
     brands,
     categories,
   ] = await Promise.all([
-    getProducts(),
-
-    prisma.brand.findMany({
-      where: {
-        active: true,
-      },
-
-      orderBy: {
-        name: 'asc',
-      },
+    getShopProducts({
+      ...filters,
+      min: priceRange.min,
+      max: priceRange.max,
+      rating: filters.ratingFilter,
+      perPage: 16,
     }),
 
-    prisma.category.findMany({
-      where: {
-        active: true,
-      },
-
-      orderBy: {
-        name: 'asc',
-      },
-    }),
+    getPublicBrands(),
+    getPublicCategories(),
   ]);
 
 
   return (
     <ShopBrowser
-      products={products}
+      products={productData.products}
+      total={productData.total}
+      totalPages={productData.totalPages}
+      currentPage={productData.page}
+      initialFilters={filters}
       brands={brands}
       categories={categories}
     />

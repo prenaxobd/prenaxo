@@ -5,6 +5,7 @@ import {
 } from '@/lib/admin';
 import { z } from 'zod';
 import { deleteImage, publicIdFromCloudinaryUrl } from '@/lib/cloudinary';
+import { invalidatePublicCache } from '@/lib/cache-tags';
 
 const schema = z.object({
   image: z.string().min(1),
@@ -86,6 +87,7 @@ export async function POST(request) {
         },
       });
 
+    invalidatePublicCache('homepage');
     return Response.json(
       banner,
       { status: 201 }
@@ -173,6 +175,7 @@ export async function PATCH(request) {
         if (publicId) await deleteImage(publicId).catch(() => {});
       }
     }
+    invalidatePublicCache('homepage');
     return Response.json(banner);
   } catch (error) {
     return jsonError(error);
@@ -208,6 +211,7 @@ export async function DELETE(request) {
       if (publicId) await deleteImage(publicId).catch(() => {});
     }
 
+    invalidatePublicCache('homepage');
     return Response.json(deleted);
   } catch (error) {
     return jsonError(error);

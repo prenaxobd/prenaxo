@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { requirePermission, jsonError } from '@/lib/admin';
 import { deleteImage, publicIdFromCloudinaryUrl } from '@/lib/cloudinary';
 import { z } from 'zod';
+import { invalidatePublicCache } from '@/lib/cache-tags';
 
 const comboItemSchema = z.object({
   productId: z.string().min(1),
@@ -413,6 +414,7 @@ export async function POST(request) {
       include: detailInclude,
     });
 
+    invalidatePublicCache('products', 'homepage', 'seo');
     return Response.json(product, {
       status: 201,
     });
@@ -691,6 +693,7 @@ export async function PATCH(request) {
       if (publicId) await deleteImage(publicId).catch(() => {});
     }
 
+    invalidatePublicCache('products', 'homepage', 'seo');
     return Response.json(product);
   } catch (error) {
     return jsonError(error);
@@ -719,6 +722,7 @@ export async function DELETE(request) {
       },
     });
 
+    invalidatePublicCache('products', 'homepage', 'seo');
     return Response.json(product);
   } catch (error) {
     return jsonError(error);

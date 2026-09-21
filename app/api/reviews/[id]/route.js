@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/lib/admin';
+import { invalidatePublicCache } from '@/lib/cache-tags';
 
 /*
 |--------------------------------------------------------------------------
@@ -52,6 +53,7 @@ export async function PATCH(request, { params }) {
       },
     });
 
+    invalidatePublicCache('products', 'homepage', 'seo');
     return NextResponse.json({
       ok: true,
       review,
@@ -94,6 +96,7 @@ export async function DELETE(request, { params }) {
       },
     });
 
+    invalidatePublicCache('products', 'homepage', 'seo');
     return NextResponse.json({
       ok: true,
       message: 'Review deleted successfully.',

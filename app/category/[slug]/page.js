@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import ProductCard from '@/components/ProductCard';
-import { prisma } from '@/lib/prisma';
+import { getPublicCategory, getPublicCategoryPage } from '@/lib/public-data';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import styles from './category.module.css';
 
@@ -28,16 +28,7 @@ export async function generateMetadata({
   const { slug } = await params;
 
 
-  const category =
-    await prisma.category.findUnique({
-      where: {
-        slug,
-      },
-
-      include: {
-        seo: true,
-      },
-    });
+  const category = await getPublicCategory(slug);
 
 
   if (!category) {
@@ -172,46 +163,21 @@ export default async function CategoryPage({
   const productsPerPage = 12;
 
 
-  const category =
-    await prisma.category.findUnique({
-      where: {
-        slug,
-      },
-
-      include: {
-        seo: true,
-
-        products: {
-          where: {
-            active: true,
-          },
-
-          include: {
-            category: true,
-
-            images: {
-              orderBy: {
-                sortOrder: 'asc',
-              },
-            },
-          },
-
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
-      },
-    });
+  let category = await getPublicCategoryPage(slug, currentPage, productsPerPage);
 
 
   if (!category) {
     notFound();
   }
 
-  const totalPages = Math.max(1, Math.ceil(category.products.length / productsPerPage));
+  const lastPage = Math.max(1, Math.ceil(category._count.products / productsPerPage));
+  if (currentPage > lastPage) {
+    category = await getPublicCategoryPage(slug, lastPage, productsPerPage);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(category._count.products / productsPerPage));
   const page = Math.min(currentPage, totalPages);
-  const visibleProducts = category.products.slice((page - 1) * productsPerPage, page * productsPerPage);
-  const serializedProducts = visibleProducts.map((product) => ({
+  const serializedProducts = category.products.map((product) => ({
     ...product,
     regularPrice: product.regularPrice?.toString() || null,
     salePrice: product.salePrice?.toString() || null,
@@ -363,7 +329,7 @@ export default async function CategoryPage({
 
           <div className={styles.contentHead} id="category-products">
             <div><span className={styles.eyebrow}>CURATED FOR YOU</span><h2>Shop {category.name}</h2></div>
-            <span className={styles.count}>{category.products.length} products</span>
+            <span className={styles.count}>{category._count.products} products</span>
           </div>
 
           <div className={styles.products}>

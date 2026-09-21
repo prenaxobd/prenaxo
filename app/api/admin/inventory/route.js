@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { requirePermission, jsonError } from '@/lib/admin';
 import { z } from 'zod';
+import { invalidatePublicCache } from '@/lib/cache-tags';
 
 const adjustmentSchema = z.object({
   productId: z.string().min(1),
@@ -21,6 +22,7 @@ export async function PATCH(request) {
       await transaction.product.update({ where: { id: input.productId }, data: { stock: newStock } });
       return transaction.inventoryMovement.create({ data: { ...input, previousStock: product.stock, newStock, adminId: admin.id } });
     });
+    invalidatePublicCache('products', 'homepage');
     return Response.json(result, { status: 201 });
   } catch (error) {
     return jsonError(error);

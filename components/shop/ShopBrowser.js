@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ChevronDown,
   ArrowUpDown,
@@ -10,7 +11,7 @@ import {
   ChevronRight,
   LayoutGrid,
 } from 'lucide-react';
-import { startTransition, useEffect, useMemo, useState } from 'react';
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 
 import ProductCard from '@/components/ProductCard';
 
@@ -83,25 +84,31 @@ const sortOptions = [
 
 export default function ShopBrowser({
   products = [],
+  total = 0,
+  totalPages = 1,
+  currentPage: serverPage = 1,
+  initialFilters = {},
   brands: availableBrands = [],
   categories: availableCategories = [],
 }) {
 
-  const [category, setCategory] = useState('all');
+  const router = useRouter();
 
-  const [brand, setBrand] = useState('all');
+  const [category, setCategory] = useState(initialFilters.category || 'all');
+
+  const [brand, setBrand] = useState(initialFilters.brand || 'all');
 
   const [priceRange, setPriceRange] =
-    useState(priceRanges[0]);
+    useState(initialFilters.priceRange || priceRanges[0]);
 
   const [ratingFilter, setRatingFilter] =
-    useState(0);
+    useState(initialFilters.ratingFilter || 0);
 
   const [availability, setAvailability] =
-    useState('all');
+    useState(initialFilters.availability || 'all');
 
   const [sort, setSort] =
-    useState('newest');
+    useState(initialFilters.sort || 'newest');
 
   const [sortMenuOpen, setSortMenuOpen] =
     useState(false);
@@ -148,14 +155,36 @@ export default function ShopBrowser({
   }, [filtersOpen]);
 
   const [currentPage, setCurrentPage] =
-    useState(1);
+    useState(serverPage);
+  const hasMounted = useRef(false);
 
   useEffect(() => {
-    const requestedBrand = new URLSearchParams(window.location.search).get('brand');
-    if (requestedBrand) {
-      startTransition(() => setBrand(requestedBrand));
+    startTransition(() => setCurrentPage(serverPage));
+  }, [serverPage]);
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
     }
-  }, []);
+
+    startTransition(() => setCurrentPage(1));
+  }, [availability, brand, category, priceRange, ratingFilter, sort]);
+
+  useEffect(() => {
+    const query = new URLSearchParams();
+    if (category !== 'all') query.set('category', category);
+    if (brand !== 'all') query.set('brand', brand);
+    if (priceRange.min) query.set('min', priceRange.min);
+    if (priceRange.max) query.set('max', priceRange.max);
+    if (ratingFilter) query.set('rating', String(ratingFilter));
+    if (availability !== 'all') query.set('availability', availability);
+    if (sort !== 'newest') query.set('sort', sort);
+    if (currentPage > 1) query.set('page', String(currentPage));
+
+    const nextUrl = query.toString() ? `/shop?${query}` : '/shop';
+    router.replace(nextUrl, { scroll: false });
+  }, [availability, brand, category, currentPage, priceRange, ratingFilter, router, sort]);
 
 
   /* =======================================================
@@ -170,20 +199,13 @@ export default function ShopBrowser({
           .filter(Boolean)
       : [];
 
-    const namesFromProducts = Array.isArray(products)
-      ? products
-          .map((product) => product.category?.name)
-          .filter(Boolean)
-      : [];
-
     return Array.from(
       new Set([
         ...namesFromCategories,
-        ...namesFromProducts,
       ])
     ).sort((a, b) => a.localeCompare(b));
 
-  }, [availableCategories, products]);
+  }, [availableCategories]);
 
 
   /* =======================================================
@@ -214,200 +236,15 @@ export default function ShopBrowser({
       registerBrand(brandItem.name);
     }
 
-    for (const product of products || []) {
-      const productBrandName = product?.brandRelation?.name || product?.brand;
-      registerBrand(productBrandName);
-    }
-
     return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [availableBrands, products]);
+  }, [availableBrands]);
 
 
   /* =======================================================
      FILTER + SORT
   ======================================================= */
 
-  const filteredProducts = useMemo(() => {
-
-    return products
-
-      /* CATEGORY */
-      .filter(product =>
-        category === 'all' ||
-        product.category?.name === category
-      )
-
-      /* BRAND */
-      .filter(product => {
-        if (brand === 'all') return true;
-
-        const productBrandName = (product.brandRelation?.name || product.brand || '').trim();
-        return productBrandName.toLowerCase() === brand.toLowerCase();
-      })
-
-      /* PRICE */
-      .filter(product => {
-
-        const price = Number(
-          product.salePrice ||
-          product.regularPrice ||
-          0
-        );
-
-        return (
-          (!priceRange.min ||
-            price >= Number(priceRange.min)) &&
-
-          (!priceRange.max ||
-            price < Number(priceRange.max))
-        );
-
-      })
-
-      /* RATING */
-      .filter(product => {
-
-        if (ratingFilter === 0) {
-          return true;
-        }
-
-        const rating = Number(
-          product.rating || 0
-        );
-
-        return rating >= ratingFilter;
-
-      })
-
-      /* AVAILABILITY */
-      .filter(product => {
-
-        if (availability === 'all') {
-          return true;
-        }
-
-        if (availability === 'in-stock') {
-          return Number(product.stock || 0) > 0;
-        }
-
-        if (availability === 'out-of-stock') {
-          return Number(product.stock || 0) < 1;
-        }
-
-        return true;
-
-      })
-
-      /* SORT */
-      .sort((first, second) => {
-
-        const firstPrice = Number(
-          first.salePrice ||
-          first.regularPrice ||
-          0
-        );
-
-        const secondPrice = Number(
-          second.salePrice ||
-          second.regularPrice ||
-          0
-        );
-
-        const firstRating = Number(
-          first.rating || 0
-        );
-
-        const secondRating = Number(
-          second.rating || 0
-        );
-
-        const firstReviewCount = Number(
-          first.reviewCount || 0
-        );
-
-        const secondReviewCount = Number(
-          second.reviewCount || 0
-        );
-
-        const firstPopularity =
-          firstReviewCount * 12 +
-          firstRating * 10 +
-          Number(first.featured ? 30 : 0);
-
-        const secondPopularity =
-          secondReviewCount * 12 +
-          secondRating * 10 +
-          Number(second.featured ? 30 : 0);
-
-        if (sort === 'best-sellers') {
-          return secondPopularity - firstPopularity ||
-            secondRating - firstRating ||
-            new Date(second.createdAt) - new Date(first.createdAt);
-        }
-
-        if (sort === 'price-low') {
-          return firstPrice - secondPrice ||
-            new Date(second.createdAt) - new Date(first.createdAt);
-        }
-
-        if (sort === 'price-high') {
-          return secondPrice - firstPrice ||
-            new Date(second.createdAt) - new Date(first.createdAt);
-        }
-
-        if (sort === 'top-rated') {
-          return secondRating - firstRating ||
-            secondReviewCount - firstReviewCount ||
-            new Date(second.createdAt) - new Date(first.createdAt);
-        }
-
-        if (sort === 'featured') {
-          return Number(second.featured) - Number(first.featured) ||
-            secondRating - firstRating ||
-            new Date(second.createdAt) - new Date(first.createdAt);
-        }
-
-        /* NEWEST */
-        return new Date(second.createdAt) - new Date(first.createdAt);
-      });
-
-  }, [
-    products,
-    category,
-    brand,
-    priceRange,
-    ratingFilter,
-    availability,
-    sort,
-  ]);
-
-
-  /* =======================================================
-     TOTAL PAGES
-  ======================================================= */
-
-  const totalPages = Math.ceil(
-    filteredProducts.length /
-    PRODUCTS_PER_PAGE
-  );
-
-
-  /* =======================================================
-     RESET PAGE WHEN FILTER CHANGES
-  ======================================================= */
-
-  useEffect(() => {
-
-    startTransition(() => setCurrentPage(1));
-
-  }, [
-    category,
-    brand,
-    priceRange,
-    ratingFilter,
-    availability,
-    sort,
-  ]);
+  const filteredProducts = products;
 
 
   /* =======================================================
@@ -416,10 +253,7 @@ export default function ShopBrowser({
 
   useEffect(() => {
 
-    if (
-      totalPages > 0 &&
-      currentPage > totalPages
-    ) {
+    if (totalPages > 0 && currentPage > totalPages) {
 
       startTransition(() => setCurrentPage(totalPages));
 
@@ -435,19 +269,9 @@ export default function ShopBrowser({
      PAGINATION
   ======================================================= */
 
-  const startIndex =
-    (currentPage - 1) *
-    PRODUCTS_PER_PAGE;
-
-  const endIndex =
-    startIndex +
-    PRODUCTS_PER_PAGE;
-
-  const paginatedProducts =
-    filteredProducts.slice(
-      startIndex,
-      endIndex
-    );
+  const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+  const endIndex = startIndex + PRODUCTS_PER_PAGE;
+  const paginatedProducts = filteredProducts;
 
 
   /* =======================================================
@@ -455,14 +279,14 @@ export default function ShopBrowser({
   ======================================================= */
 
   const showingStart =
-    filteredProducts.length > 0
+    total > 0
       ? startIndex + 1
       : 0;
 
   const showingEnd =
     Math.min(
       endIndex,
-      filteredProducts.length
+      startIndex + paginatedProducts.length
     );
 
 
@@ -503,6 +327,9 @@ export default function ShopBrowser({
     }
 
     setCurrentPage(page);
+    const query = new URLSearchParams(window.location.search);
+    query.set('page', String(page));
+    router.push(`/shop?${query.toString()}`, { scroll: false });
 
     window.scrollTo({
       top: 0,
@@ -644,7 +471,7 @@ export default function ShopBrowser({
 
           <span className="shop-result-pill">
 
-            {filteredProducts.length}
+            {total}
             {' '}
             products
             {' • '}

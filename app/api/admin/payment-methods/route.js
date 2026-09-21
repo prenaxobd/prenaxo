@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requirePermission, jsonError } from '@/lib/admin';
+import { invalidatePublicCache } from '@/lib/cache-tags';
 import { z } from 'zod';
 import { ensureDefaultPaymentMethods } from '@/lib/payment-methods';
 
@@ -79,6 +80,7 @@ export async function POST(request) {
       },
     });
 
+    invalidatePublicCache('site-settings');
     return Response.json(method, {
       status: 201,
     });
@@ -110,6 +112,7 @@ export async function PATCH(request) {
       data,
     });
 
+    invalidatePublicCache('site-settings');
     return Response.json(method);
   } catch (error) {
     return jsonError(error);
@@ -136,6 +139,7 @@ export async function DELETE(request) {
       },
     });
 
+    invalidatePublicCache('site-settings');
     return Response.json(method);
   } catch (error) {
     return jsonError(error);
