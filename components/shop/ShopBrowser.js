@@ -10,7 +10,7 @@ import {
   ChevronRight,
   LayoutGrid,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { startTransition, useEffect, useMemo, useState } from 'react';
 
 import ProductCard from '@/components/ProductCard';
 
@@ -152,7 +152,9 @@ export default function ShopBrowser({
 
   useEffect(() => {
     const requestedBrand = new URLSearchParams(window.location.search).get('brand');
-    if (requestedBrand) setBrand(requestedBrand);
+    if (requestedBrand) {
+      startTransition(() => setBrand(requestedBrand));
+    }
   }, []);
 
 
@@ -396,7 +398,7 @@ export default function ShopBrowser({
 
   useEffect(() => {
 
-    setCurrentPage(1);
+    startTransition(() => setCurrentPage(1));
 
   }, [
     category,
@@ -419,7 +421,7 @@ export default function ShopBrowser({
       currentPage > totalPages
     ) {
 
-      setCurrentPage(totalPages);
+      startTransition(() => setCurrentPage(totalPages));
 
     }
 
@@ -693,6 +695,7 @@ export default function ShopBrowser({
                   <button
                     key={option.value}
                     type="button"
+                    role="option"
                     className={`shop-sort-option ${sort === option.value ? 'is-selected' : ''}`}
                     onClick={() => {
                       setSort(option.value);
@@ -842,6 +845,7 @@ export default function ShopBrowser({
                       <button
                         key={option.value}
                         type="button"
+                        role="option"
                         className={`shop-sort-option ${sort === option.value ? 'is-selected' : ''}`}
                         onClick={() => {
                           setSort(option.value);

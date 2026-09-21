@@ -1,7 +1,9 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import {
   Save,
@@ -207,6 +209,7 @@ export default function ProductForm({
   categories = [],
   brands = [],
 }) {
+  const router = useRouter();
   const isEdit = mode === 'edit';
 
   const [form, setForm] =
@@ -231,7 +234,6 @@ export default function ProductForm({
 
   useEffect(() => {
     if (form.productType !== 'COMBO' || comboSearch.trim().length < 2) {
-      setComboResults([]);
       return undefined;
     }
     const controller = new AbortController();
@@ -592,8 +594,7 @@ export default function ProductForm({
         );
 
         setTimeout(() => {
-          window.location.href =
-            '/admin/products';
+          router.push('/admin/products');
         }, 500);
       }
 
@@ -1429,7 +1430,7 @@ export default function ProductForm({
                       }
                       key={`${image.url}-${index}`}
                     >
-                      <img
+                      <OptimizedImage
                         src={
                           image.url
                         }
@@ -1660,8 +1661,8 @@ export default function ProductForm({
                     <Search size={16} />
                     <input value={comboSearch} onChange={event => setComboSearch(event.target.value)} placeholder="Search products..." />
                   </div>
-                  {comboResults.length > 0 && <div className={styles.comboResults}>{comboResults.map(item => <button type="button" key={item.id} onClick={() => addComboItem(item)}><span>{item.images?.[0]?.url && <img src={item.images[0].url} alt="" />}</span><span>{item.name}<small>{item.sku}</small></span><Plus size={15} /></button>)}</div>}
-                  <div className={styles.comboItems}>{form.comboItems.map(item => <div className={styles.comboItem} key={item.productId}><span>{item.product?.images?.[0]?.url && <img src={item.product.images[0].url} alt="" />}</span><strong>{item.product?.name || item.productId}</strong><input type="number" min="1" value={item.quantity} onChange={event => update('comboItems', form.comboItems.map(current => current.productId === item.productId ? { ...current, quantity: Math.max(1, Number(event.target.value) || 1) } : current))} /><button type="button" onClick={() => removeComboItem(item.productId)} aria-label="Remove combo product"><X size={15} /></button></div>)}</div>
+                  {comboResults.length > 0 && <div className={styles.comboResults}>{comboResults.map(item => <button type="button" key={item.id} onClick={() => addComboItem(item)}><span>{item.images?.[0]?.url && <OptimizedImage src={item.images[0].url} alt="" />}</span><span>{item.name}<small>{item.sku}</small></span><Plus size={15} /></button>)}</div>}
+                  <div className={styles.comboItems}>{form.comboItems.map(item => <div className={styles.comboItem} key={item.productId}><span>{item.product?.images?.[0]?.url && <OptimizedImage src={item.product.images[0].url} alt="" />}</span><strong>{item.product?.name || item.productId}</strong><input type="number" min="1" value={item.quantity} onChange={event => update('comboItems', form.comboItems.map(current => current.productId === item.productId ? { ...current, quantity: Math.max(1, Number(event.target.value) || 1) } : current))} /><button type="button" onClick={() => removeComboItem(item.productId)} aria-label="Remove combo product"><X size={15} /></button></div>)}</div>
                 </div>
               )}
             </section>

@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useState } from 'react';
 import MediaUploader from './MediaUploader';
@@ -28,7 +29,7 @@ function BannerPreview({ src, alt = 'Banner preview' }) {
   }
 
   return (
-    <img
+    <OptimizedImage
       src={src}
       alt={alt}
       className="admin-banner-preview-image"

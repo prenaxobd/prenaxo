@@ -1,5 +1,6 @@
-
 'use client';
+
+import OptimizedImage from '@/components/OptimizedImage';
 
 import {
   Star,
@@ -399,7 +400,7 @@ export default function ProductReviews({
               <div className="review-avatar">
 
                 {review.user?.image ? (
-                  <img
+                  <OptimizedImage
                     src={review.user.image}
                     alt=""
                   />

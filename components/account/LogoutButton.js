@@ -2,15 +2,18 @@
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
+import { useRouter } from 'next/navigation';
 
 export default function LogoutButton() {
+  const router = useRouter();
+
   async function logout() {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
       });
 
-      window.location.href = '/login';
+      router.push('/login');
     } catch (error) {
       console.error(error);
     }

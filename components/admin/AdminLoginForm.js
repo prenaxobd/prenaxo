@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
 import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
@@ -34,7 +35,7 @@ export default function AdminLoginForm({ inviteToken = '', initialEmail = '' }) 
   }
 
   return <main className="admin-login-page"><form className="admin-login-card" onSubmit={submit}>
-    <Link className="admin-login-logo" href="/"><img src="/uploads/prenaxo-logo.png" alt="Prenaxo" /></Link>
+    <Link className="admin-login-logo" href="/"><OptimizedImage src="/uploads/prenaxo-logo.png" alt="Prenaxo" /></Link>
     <div className="admin-login-icon"><LockKeyhole size={20} /></div>
     <p className="admin-login-eyebrow">Prenaxo Admin</p>
     <h1>Sign in to your account</h1>

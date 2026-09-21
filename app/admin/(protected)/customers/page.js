@@ -1,3 +1,4 @@
+import OptimizedImage from '@/components/OptimizedImage';
 import { prisma } from '@/lib/prisma';
 
 function initials(name = '') {
@@ -56,7 +57,7 @@ export default async function Customers() {
 											<div className="admin-customer-identity">
 												<div className="admin-customer-avatar">
 													{user.image ? (
-														<img src={user.image} alt="" />
+														<OptimizedImage src={user.image} alt="" />
 													) : (
 														initials(user.name)
 													)}

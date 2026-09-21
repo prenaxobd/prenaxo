@@ -1,3 +1,4 @@
+import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
@@ -108,7 +109,7 @@ export default async function OrderDetailsPage({ params }) {
                     <div className="order-detail-image">
 
                       {image ? (
-                        <img
+                        <OptimizedImage
                           src={image}
                           alt={item.productName}
                         />

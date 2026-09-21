@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import {
   ChevronLeft,
@@ -13,11 +14,9 @@ export default function ReviewRail({
 }) {
   const items = reviews || [];
 
-  if (!items.length) return null;
-
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [perView, setPerView] = useState(3);
+  const [perView, setPerView] = useState(1);
 
   const touchStart = useRef(0);
   const touchEnd = useRef(0);
@@ -72,12 +71,6 @@ export default function ReviewRail({
     paused,
   ]);
 
-  useEffect(() => {
-    if (active > maxIndex) {
-      setActive(0);
-    }
-  }, [active, maxIndex]);
-
   function previous() {
     setActive((current) =>
       current <= 0
@@ -116,8 +109,11 @@ export default function ReviewRail({
     }
   }
 
+  if (!items.length) return null;
+
+  const visibleActive = Math.min(active, maxIndex);
   const translate =
-    -(active * (100 / perView));
+    -(visibleActive * (100 / perView));
 
   const getInitials = (name = '') =>
     name
@@ -176,7 +172,7 @@ export default function ReviewRail({
                   <div className="home-review-header">
                     <div className="home-review-avatar-wrap">
                       {review.user?.image ? (
-                        <img
+                        <OptimizedImage
                           src={review.user.image}
                           alt={review.user?.name || 'Customer'}
                           className="home-review-avatar"
@@ -263,7 +259,7 @@ export default function ReviewRail({
                 key={index}
                 type="button"
                 className={
-                  index === active
+                  index === visibleActive
                     ? 'active'
                     : ''
                 }

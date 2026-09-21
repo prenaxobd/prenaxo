@@ -1,7 +1,8 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -188,7 +189,7 @@ function ProductSuggestion({ item, onSelect }) {
     >
       <span className="header-product-thumb">
         {imageUrl ? (
-          <img
+          <OptimizedImage
             src={imageUrl}
             alt={item.name}
             onError={(event) => {
@@ -406,9 +407,11 @@ export default function Header() {
      ======================================================= */
 
   useEffect(() => {
-    loadUser();
-    loadWishlistCount();
-    loadNavigation();
+    startTransition(() => {
+      loadUser();
+      loadWishlistCount();
+      loadNavigation();
+    });
 
     const onWishlist = (event) => {
       if (typeof event?.detail?.count === 'number') {
@@ -508,12 +511,12 @@ export default function Header() {
 
   useEffect(() => {
     if (!query.trim()) {
-      setResults({
+      startTransition(() => setResults({
         products: [],
         categories: [],
         brands: [],
-      });
-      setSearchLoading(false);
+      }));
+      startTransition(() => setSearchLoading(false));
       return undefined;
     }
 
@@ -707,7 +710,7 @@ export default function Header() {
             href="/"
             aria-label="Prenaxo home"
           >
-            <img
+            <OptimizedImage
               src="/uploads/prenaxo-logo.png"
               alt="Prenaxo"
             />
@@ -822,7 +825,7 @@ export default function Header() {
             >
               <span className="header-action-icon account-icon">
                 {user?.image && !userImageFailed ? (
-                  <img
+                  <OptimizedImage
                     src={user.image}
                     alt={userName}
                     className="header-profile-image"
@@ -1093,7 +1096,7 @@ export default function Header() {
             href="/"
             onClick={closePanels}
           >
-            <img
+            <OptimizedImage
               src="/uploads/prenaxo-logo.png"
               alt="Prenaxo"
             />
@@ -1123,7 +1126,7 @@ export default function Header() {
               <>
                 <span className="mobile-avatar">
                   {user.image && !userImageFailed ? (
-                    <img
+                    <OptimizedImage
                       src={user.image}
                       alt={userName}
                       onError={() => setUserImageFailed(true)}

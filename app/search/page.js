@@ -1,6 +1,16 @@
 import ProductCard from '@/components/ProductCard';
 import { prisma } from '@/lib/prisma';
 
+export async function generateMetadata() {
+  return {
+    title: 'Search',
+    robots: {
+      index: false,
+      follow: true,
+    },
+  };
+}
+
 function normalizeSearchTokens(rawQuery) {
   const trimmed = (rawQuery || '').trim();
   if (!trimmed) return [];

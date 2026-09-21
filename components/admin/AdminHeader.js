@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell, faChevronDown, faExpand, faMagnifyingGlass, faMessage, faMoon, faPlus, faSun } from '@fortawesome/free-solid-svg-icons';
@@ -14,7 +14,7 @@ export default function AdminHeader({ user }) {
 
   useEffect(() => {
     const saved = window.localStorage.getItem('khatibazar-admin-theme') || 'light';
-    setTheme(saved);
+    startTransition(() => setTheme(saved));
     document.documentElement.dataset.adminTheme = saved;
   }, []);
 

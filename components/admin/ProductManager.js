@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
@@ -734,7 +735,7 @@ export default function ProductManager({
                             }
                           >
                             {image ? (
-                              <img
+                              <OptimizedImage
                                 src={
                                   image
                                 }

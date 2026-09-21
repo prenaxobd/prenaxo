@@ -1,10 +1,13 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import './CheckoutView.css';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function CheckoutView() {
+  const router = useRouter();
   const [cart, setCart] = useState(null);
   const [delivery, setDelivery] = useState(null);
   const [paymentOptions, setPaymentOptions] = useState([]);
@@ -363,9 +366,7 @@ export default function CheckoutView() {
         'khatibazar-cart'
       );
 
-      window.location.assign(
-        `/order-success?order=${data.orderNumber}`
-      );
+      router.push(`/order-success?order=${data.orderNumber}`);
     } catch (err) {
       setError(
         err.message ||
@@ -1242,7 +1243,7 @@ function OrderSummary({
               <div className="checkout-thumb">
                 {item.product.images?.[0]
                   ?.url ? (
-                  <img
+                  <OptimizedImage
                     src={
                       item.product
                         .images[0].url

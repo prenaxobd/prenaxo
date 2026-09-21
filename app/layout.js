@@ -8,6 +8,7 @@ import {
   SITE_NAME,
   SITE_URL,
   absoluteUrl,
+  getCanonical,
   getSiteSettings,
 } from '@/lib/seo';
 
@@ -24,8 +25,7 @@ export async function generateMetadata() {
     settings?.metaDescription ||
     'Shop quality products online in Bangladesh at Prenaxo. Discover everyday essentials, trending products, great deals and reliable delivery.';
 
-  const canonical =
-    settings?.canonicalUrl || SITE_URL;
+  const canonical = getCanonical(settings?.canonicalUrl, '/');
 
   const ogTitle =
     settings?.ogTitle ||
@@ -61,6 +61,8 @@ export async function generateMetadata() {
     },
 
     keywords,
+
+    description,
 
     alternates: {
       canonical,
@@ -120,6 +122,10 @@ export async function generateMetadata() {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
       <body>
         <AuthSessionProvider>
           <StorefrontShell footer={<Footer />}>

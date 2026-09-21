@@ -86,7 +86,7 @@ export default function Wishlist() {
   }
 
   useEffect(() => {
-    loadWishlist();
+    queueMicrotask(loadWishlist);
 
     function handleWishlistUpdated() {
       loadWishlist();

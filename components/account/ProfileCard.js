@@ -1,3 +1,4 @@
+import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 
 export default function ProfileCard({ user }) {
@@ -7,7 +8,7 @@ export default function ProfileCard({ user }) {
   return (
     <div className="account-profile-card">
       <div className="profile-avatar-wrap">
-        <img
+        <OptimizedImage
           src={image}
           alt={user.name}
           className="profile-avatar"

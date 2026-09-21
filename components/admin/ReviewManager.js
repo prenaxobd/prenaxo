@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useMemo, useState } from 'react';
 import {
@@ -222,7 +223,7 @@ export default function ReviewManager({ initialReviews = [] }) {
                   <div className="admin-review-avatar">
 
                     {review.user?.image ? (
-                      <img
+                      <OptimizedImage
                         src={review.user.image}
                         alt=""
                       />

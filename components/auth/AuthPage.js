@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
@@ -80,7 +81,7 @@ export default function AuthPage({ mode = 'login' }) {
           <div className="auth-promo-overlay" />
           <div className="auth-promo-content">
             <Link className="auth-brand" href="/" aria-label="Prenaxo home">
-              <img src="/uploads/prenaxo-logo.png" alt="Prenaxo" />
+              <OptimizedImage src="/uploads/prenaxo-logo.png" alt="Prenaxo" />
             </Link>
             <div className="auth-promo-copy">
               <span className="auth-kicker">QUALITY PRODUCTS, BETTER LIFE</span>
@@ -107,7 +108,7 @@ export default function AuthPage({ mode = 'login' }) {
               <button className="auth-submit" type="submit" disabled={loading}>{loading ? (isLogin ? 'Signing in...' : 'Creating account...') : <>{isLogin ? 'Sign In' : 'Create Account'} <ArrowRight size={17} /></>}</button>
             </form>
             <div className="auth-divider"><span>OR</span></div>
-            <button className="auth-google" type="button" onClick={continueWithGoogle} disabled={loading}><img className="auth-google-mark" src="/uploads/google.webp" alt="" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling.hidden = false; }} /> <span className="auth-google-fallback" hidden>G</span> Continue with Google</button>
+            <button className="auth-google" type="button" onClick={continueWithGoogle} disabled={loading}><OptimizedImage className="auth-google-mark" src="/uploads/google.webp" alt="" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling.hidden = false; }} /> <span className="auth-google-fallback" hidden>G</span> Continue with Google</button>
             <p className="auth-legal">By signing in, you agree to our <Link href="/terms">Terms &amp; Conditions</Link> and <Link href="/privacy">Privacy Policy</Link>.</p>
           </div>
         </section>

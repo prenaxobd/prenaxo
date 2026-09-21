@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -134,7 +135,7 @@ export default function About() {
       <section className="about-story">
         <div className="about-container story-grid">
           <div className="story-image-wrap reveal">
-            <img src="/uploads/our_story_img.webp" alt="Prenaxo team and warehouse" />
+            <OptimizedImage src="/uploads/our_story_img.webp" alt="Prenaxo team and warehouse" />
           </div>
 
           <div className="story-content reveal">
@@ -253,7 +254,7 @@ export default function About() {
           </div>
 
           <div className="values-image-wrap reveal">
-            <img src="/uploads/our_valuse_img.webp" alt="Prenaxo team" />
+            <OptimizedImage src="/uploads/our_valuse_img.webp" alt="Prenaxo team" />
           </div>
         </div>
       </section>

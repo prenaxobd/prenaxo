@@ -2,6 +2,7 @@
 
 import { Heart, ShoppingBag } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/cart/CartProvider';
 
 function getAttributeValueIds(variant) {
@@ -74,11 +75,16 @@ export default function ProductActions({
   productId,
   disabled = false,
 }) {
-  const cartProduct = product || { id: productId };
+  const router = useRouter();
+  const cartProduct = useMemo(
+    () => product || { id: productId },
+    [product, productId]
+  );
 
-  const variants = Array.isArray(cartProduct.variants)
-    ? cartProduct.variants
-    : [];
+  const variants = useMemo(
+    () => (Array.isArray(cartProduct.variants) ? cartProduct.variants : []),
+    [cartProduct.variants]
+  );
 
   /*
    * ============================================
@@ -580,9 +586,7 @@ export default function ProductActions({
         }
       }
 
-      window.location.assign(
-        '/checkout'
-      );
+      router.push('/checkout');
     } catch (error) {
       console.error(error);
 

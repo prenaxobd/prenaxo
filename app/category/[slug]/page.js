@@ -13,6 +13,7 @@ import {
   cleanText,
   truncate,
   getRobots,
+  getCanonical,
   safeJsonLd,
 } from '@/lib/seo';
 
@@ -70,11 +71,10 @@ export async function generateMetadata({
     );
 
 
-  const canonical =
-    category.seo?.canonicalUrl ||
-    absoluteUrl(
-      `/category/${category.slug}`
-    );
+  const canonical = getCanonical(
+    category.seo?.canonicalUrl,
+    `/category/${category.slug}`
+  );
 
 
   const ogTitle =

@@ -1,3 +1,4 @@
+import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -23,6 +24,7 @@ import {
 
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import LogoutButton from '@/components/account/LogoutButton';
 
 export default async function AccountPage() {
   const user = await getCurrentUser();
@@ -163,13 +165,7 @@ export default async function AccountPage() {
 
             <div className="account-nav-divider" />
 
-            <a
-              href="/api/auth/logout"
-              className="account-nav-item logout"
-            >
-              <span className="account-nav-icon"><FontAwesomeIcon icon={faRightFromBracket} aria-hidden="true" /></span>
-              <span>Logout</span>
-            </a>
+            <LogoutButton />
 
           </nav>
 
@@ -219,7 +215,7 @@ export default async function AccountPage() {
 
                 {user.image ? (
 
-                  <img
+                  <OptimizedImage
                     src={user.image}
                     alt={user.name || 'Profile'}
                   />
@@ -382,7 +378,7 @@ export default async function AccountPage() {
                 </h3>
 
                 <p>
-                  You haven't placed any orders yet.
+                  You haven&apos;t placed any orders yet.
                 </p>
 
                 <Link href="/shop">
@@ -457,7 +453,7 @@ export default async function AccountPage() {
 
                             {productImage ? (
 
-                              <img
+                              <OptimizedImage
                                 src={productImage}
                                 alt={
                                   firstItem?.productName ||

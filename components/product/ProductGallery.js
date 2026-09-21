@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import {
   Heart,
@@ -93,7 +94,7 @@ export default function ProductGallery({
         <div className="product-image-box">
 
           {current ? (
-            <img
+            <OptimizedImage
               src={current}
               alt={
                 images[active]?.alt ||
@@ -169,7 +170,7 @@ export default function ProductGallery({
           <div className="product-share-popup" role="dialog" aria-label="Share product">
             <div className="product-share-preview">
               {product.images?.[0]?.url && (
-                <img src={product.images[0].url} alt="" />
+                <OptimizedImage src={product.images[0].url} alt="" />
               )}
               <strong>{product.name}</strong>
             </div>
@@ -215,7 +216,7 @@ export default function ProductGallery({
                     setActive(index)
                   }
                 >
-                  <img
+                  <OptimizedImage
                     src={image.url}
                     alt={
                       image.alt ||
@@ -273,7 +274,7 @@ export default function ProductGallery({
             <ChevronLeft />
           </button>
 
-          <img
+          <OptimizedImage
             src={current}
             alt={product.name}
             onClick={(event) =>

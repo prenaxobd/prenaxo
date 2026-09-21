@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
 
@@ -467,7 +468,7 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
 
             {image?.url ? (
 
-              <img
+              <OptimizedImage
                 src={image.url}
                 alt={
                   image.alt ||

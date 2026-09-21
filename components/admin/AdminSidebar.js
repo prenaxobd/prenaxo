@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -254,7 +255,7 @@ export default function AdminSidebar({
               )
             }
           >
-            <img
+            <OptimizedImage
               src="/uploads/prenaxo-logo.png"
               alt="Prenaxo"
             />

@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -7,11 +8,9 @@ import { useEffect, useRef, useState } from 'react';
 export default function CategoryRail({ categories }) {
   const items = categories || [];
 
-  if (!items.length) return null;
-
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [perView, setPerView] = useState(6);
+  const [perView, setPerView] = useState(3);
 
   const touchStart = useRef(0);
   const touchEnd = useRef(0);
@@ -49,12 +48,6 @@ export default function CategoryRail({ categories }) {
     return () => clearInterval(timer);
   }, [items.length, perView, maxIndex, paused]);
 
-  useEffect(() => {
-    if (active > maxIndex) {
-      setActive(0);
-    }
-  }, [active, maxIndex]);
-
   function previous() {
     setActive((current) =>
       current <= 0 ? maxIndex : current - 1
@@ -86,8 +79,11 @@ export default function CategoryRail({ categories }) {
     }
   }
 
+  if (!items.length) return null;
+
+  const visibleActive = Math.min(active, maxIndex);
   const translate =
-    -(active * (100 / perView));
+    -(visibleActive * (100 / perView));
 
   return (
     <section className="home-section home-category-section">
@@ -144,7 +140,7 @@ export default function CategoryRail({ categories }) {
 
                   {category.image ? (
 
-                    <img
+                    <OptimizedImage
                       src={category.image}
                       alt={category.name}
                       loading="lazy"
@@ -216,7 +212,7 @@ export default function CategoryRail({ categories }) {
                 key={index}
                 type="button"
                 className={
-                  index === active
+                  index === visibleActive
                     ? 'active'
                     : ''
                 }

@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useMemo, useState } from 'react';
 import MediaUploader from '@/components/admin/MediaUploader';
@@ -109,7 +110,7 @@ export default function CategoryManager({ initialCategories, attributes = [] }) 
       <div className="admin-form-actions"><button className="btn">Save category</button></div>
     </form>}
     <div className="admin-table-wrap category-table-wrap"><table className="table category-table"><thead><tr><th>Image</th><th>Category</th><th>Parent</th><th>Slug</th><th>Products</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{categoryRows.map(category => <tr key={category.id}>
-      <td>{category.image ? <img className="admin-thumbnail" src={category.image} alt={category.name} onError={event => { event.currentTarget.style.display = 'none'; }} /> : <div className="no-image">No image</div>}</td>
+      <td>{category.image ? <OptimizedImage className="admin-thumbnail" src={category.image} alt={category.name} onError={event => { event.currentTarget.style.display = 'none'; }} /> : <div className="no-image">No image</div>}</td>
       <td><div className="category-name-cell" style={{ '--category-depth': category.depth }}><span className="category-tree-mark" aria-hidden="true">{category.depth ? '↳' : '•'}</span><strong title={category.name}>{category.name}</strong></div></td>
       <td>{category.parent?.name || <span className="category-root-label">Root</span>}</td><td>{category.slug}</td><td><span className="stock">{category._count.products}</span></td><td><span className={category.active ? 'status active' : 'status'}>{category.active ? 'Active' : 'Archived'}</span></td><td><span className="admin-date">{category.createdAt ? new Date(category.createdAt).toLocaleDateString('en-GB') : '—'}</span></td>
       <td><div className="admin-action-menu"><button type="button" aria-label={`Actions for ${category.name}`} onClick={() => setActionId(actionId === category.id ? null : category.id)}>⋮</button>{actionId === category.id && <div className="admin-action-popover"><button type="button" onClick={() => openEdit(category)}>Edit</button><button type="button" onClick={() => { setActionId(null); archive(category.id); }}>Archive</button></div>}</div></td>

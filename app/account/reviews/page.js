@@ -1,3 +1,4 @@
+import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
@@ -99,7 +100,7 @@ export default async function ReviewsPage() {
                       <div className="review-product-image">
 
                         {image ? (
-                          <img
+                          <OptimizedImage
                             src={image}
                             alt={review.product.name}
                           />

@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
 import {
@@ -140,7 +141,7 @@ export default function ProductView({
             }
           >
             {primaryImage ? (
-              <img
+              <OptimizedImage
                 src={primaryImage}
                 alt={product.name}
               />
@@ -164,7 +165,7 @@ export default function ProductView({
                       styles.thumb
                     }
                   >
-                    <img
+                    <OptimizedImage
                       src={image.url}
                       alt={
                         image.alt ||

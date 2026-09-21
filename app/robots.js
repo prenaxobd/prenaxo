@@ -20,6 +20,8 @@ export default function robots() {
           '/account/',
           '/login/',
           '/register/',
+          '/order-success/',
+          '/track-order/',
         ],
       },
     ],

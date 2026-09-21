@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import {
   SITE_URL,
   absoluteUrl,
+  getCanonical,
 } from '@/lib/seo';
 
 
@@ -84,20 +85,21 @@ export default async function sitemap() {
           }
 
           const canonical =
-            absoluteUrl(
-              product.seo.canonicalUrl
+            getCanonical(
+              product.seo.canonicalUrl,
+              `/product/${product.slug}`
             );
 
           return (
             canonical ===
               absoluteUrl(
-                `/products/${product.slug}`
+                `/product/${product.slug}`
               )
           );
         })
         .map((product) => ({
           url: absoluteUrl(
-            `/products/${product.slug}`
+            `/product/${product.slug}`
           ),
 
           lastModified:
@@ -129,8 +131,9 @@ export default async function sitemap() {
           }
 
           const canonical =
-            absoluteUrl(
-              category.seo.canonicalUrl
+            getCanonical(
+              category.seo.canonicalUrl,
+              `/category/${category.slug}`
             );
 
           return (
@@ -146,7 +149,7 @@ export default async function sitemap() {
           ),
 
           lastModified:
-            category.updatedAt,
+            category.createdAt,
 
           changeFrequency:
             'weekly',
@@ -184,6 +187,21 @@ export default async function sitemap() {
 
         priority: 0.9,
       },
+
+      ...[
+        '/about',
+        '/contact',
+        '/faq',
+        '/privacy',
+        '/terms',
+        '/combos',
+        '/flash-sale',
+      ].map((path) => ({
+        url: absoluteUrl(path),
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.5,
+      })),
     ];
 
 

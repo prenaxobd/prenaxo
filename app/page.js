@@ -11,6 +11,7 @@ import {
   SITE_NAME,
   SITE_URL,
   absoluteUrl,
+  getCanonical,
   getSiteSettings,
   safeJsonLd,
 } from '@/lib/seo';
@@ -26,8 +27,7 @@ export async function generateMetadata() {
     settings?.metaDescription ||
     'Shop quality products online in Bangladesh at Prenaxo. Discover everyday essentials, trending products, great deals and reliable delivery.';
 
-  const canonical =
-    settings?.canonicalUrl || SITE_URL;
+  const canonical = getCanonical(settings?.canonicalUrl, '/');
 
   const ogTitle =
     settings?.ogTitle || title;

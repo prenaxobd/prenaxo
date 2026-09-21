@@ -1,3 +1,4 @@
+import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import './product-page.css';
 
@@ -30,6 +31,7 @@ import {
   cleanText,
   truncate,
   getRobots,
+  getCanonical,
   getProductPrice,
   getProductAvailability,
   safeJsonLd,
@@ -67,10 +69,17 @@ export async function generateMetadata({
   const title = product.name;
 
 
-  const canonical =
-    absoluteUrl(
-      `/product/${product.slug}`
-    );
+  const canonical = getCanonical(
+    seo?.canonicalUrl,
+    `/product/${product.slug}`
+  );
+
+  const description = truncate(
+    cleanText(
+      product.shortDescription || product.description
+    ) || `Shop ${product.name} online at ${SITE_NAME}.`,
+    160
+  );
 
 
   const image = product.images?.[0]?.url
@@ -82,6 +91,8 @@ export async function generateMetadata({
 
   return {
     title,
+
+    description,
 
     alternates: {
       canonical,
@@ -96,7 +107,7 @@ export async function generateMetadata({
       url: canonical,
       siteName: SITE_NAME,
       title,
-      description: null,
+      description,
 
       images: image
         ? [
@@ -114,6 +125,8 @@ export async function generateMetadata({
       card: 'summary_large_image',
 
       title,
+
+      description,
 
       images:
         image ? [image] : [],
@@ -136,7 +149,7 @@ function ProductStructuredData({
 }) {
   const productUrl =
     absoluteUrl(
-      `/products/${product.slug}`
+      `/product/${product.slug}`
     );
 
 
@@ -946,7 +959,7 @@ export default async function ProductPage({
                         {item.includedProduct
                           ?.images?.[0]
                           ?.url && (
-                          <img
+                          <OptimizedImage
                             src={
                               item
                                 .includedProduct

@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useState } from 'react';
 
@@ -169,7 +170,7 @@ export default function ProfileImageUpload({
 
       <div className="profile-large-avatar-wrap">
 
-        <img
+        <OptimizedImage
           src={preview}
           alt={userName || 'Profile'}
           className="profile-large-avatar"

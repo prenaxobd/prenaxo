@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 import {
+  useCallback,
   useEffect,
   useRef,
 } from 'react';
@@ -18,7 +19,7 @@ export default function RelatedProducts({
   const sliderRef = useRef(null);
   const timerRef = useRef(null);
 
-  function scrollNext() {
+  const scrollNext = useCallback(() => {
     const slider = sliderRef.current;
 
     if (!slider) return;
@@ -46,7 +47,7 @@ export default function RelatedProducts({
       left: amount,
       behavior: 'smooth',
     });
-  }
+  }, []);
 
   function scrollPrevious() {
     const slider = sliderRef.current;
@@ -73,21 +74,21 @@ export default function RelatedProducts({
     });
   }
 
-  function startAutoPlay() {
+  const stopAutoPlay = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const startAutoPlay = useCallback(() => {
     stopAutoPlay();
 
     timerRef.current =
       setInterval(() => {
         scrollNext();
       }, 4000);
-  }
-
-  function stopAutoPlay() {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }
+  }, [scrollNext, stopAutoPlay]);
 
   useEffect(() => {
     startAutoPlay();
@@ -95,7 +96,7 @@ export default function RelatedProducts({
     return () => {
       stopAutoPlay();
     };
-  }, []);
+  }, [startAutoPlay, stopAutoPlay]);
 
   if (!products.length) {
     return null;

@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useState } from 'react';
 import MediaUploader from './MediaUploader';
@@ -28,7 +29,7 @@ function BrandLogo({ src, name }) {
   }
 
   return (
-    <img
+    <OptimizedImage
       className="admin-thumbnail"
       src={src}
       alt={name}

@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useState } from 'react';
 
@@ -88,7 +89,7 @@ export default function TrackOrder() {
               {order.items.map((item) => (
                 <div key={item.id || item.productId} style={{ display: 'flex', gap: 12, marginTop: 12, alignItems: 'center' }}>
                   {item.image ? (
-                    <img
+                    <OptimizedImage
                       src={item.image.url || item.image}
                       alt={item.productName}
                       style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8 }}

@@ -1,3 +1,4 @@
+import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 
@@ -305,7 +306,7 @@ export default async function AdminDashboard() {
                   <tr key={product.productId}>
                     <td>
                       <div className="product-cell">
-                        {topProductMap.get(product.productId)?.images?.[0]?.url ? <img className="dashboard-thumb" src={topProductMap.get(product.productId).images[0].url} alt="" /> : <span className="product-badge">P</span>}
+                        {topProductMap.get(product.productId)?.images?.[0]?.url ? <OptimizedImage className="dashboard-thumb" src={topProductMap.get(product.productId).images[0].url} alt="" /> : <span className="product-badge">P</span>}
                         <span title={product.productName}>{product.productName}</span>
                       </div>
                     </td>
@@ -335,7 +336,7 @@ export default async function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {lowStockProducts.map(product => <tr key={product.id}><td><div className="product-cell">{product.images?.[0]?.url ? <img className="dashboard-thumb" src={product.images[0].url} alt="" /> : <span className="product-badge">P</span>}<span title={product.name}>{product.name}</span></div></td><td><span className={`stock ${product.stock <= 3 ? 'critical' : product.stock <= 5 ? 'warning' : ''}`}>{product.stock}</span></td></tr>)}
+                {lowStockProducts.map(product => <tr key={product.id}><td><div className="product-cell">{product.images?.[0]?.url ? <OptimizedImage className="dashboard-thumb" src={product.images[0].url} alt="" /> : <span className="product-badge">P</span>}<span title={product.name}>{product.name}</span></div></td><td><span className={`stock ${product.stock <= 3 ? 'critical' : product.stock <= 5 ? 'warning' : ''}`}>{product.stock}</span></td></tr>)}
               </tbody>
             </table>
           </div>

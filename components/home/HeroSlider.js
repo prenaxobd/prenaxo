@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -12,10 +13,12 @@ function BannerImage({ banner, priority = false }) {
   if (!image) return null;
 
   const content = (
-    <img
+    <OptimizedImage
       src={image}
       alt=""
       className="home-hero-image"
+      sizes="100vw"
+      priority={priority}
       loading={priority ? 'eager' : 'lazy'}
       fetchPriority={priority ? 'high' : 'auto'}
       draggable="false"
@@ -41,7 +44,7 @@ function RightBanner({ banner }) {
   if (!banner?.image) return null;
 
   const content = (
-    <img
+    <OptimizedImage
       src={banner.image}
       alt=""
       className="home-hero-right-image"
@@ -80,11 +83,9 @@ export default function HeroSlider({
   const touchStartY = useRef(0);
   const touchActive = useRef(false);
 
-  useEffect(() => {
-    if (active >= validBanners.length) {
-      setActive(0);
-    }
-  }, [active, validBanners.length]);
+  const visibleActive = validBanners.length
+    ? Math.min(active, validBanners.length - 1)
+    : 0;
 
   const next = useCallback(() => {
     if (validBanners.length < 2) return;

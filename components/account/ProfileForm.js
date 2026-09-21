@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import { useRef, useState } from 'react';
 
@@ -280,7 +281,7 @@ export default function ProfileForm({ user }) {
         <div className="profile-preview-avatar">
 
           {image ? (
-            <img
+            <OptimizedImage
               src={image}
               alt={name || 'Profile'}
             />
@@ -490,7 +491,7 @@ export default function ProfileForm({ user }) {
               <div className="profile-photo-small-preview">
 
                 {image ? (
-                  <img
+                  <OptimizedImage
                     src={image}
                     alt="Profile"
                   />

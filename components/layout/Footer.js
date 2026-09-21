@@ -1,3 +1,4 @@
+import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { DEFAULT_CONTACT_EMAIL, getSiteSettings, normalizeSiteSettings } from '@/lib/seo';
 import { prisma } from '@/lib/prisma';
@@ -39,7 +40,7 @@ export default async function Footer() {
           {/* Brand Section */}
           <div className="footer-section footer-brand">
             <div className="footer-logo">
-              <img 
+              <OptimizedImage 
                 src={logoUrl} 
                 alt={siteName}
                 width="160"
@@ -80,10 +81,10 @@ export default async function Footer() {
 
               <div className="footer-apps" aria-label="Download our apps">
                 <a href="https://www.apple.com/app-store/" target="_blank" rel="noreferrer" aria-label="Download on the App Store">
-                  <img src="/uploads/app-store.svg" alt="App Store" />
+                  <OptimizedImage src="/uploads/app-store.svg" alt="App Store" />
                 </a>
                 <a href="https://play.google.com/store" target="_blank" rel="noreferrer" aria-label="Get it on Google Play">
-                  <img src="/uploads/google-play.svg" alt="Google Play" />
+                  <OptimizedImage src="/uploads/google-play.svg" alt="Google Play" />
                 </a>
               </div>
             </div>
@@ -216,7 +217,7 @@ export default async function Footer() {
             </p>
 
             <div className="footer-payment">
-              <img src="/uploads/we-accept.png" alt="We accept secure payments" />
+              <OptimizedImage src="/uploads/we-accept.png" alt="We accept secure payments" />
             </div>
 
             <nav className="footer-bottom-links" aria-label="Legal">

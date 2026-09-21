@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { clearThrottle, createAdminSession, getThrottle, isPermanentAdminEmail, logSecurityEvent, recordThrottleFailure } from '@/lib/auth';
+import { ensureDefaultAdminRBAC } from '@/lib/admin';
 import { getAdminInvite, consumeAdminInvite } from '@/lib/admin-invites';
 
 const GENERIC_ERROR = 'Invalid email or password.';
@@ -12,6 +13,7 @@ export async function POST(request) {
   const keyPrefix = `admin-login:${ip}`;
 
   try {
+    await ensureDefaultAdminRBAC();
     const body = await request.json();
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');

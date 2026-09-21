@@ -1,4 +1,5 @@
 'use client';
+import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -40,13 +41,9 @@ export default function BrandRail({ brands = [] }) {
     ? brands.slice(0, 12)
     : [];
 
-  if (!items.length) {
-    return null;
-  }
-
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [perView, setPerView] = useState(5);
+  const [perView, setPerView] = useState(2);
 
   const touchStart = useRef(0);
   const touchEnd = useRef(0);
@@ -84,12 +81,6 @@ export default function BrandRail({ brands = [] }) {
     return () => clearInterval(timer);
   }, [items.length, perView, maxIndex, paused]);
 
-  useEffect(() => {
-    if (active > maxIndex) {
-      setActive(0);
-    }
-  }, [active, maxIndex]);
-
   function previous() {
     setActive((current) =>
       current <= 0 ? maxIndex : current - 1
@@ -119,7 +110,10 @@ export default function BrandRail({ brands = [] }) {
     }
   }
 
-  const translate = -(active * (100 / perView));
+  if (!items.length) return null;
+
+  const visibleActive = Math.min(active, maxIndex);
+  const translate = -(visibleActive * (100 / perView));
 
   return (
     <section className="home-section home-brand-section">
@@ -168,7 +162,7 @@ export default function BrandRail({ brands = [] }) {
                     aria-label={`Shop ${brand.name || 'brand'}`}
                   >
                     {image ? (
-                      <img
+                      <OptimizedImage
                         src={image}
                         alt={brand.name || 'Brand'}
                         className="home-brand-image"
@@ -215,7 +209,7 @@ export default function BrandRail({ brands = [] }) {
               <button
                 key={index}
                 type="button"
-                className={index === active ? 'active' : ''}
+                className={index === visibleActive ? 'active' : ''}
                 onClick={() => setActive(index)}
                 aria-label={`Go to brand slide ${index + 1}`}
               />

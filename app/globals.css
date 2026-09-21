@@ -5618,6 +5618,8 @@ body.header-menu-open {
 }
 
 .home-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 260px;
   padding: 20px 0 0;
 }
 .home-section .section-head h2{

@@ -1,3 +1,4 @@
+import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
@@ -78,7 +79,7 @@ export default async function OrdersPage() {
                 <h3>No orders found</h3>
 
                 <p>
-                  You haven't placed an order yet.
+                  You haven&apos;t placed an order yet.
                 </p>
 
                 <Link
@@ -152,7 +153,7 @@ export default async function OrdersPage() {
                           >
 
                             {itemImage ? (
-                              <img
+                              <OptimizedImage
                                 src={itemImage}
                                 alt={item.productName}
                               />

@@ -18,11 +18,9 @@ export default function ProductRail({
 }) {
   const items = products || [];
 
-  if (!items.length) return null;
-
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [perView, setPerView] = useState(5);
+  const [perView, setPerView] = useState(2);
 
   const touchStart = useRef(0);
   const touchEnd = useRef(0);
@@ -77,12 +75,6 @@ export default function ProductRail({
     paused,
   ]);
 
-  useEffect(() => {
-    if (active > maxIndex) {
-      setActive(0);
-    }
-  }, [active, maxIndex]);
-
   function previous() {
     setActive((current) =>
       current <= 0
@@ -121,8 +113,11 @@ export default function ProductRail({
     }
   }
 
+  if (!items.length) return null;
+
+  const visibleActive = Math.min(active, maxIndex);
   const translate =
-    -(active * (100 / perView));
+    -(visibleActive * (100 / perView));
 
   return (
     <section className="home-section">
@@ -226,7 +221,7 @@ export default function ProductRail({
                 key={index}
                 type="button"
                 className={
-                  index === active
+                  index === visibleActive
                     ? 'active'
                     : ''
                 }
