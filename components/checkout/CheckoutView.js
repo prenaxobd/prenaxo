@@ -5,9 +5,11 @@ import './CheckoutView.css';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCart } from '@/components/cart/CartProvider';
 
 export default function CheckoutView() {
   const router = useRouter();
+  const { ready: cartReady } = useCart();
   const [cart, setCart] = useState(null);
   const [delivery, setDelivery] = useState(null);
   const [paymentOptions, setPaymentOptions] = useState([]);
@@ -32,6 +34,8 @@ export default function CheckoutView() {
   });
 
   useEffect(() => {
+    if (!cartReady) return undefined;
+
     const savedCoupon =
       localStorage.getItem('khatibazar-coupon');
 
@@ -75,10 +79,31 @@ export default function CheckoutView() {
         const paymentData =
           await paymentResponse.json();
 
-        const cartFromServer =
+        let cartFromServer =
           cartResponse.ok && cartData
             ? cartData
             : { items: [] };
+
+        // A guest cart is stored locally first. Persist it before checkout so
+        // the order API and the checkout view use the same source of truth.
+        if (cartResponse.ok && !(cartFromServer.items || []).length && localCart.items?.length) {
+          await Promise.all(localCart.items.map((item) => fetch('/api/cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              productId: item.productId,
+              variantId: item.variantId || null,
+              attributeValueIds: item.attributeValueIds || [],
+              quantity: item.quantity,
+            }),
+          })));
+
+          const refreshedCartResponse = await fetch('/api/cart');
+          if (refreshedCartResponse.ok) {
+            cartFromServer = await refreshedCartResponse.json();
+            localStorage.removeItem('khatibazar-cart');
+          }
+        }
 
         const fallbackCart =
           (cartFromServer.items || []).length > 0
@@ -165,7 +190,7 @@ export default function CheckoutView() {
     }
 
     loadCheckoutData();
-  }, []);
+  }, [cartReady]);
 
   const items = cart?.items || [];
 

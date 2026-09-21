@@ -38,7 +38,7 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState({ items: [] });
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
-  useEffect(() => { const stored = localCart(); startTransition(() => { setCart(stored); setReady(true); }); fetch('/api/cart').then(async response => { if (!response.ok) return; const serverCart = await response.json(); const serverItems = serverCart?.items || [];
+  useEffect(() => { const stored = localCart(); startTransition(() => { setCart(stored); }); fetch('/api/cart').then(async response => { if (!response.ok) return; const serverCart = await response.json(); const serverItems = serverCart?.items || [];
       if (stored.items.length) {
         for (const item of stored.items) {
           await fetch('/api/cart', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ productId:item.productId, variantId:item.variantId || null, attributeValueIds:item.attributeValueIds || [], quantity:item.quantity }) }).catch(() => {});
@@ -58,7 +58,7 @@ export function CartProvider({ children }) {
       if ((serverCart?.items || []).length > 0 || stored.items.length) {
         localStorage.removeItem('khatibazar-cart');
       }
-    }).catch(() => {}); }, []);
+    }).catch(() => {}).finally(() => setReady(true)); }, []);
   useEffect(() => { if (ready && !cart.id) saveLocal(cart); }, [cart, ready]);
   useEffect(() => { const close = event => event.key === 'Escape' && setOpen(false); window.addEventListener('keydown', close); return () => window.removeEventListener('keydown', close); }, []);
   async function sync(action, payload) {
@@ -99,7 +99,7 @@ export function CartProvider({ children }) {
   const items = cart.items || [];
   const count = items.reduce((total, item) => total + item.quantity, 0);
   const subtotal = items.reduce((total, item) => total + Number(item.variant?.price ?? item.product?.salePrice ?? item.product?.regularPrice ?? 0) * item.quantity, 0);
-  return <CartContext.Provider value={{ items, count, subtotal, add, update, remove, isOpen: open, open: () => setOpen(true) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
+  return <CartContext.Provider value={{ items, count, subtotal, add, update, remove, ready, isOpen: open, open: () => setOpen(true) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
 }
 
 export function useCart() { return useContext(CartContext); }

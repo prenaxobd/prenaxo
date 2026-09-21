@@ -14,7 +14,7 @@ import {
 
 import {
   getProduct,
-  getProducts,
+  getRelatedProducts,
 } from '@/lib/products';
 
 import ProductReviews from '@/components/product/ProductReviews';
@@ -503,8 +503,8 @@ export default async function ProductPage({
   }
 
 
-  const allProducts =
-    await getProducts();
+  const related =
+    await getRelatedProducts(product.id, product.categoryId);
 
 
   /* =========================================
@@ -555,30 +555,6 @@ export default async function ProductPage({
   /* =========================================
      RELATED PRODUCTS
   ========================================= */
-
-  const sameCategory =
-    allProducts.filter(
-      (item) =>
-        item.id !== product.id &&
-        item.categoryId ===
-          product.categoryId
-    );
-
-
-  const otherProducts =
-    allProducts.filter(
-      (item) =>
-        item.id !== product.id &&
-        item.categoryId !==
-          product.categoryId
-    );
-
-
-  const related = [
-    ...sameCategory,
-    ...otherProducts,
-  ].slice(0, 8);
-
 
   /* =========================================
      REVIEWS

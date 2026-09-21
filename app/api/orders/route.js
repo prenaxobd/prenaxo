@@ -130,7 +130,7 @@ export async function POST(request) {
       });
 
       return created;
-    });
+    }, { maxWait: 10000, timeout: 15000 });
 
     return NextResponse.json({ orderNumber: order.orderNumber }, { status: 201 });
   } catch (error) {
