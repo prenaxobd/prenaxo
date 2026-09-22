@@ -4,6 +4,7 @@ import { createContext, startTransition, useContext, useEffect, useState } from 
 import Link from 'next/link';
 import { X, Minus, Plus, Trash2, ShoppingBag, Ticket, ChevronDown, ArrowRight, LockKeyhole } from 'lucide-react';
 import { bn } from '@/lib/i18n';
+import { mergeGuestCart } from './guest-cart';
 
 const CartContext = createContext(null);
 
@@ -40,18 +41,24 @@ export function CartProvider({ children }) {
   const [ready, setReady] = useState(false);
   useEffect(() => { const stored = localCart(); startTransition(() => { setCart(stored); }); fetch('/api/cart').then(async response => { if (!response.ok) return; const serverCart = await response.json(); const serverItems = serverCart?.items || [];
       if (stored.items.length) {
-        for (const item of stored.items) {
-          await fetch('/api/cart', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ productId:item.productId, variantId:item.variantId || null, attributeValueIds:item.attributeValueIds || [], quantity:item.quantity }) }).catch(() => {});
+        try {
+          await mergeGuestCart(stored.items);
+        } catch {
+          startTransition(() => setCart(stored));
+          return;
         }
 
         const refreshed = await fetch('/api/cart');
 
-        if (refreshed.ok) {
-          const mergedCart = await refreshed.json();
-          startTransition(() => setCart({ ...mergedCart, items: mergeCartItems(stored.items, mergedCart.items || []) }));
-          localStorage.removeItem('khatibazar-cart');
+        if (!refreshed.ok) {
+          startTransition(() => setCart(stored));
           return;
         }
+
+        const mergedCart = await refreshed.json();
+        startTransition(() => setCart({ ...mergedCart, items: mergeCartItems(stored.items, mergedCart.items || []) }));
+        localStorage.removeItem('khatibazar-cart');
+        return;
       }
 
       startTransition(() => setCart({ ...(serverCart || { items: [] }), items: mergeCartItems(stored.items, serverItems) }));
@@ -127,12 +134,16 @@ function CartDrawer({ items, count, subtotal, open, close, update, remove }) {
   }, [open]);
 
   useEffect(() => {
+    if (!open) return undefined;
+
     fetch('/api/delivery').then(async response => {
       if (!response.ok) return;
       const data = await response.json();
       setDeliveryConfig({ threshold: data.threshold, charge: data.zones?.[0]?.charge });
     }).catch(() => {});
-  }, []);
+
+    return undefined;
+  }, [open]);
 
   async function applyCoupon(event) {
     event.preventDefault();

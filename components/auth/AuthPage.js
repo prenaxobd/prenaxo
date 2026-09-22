@@ -61,6 +61,7 @@ export default function AuthPage({ mode = 'login' }) {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(isLogin ? 'Invalid email/mobile number or password.' : (result.error || 'Unable to create your account.'));
+      window.dispatchEvent(new Event('auth-state-changed'));
       window.location.assign(isLogin ? safeRedirect() : '/login?registered=1');
     } catch (submitError) {
       setError(submitError.message || 'Something went wrong. Please try again.');

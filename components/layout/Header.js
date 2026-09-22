@@ -12,6 +12,7 @@ import {
   faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import { useCart } from '@/components/cart/CartProvider';
+import { useWishlist } from '@/components/wishlist/WishlistProvider';
 
 const placeholderMessages = [
   'Products',
@@ -275,6 +276,7 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const cart = useCart();
+  const wishlist = useWishlist();
 
   const desktopSearchRef = useRef(null);
   const mobileSearchRef = useRef(null);
@@ -299,7 +301,7 @@ export default function Header() {
     brands: [],
   });
 
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const wishlistCount = wishlist?.count || 0;
 
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
@@ -327,26 +329,6 @@ export default function Header() {
       setUserImageFailed(false);
     } finally {
       setUserLoading(false);
-    }
-  }
-
-  /* =======================================================
-     LOAD WISHLIST COUNT
-     ======================================================= */
-
-  async function loadWishlistCount() {
-    try {
-      const response = await fetch('/api/wishlist', {
-        cache: 'no-store',
-      });
-
-      const data = await response.json();
-
-      setWishlistCount(
-        Array.isArray(data?.items) ? data.items.length : 0
-      );
-    } catch {
-      setWishlistCount(0);
     }
   }
 
@@ -409,17 +391,7 @@ export default function Header() {
   useEffect(() => {
     startTransition(() => {
       loadUser();
-      loadWishlistCount();
-      loadNavigation();
     });
-
-    const onWishlist = (event) => {
-      if (typeof event?.detail?.count === 'number') {
-        setWishlistCount(event.detail.count);
-      } else {
-        loadWishlistCount();
-      }
-    };
 
     const onUser = () => loadUser();
 
@@ -430,7 +402,6 @@ export default function Header() {
 
     const onFocus = () => {
       loadUser();
-      loadWishlistCount();
     };
 
     const onOpenMenu = () => {
@@ -441,11 +412,6 @@ export default function Header() {
       setSearchOpen(true);
       setMenuOpen(false);
     };
-
-    window.addEventListener(
-      'wishlist-updated',
-      onWishlist
-    );
 
     window.addEventListener(
       'user-updated',
@@ -474,11 +440,6 @@ export default function Header() {
 
     return () => {
       window.removeEventListener(
-        'wishlist-updated',
-        onWishlist
-      );
-
-      window.removeEventListener(
         'user-updated',
         onUser
       );
@@ -503,7 +464,7 @@ export default function Header() {
         onOpenSearch
       );
     };
-  }, [query]);
+  }, []);
 
   /* =======================================================
      SEARCH
@@ -729,7 +690,10 @@ export default function Header() {
                 name="q"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                onFocus={() => setSearchOpen(true)}
+                onFocus={() => {
+                  setSearchOpen(true);
+                  if (!suggestions.products.length) loadNavigation();
+                }}
                 aria-label="Search products, brands and categories"
                 autoComplete="off"
               />

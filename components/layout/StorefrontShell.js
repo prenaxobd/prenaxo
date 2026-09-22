@@ -6,6 +6,7 @@ import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import StickyCartButton from '@/components/StickyCartButton';
 import HelpCenterButton from '@/components/layout/HelpCenterButton';
 import { CartProvider } from '@/components/cart/CartProvider';
+import { WishlistProvider } from '@/components/wishlist/WishlistProvider';
 
 export default function StorefrontShell({ children, footer }) {
   const pathname = usePathname();
@@ -21,19 +22,21 @@ export default function StorefrontShell({ children, footer }) {
   }
 
   return (
-    <CartProvider>
-      <Header />
+    <WishlistProvider>
+      <CartProvider>
+        <Header />
 
-      {children}
+        {children}
 
-      {footer}
-      <MobileBottomNav />
+        {footer}
+        <MobileBottomNav />
 
-      {/* Help center appears on all customer-facing pages */}
-      <HelpCenterButton />
+        {/* Help center appears on all customer-facing pages */}
+        <HelpCenterButton />
 
-      {/* Sticky cart checkout page-এ দেখাবে না */}
-      {!isCheckout && <StickyCartButton />}
-    </CartProvider>
+        {/* Sticky cart checkout page-এ দেখাবে না */}
+        {!isCheckout && <StickyCartButton />}
+      </CartProvider>
+    </WishlistProvider>
   );
 }

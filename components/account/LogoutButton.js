@@ -13,6 +13,7 @@ export default function LogoutButton() {
         method: 'POST',
       });
 
+      window.dispatchEvent(new Event('auth-state-changed'));
       router.push('/login');
     } catch (error) {
       console.error(error);

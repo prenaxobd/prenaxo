@@ -101,6 +101,7 @@ export default function ProductGallery({
                 product.name
               }
               className="main-product-image"
+              priority
             />
           ) : (
             <div className="product-image-placeholder">

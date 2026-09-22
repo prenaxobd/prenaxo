@@ -447,6 +447,9 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([categoryId, active])
+  @@index([brandId, active])
+
   @@map("product")
 }
 
@@ -484,6 +487,7 @@ model ProductImage {
   productId String
 
   product Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@index([productId, sortOrder])
   @@map("productimage")
 }
 
@@ -513,6 +517,8 @@ model ProductVariant {
   cartItems CartItem[]
 
   orderItems OrderItem[]
+
+  @@index([productId])
 
   @@map("productvariant")
 }
@@ -758,6 +764,8 @@ model OrderItem {
 
   attributeValueIds Json?
 
+  @@index([productId])
+
   @@map("orderitem")
 }
 
@@ -814,6 +822,7 @@ model Review {
   user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   product Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   @@unique([userId, productId])
+  @@index([productId, approved, createdAt])
 
   @@map("review")
 }

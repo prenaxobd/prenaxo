@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/cart/CartProvider';
+import { mergeGuestCart } from '@/components/cart/guest-cart';
 
 export default function CheckoutView() {
   const router = useRouter();
@@ -87,16 +88,7 @@ export default function CheckoutView() {
         // A guest cart is stored locally first. Persist it before checkout so
         // the order API and the checkout view use the same source of truth.
         if (cartResponse.ok && !(cartFromServer.items || []).length && localCart.items?.length) {
-          await Promise.all(localCart.items.map((item) => fetch('/api/cart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              productId: item.productId,
-              variantId: item.variantId || null,
-              attributeValueIds: item.attributeValueIds || [],
-              quantity: item.quantity,
-            }),
-          })));
+          await mergeGuestCart(localCart.items);
 
           const refreshedCartResponse = await fetch('/api/cart');
           if (refreshedCartResponse.ok) {

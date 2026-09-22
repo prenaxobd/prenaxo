@@ -11,9 +11,10 @@ import {
   Eye,
 } from 'lucide-react';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useCart } from '@/components/cart/CartProvider';
+import { useWishlist } from '@/components/wishlist/WishlistProvider';
 
 
 /*
@@ -96,6 +97,7 @@ function RatingStars({ rating }) {
 export default function ProductCard({ product, flashSale = false, maxStock = 0, viewMode = 'grid' }) {
 
   const cart = useCart();
+  const wishlistStore = useWishlist();
 
 
   /*
@@ -107,104 +109,11 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
   const [message, setMessage] =
     useState('');
 
-  const [saved, setSaved] =
-    useState(false);
-
-  const [wishlistLoading, setWishlistLoading] =
-    useState(true);
+  const saved = wishlistStore?.isSaved(product.id) || false;
+  const wishlistLoading = !wishlistStore?.ready;
 
   const [adding, setAdding] =
     useState(false);
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | LOAD WISHLIST STATE
-  |--------------------------------------------------------------------------
-  */
-
-  useEffect(() => {
-
-    let cancelled = false;
-
-
-    async function loadWishlistState() {
-
-      try {
-
-        const response =
-          await fetch(
-            '/api/wishlist',
-            {
-              cache: 'no-store',
-            }
-          );
-
-
-        if (!response.ok) {
-
-          if (!cancelled) {
-            setSaved(false);
-          }
-
-          return;
-        }
-
-
-        const data =
-          await response.json();
-
-
-        const wishlistItems =
-          Array.isArray(data?.items)
-            ? data.items
-            : [];
-
-
-        const exists =
-          wishlistItems.some(
-            (item) =>
-              String(item.productId) ===
-              String(product.id)
-          );
-
-
-        if (!cancelled) {
-
-          setSaved(exists);
-
-        }
-
-      } catch (error) {
-
-        console.error(
-          'Wishlist state error:',
-          error
-        );
-
-      } finally {
-
-        if (!cancelled) {
-
-          setWishlistLoading(false);
-
-        }
-
-      }
-
-    }
-
-
-    loadWishlistState();
-
-
-    return () => {
-
-      cancelled = true;
-
-    };
-
-  }, [product.id]);
 
 
   /*
@@ -364,68 +273,7 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
 
     try {
 
-      const response =
-        await fetch(
-          '/api/wishlist',
-          {
-            method: 'POST',
-
-            headers: {
-              'Content-Type':
-                'application/json',
-            },
-
-            body: JSON.stringify({
-              productId:
-                product.id,
-            }),
-          }
-        );
-
-
-      const data =
-        await response.json();
-
-
-      if (response.ok) {
-
-        const newSaved =
-          Boolean(data.saved);
-
-
-        setSaved(newSaved);
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | UPDATE HEADER WISHLIST COUNT
-        |--------------------------------------------------------------------------
-        */
-
-        window.dispatchEvent(
-          new CustomEvent(
-            'wishlist-updated',
-            {
-              detail: {
-                saved: newSaved,
-
-                count:
-                  typeof data.count === 'number'
-                    ? data.count
-                    : undefined,
-              },
-            }
-          )
-        );
-
-      } else {
-
-        setMessage(
-          data.error ||
-          'Please sign in'
-        );
-
-      }
+      await wishlistStore.toggle(product.id);
 
     } catch (error) {
 

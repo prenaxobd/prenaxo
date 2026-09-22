@@ -1,12 +1,7 @@
 import { prisma } from '@/lib/prisma';
-import { ensureDefaultPaymentMethods } from '@/lib/payment-methods';
 
 export async function GET() {
   try {
-    // যদি PaymentMethod table empty থাকে,
-    // তাহলে default payment methods automatically তৈরি হবে।
-    await ensureDefaultPaymentMethods();
-
     const methods = await prisma.paymentMethod.findMany({
       where: {
         active: true,

@@ -120,6 +120,7 @@ export default async function Shop({ searchParams }) {
   const filters = {
     category: params?.category || 'all',
     brand: params?.brand || 'all',
+    search: params?.search || params?.q || '',
     priceRange,
     ratingFilter: Number(params?.rating || 0),
     availability: params?.availability || 'all',
