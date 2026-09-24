@@ -14,7 +14,13 @@ export default function AdminLoginForm({ inviteToken = '', initialEmail = '' }) 
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/admin/auth/me').then(response => { if (response.ok) window.location.replace('/admin'); }).catch(() => {});
+    fetch('/api/admin/auth/google-session', { method: 'POST' })
+      .then(response => {
+        if (response.ok) window.location.replace('/admin');
+        else return fetch('/api/admin/auth/me');
+      })
+      .then(response => { if (response?.ok) window.location.replace('/admin'); })
+      .catch(() => {});
   }, []);
 
   async function submit(event) {
