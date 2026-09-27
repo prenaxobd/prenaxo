@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import OptimizedImage from '@/components/OptimizedImage';
 import ProductCard from '@/components/ProductCard';
 import { getPublicCategory, getPublicCategoryPage } from '@/lib/public-data';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -16,6 +17,13 @@ import {
   getCanonical,
   safeJsonLd,
 } from '@/lib/seo';
+
+const CATEGORY_HERO_IMAGES = {
+  'lamp-light': '/uploads/lamp_category_bg.webp',
+  honey: 'https://res.cloudinary.com/ethp0qrs/image/upload/v1790486340/Honey-Nuts-Collection.webp',
+  'honey-nuts': 'https://res.cloudinary.com/ethp0qrs/image/upload/v1790486340/Honey-Nuts-Collection.webp',
+  'mans-clothing': 'https://res.cloudinary.com/ethp0qrs/image/upload/v1790486340/Man_s-Clothing-Collection.webp',
+};
 
 
 /* =====================================================
@@ -170,6 +178,9 @@ export default async function CategoryPage({
     notFound();
   }
 
+  const categoryHeroImage =
+    CATEGORY_HERO_IMAGES[category.slug?.trim().toLowerCase()];
+
   const lastPage = Math.max(1, Math.ceil(category._count.products / productsPerPage));
   if (currentPage > lastPage) {
     category = await getPublicCategoryPage(slug, lastPage, productsPerPage);
@@ -319,6 +330,18 @@ export default async function CategoryPage({
       <main className={styles.page}>
         <div className="container">
           <section className={styles.hero}>
+            {categoryHeroImage && (
+              <OptimizedImage
+                src={categoryHeroImage}
+                alt=""
+                className={styles.heroImage}
+                width={1600}
+                height={650}
+                sizes="100vw"
+                loading="eager"
+                fetchPriority="high"
+              />
+            )}
             <div className={styles.heroContent}>
               <span className={styles.eyebrow}>LIGHT UP YOUR EVERYDAY</span>
               <h1>{category.name} <strong>Collection</strong></h1>
