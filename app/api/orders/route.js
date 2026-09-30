@@ -152,7 +152,12 @@ export async function POST(request) {
       return created;
     }, { maxWait: 10000, timeout: 30000 });
 
-    return NextResponse.json({ orderNumber: order.orderNumber }, { status: 201 });
+    return NextResponse.json({
+      orderNumber: order.orderNumber,
+      total: Number(order.total),
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+    }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: error.message || 'Unable to place order.' },

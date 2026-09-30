@@ -5,12 +5,13 @@ import './CheckoutView.css';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { LoaderCircle } from 'lucide-react';
 import { useCart } from '@/components/cart/CartProvider';
 import { mergeGuestCart } from '@/components/cart/guest-cart';
 
 export default function CheckoutView() {
   const router = useRouter();
-  const { ready: cartReady } = useCart();
+  const { ready: cartReady, clearCart } = useCart();
   const [cart, setCart] = useState(null);
   const [delivery, setDelivery] = useState(null);
   const [paymentOptions, setPaymentOptions] = useState([]);
@@ -383,9 +384,14 @@ export default function CheckoutView() {
       localStorage.removeItem(
         'khatibazar-coupon'
       );
-      localStorage.removeItem(
-        'khatibazar-cart'
-      );
+      clearCart();
+
+      try {
+        sessionStorage.setItem(
+          'prenaxo-order-confirmation',
+          JSON.stringify(data)
+        );
+      } catch {}
 
       router.push(`/order-success?order=${data.orderNumber}`);
     } catch (err) {
@@ -1178,7 +1184,7 @@ export default function CheckoutView() {
               }
             >
               {loading
-                ? 'Placing your order…'
+                ? <><LoaderCircle size={17} aria-hidden="true" style={{ animation: 'route-loading-spin .75s linear infinite' }} /> Confirming your order…</>
                 : `Place order · ৳${total.toLocaleString()}`}
             </button>
           </div>

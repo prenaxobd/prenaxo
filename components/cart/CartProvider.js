@@ -103,10 +103,11 @@ export function CartProvider({ children }) {
   async function add(product, quantity = 1) { try { await sync('add', { productId: product.id, variantId: product.variantId || null, attributeValueIds: product.attributeValueIds || [], quantity, product }); setOpen(true); return { ok: true }; } catch (error) { return { ok: false, error: error.message }; } }
   async function update(productId, quantity, variantId = null, attributeValueIds = []) { try { await sync('update', { productId, variantId, attributeValueIds, quantity }); } catch (error) { return error.message; } }
   async function remove(productId, variantId = null, attributeValueIds = []) { await sync('remove', { productId, variantId, attributeValueIds }); }
+  function clearCart() { setCart({ items: [] }); setOpen(false); localStorage.removeItem('khatibazar-cart'); }
   const items = cart.items || [];
   const count = items.reduce((total, item) => total + item.quantity, 0);
   const subtotal = items.reduce((total, item) => total + Number(item.variant?.price ?? item.product?.salePrice ?? item.product?.regularPrice ?? 0) * item.quantity, 0);
-  return <CartContext.Provider value={{ items, count, subtotal, add, update, remove, ready, isOpen: open, open: () => setOpen(true) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
+  return <CartContext.Provider value={{ items, count, subtotal, add, update, remove, clearCart, ready, isOpen: open, open: () => setOpen(true) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
 }
 
 export function useCart() { return useContext(CartContext); }
