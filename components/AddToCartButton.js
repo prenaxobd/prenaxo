@@ -11,6 +11,9 @@ export default function AddToCartButton({ product, productId, quantity = 1 }) {
     setState('loading');
     const result = await cart.add(product || { id: productId }, quantity);
     setState(result.ok ? 'added' : 'error');
+    if (result.ok && typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'AddToCart');
+    }
   }
   return <button className="btn" onClick={addToCart} disabled={state === 'loading'} aria-label={bn.actions.addToCart}><ShoppingBag size={17}/>{state === 'added' ? 'কার্টে যোগ হয়েছে' : state === 'error' ? 'আবার চেষ্টা করুন' : state === 'loading' ? 'যোগ করা হচ্ছে...' : bn.actions.addToCart}</button>;
 }

@@ -376,6 +376,10 @@ export default function CheckoutView() {
         );
       }
 
+      if (typeof window !== 'undefined' && window.fbq) {
+        window.fbq('track', 'Purchase', { currency: 'BDT' });
+      }
+
       localStorage.removeItem(
         'khatibazar-coupon'
       );
