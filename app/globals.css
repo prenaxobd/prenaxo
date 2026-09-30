@@ -8409,7 +8409,7 @@ body.header-menu-open {
 .help-center-fab {
   position: fixed;
   right: 20px;
-  bottom: 100px;
+  bottom: 130px;
   width: 52px;
   height: 52px;
   display: flex;
@@ -8609,7 +8609,7 @@ body.header-menu-open {
 @media (max-width: 600px) {
   .help-center-fab {
     right: 16px;
-    bottom: 80px;
+    bottom: 110px;
     width: 56px;
     height: 56px;
   }
