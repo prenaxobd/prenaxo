@@ -1,5 +1,6 @@
 import './globals.css';
 import '@/components/flash-sale/FlashSalePage.css';
+import Script from 'next/script';
 
 import StorefrontShell from '@/components/layout/StorefrontShell';
 import Footer from '@/components/layout/Footer';
@@ -132,6 +133,20 @@ export default function RootLayout({ children }) {
             {children}
           </StorefrontShell>
         </AuthSessionProvider>
+        <Script id="facebook-pixel" strategy="afterInteractive">
+          {`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init','1485362603491782');
+fbq('track','PageView');`}
+        </Script>
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=1485362603491782&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
       </body>
     </html>
   );
