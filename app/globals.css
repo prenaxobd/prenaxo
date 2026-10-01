@@ -778,14 +778,17 @@ button:disabled {
   box-shadow: none;
 }
 
-.search svg {
-  position: absolute;
-  top: 14px;
-  right: 16px;
+.search-input-shell > button > svg {
   width: 14px;
   height: 14px;
   display: block;
   color: var(--muted);
+}
+
+.mobile-search-form > svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
 }
 
 .search-placeholder-overlay {
@@ -3298,7 +3301,7 @@ button:disabled {
   padding-right: 50px;
 }
 
-.search > button {
+.search-input-shell > button {
   position: absolute;
   top: 0;
   right: 0;
@@ -3313,7 +3316,7 @@ button:disabled {
   flex-shrink: 0;
 }
 
-.search > button:focus-visible,
+.search-input-shell > button:focus-visible,
 .mobile-search-form button:focus-visible {
   outline: 2px solid var(--green);
   outline-offset: -4px;

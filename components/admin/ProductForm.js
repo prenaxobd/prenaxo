@@ -421,10 +421,6 @@ export default function ProductForm({
         form.shortDescription
           ?.trim() || null;
 
-      if (shortDescription && shortDescription.length > 191) {
-        throw new Error('Short description must be 191 characters or fewer.');
-      }
-
       /*
        * FULL DESCRIPTION
        * Rich HTML content from Tiptap.
@@ -1012,7 +1008,6 @@ export default function ProductForm({
                       )
                     }
                     placeholder="Write a short description of this product..."
-                    maxLength={191}
                     rows={4}
                   />
                 </Field>

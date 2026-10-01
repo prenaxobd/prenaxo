@@ -138,6 +138,7 @@ export default async function NewProductPage({
 
   return (
     <ProductForm
+      key={serializedProduct?.id || 'new'}
       mode={
         serializedProduct
           ? 'edit'

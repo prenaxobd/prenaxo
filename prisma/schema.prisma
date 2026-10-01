@@ -390,7 +390,7 @@ model Product {
   slug String @unique
   sku  String @unique
 
-  shortDescription String?
+  shortDescription String? @db.LongText
   description      String? @db.Text
 
   regularPrice Decimal  @db.Decimal(10, 2)
