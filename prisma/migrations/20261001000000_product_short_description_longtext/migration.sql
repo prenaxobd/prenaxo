@@ -1,2 +1,2 @@
-ALTER TABLE `Product`
+ALTER TABLE `product`
     MODIFY `shortDescription` LONGTEXT NULL;
