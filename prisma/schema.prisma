@@ -393,7 +393,7 @@ model Product {
   shortDescription String? @db.LongText
   description      String? @db.Text
 
-  regularPrice Decimal  @db.Decimal(10, 2)
+  regularPrice Decimal? @db.Decimal(10, 2)
   salePrice    Decimal? @db.Decimal(10, 2)
   costPrice    Decimal? @db.Decimal(10, 2)
 

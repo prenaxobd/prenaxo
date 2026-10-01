@@ -159,19 +159,10 @@ function normalizeProduct(
     variants: Array.isArray(product.variants) ? product.variants.map((variant) => ({ id: variant.id, size: variant.size || '', color: variant.color || '', price: variant.price == null ? '' : String(variant.price), stock: Number(variant.stock || 0), sku: variant.sku || '', attributeValueIds: variant.attributeValues?.map((item) => item.attributeValueId) || [] })) : [],
     attributeValueIds: Array.isArray(product.attributeValues) ? product.attributeValues.map((item) => item.attributeValueId) : [],
 
-    /*
-     * SHORT DESCRIPTION
-     * Existing database value will be loaded here.
-                url: image.url,
-                id: image.id,
     shortDescription:
       product.shortDescription ||
       '',
 
-    /*
-     * FULL DESCRIPTION
-     * Existing database value will be loaded here.
-     */
     description:
       product.description || '',
 
@@ -405,8 +396,8 @@ export default function ProductForm({
         );
       }
 
-      if (form.regularPrice === '') {
-        throw new Error('Regular price is required.');
+      if (form.regularPrice === '' && form.salePrice === '') {
+        throw new Error('Enter a regular price or a sale price.');
       }
 
       if (form.productType === 'COMBO' && form.comboItems.length === 0) {
@@ -444,7 +435,7 @@ export default function ProductForm({
 
         regularPrice:
           form.regularPrice === ''
-            ? ''
+            ? null
             : Number(
                 form.regularPrice
               ),
@@ -1078,7 +1069,7 @@ export default function ProductForm({
               >
                 <Field
                   label="Regular Price"
-                  required
+                  help="Optional when Sale Price is set"
                 >
                   <PriceInput
                     value={

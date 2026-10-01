@@ -498,7 +498,7 @@ export default async function ProductPage({
   const price =
     hasDiscount
       ? salePrice
-      : regularPrice;
+      : salePrice ?? regularPrice;
 
 
   const discount =

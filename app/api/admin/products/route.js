@@ -43,8 +43,8 @@ const productSchema = z.object({
   categoryId: z.string().min(1, 'Category is required'),
 
   regularPrice: z.preprocess(
-    (value) => value === '' || value === null || value === undefined ? undefined : value,
-    z.coerce.number().nonnegative('Regular price must be zero or greater.')
+    (value) => value === '' || value === null || value === undefined ? null : value,
+    z.coerce.number().nonnegative('Regular price must be zero or greater.').nullable()
   ),
 
   salePrice: z.preprocess(
@@ -336,6 +336,10 @@ export async function POST(request) {
 
     const parsed = productSchema.parse(body);
 
+    if (parsed.regularPrice === null && parsed.salePrice === null) {
+      throw new Error('Enter a regular price or a sale price.');
+    }
+
     const {
       images,
       comboItems,
@@ -471,11 +475,24 @@ export async function PATCH(request) {
           productType: true,
           sku: true,
           categoryId: true,
+          regularPrice: true,
+          salePrice: true,
         },
       });
 
       if (!existing) {
         throw new Error('Product not found.');
+      }
+
+      const nextRegularPrice = Object.hasOwn(data, 'regularPrice')
+        ? data.regularPrice
+        : existing.regularPrice;
+      const nextSalePrice = Object.hasOwn(data, 'salePrice')
+        ? data.salePrice
+        : existing.salePrice;
+
+      if (nextRegularPrice === null && nextSalePrice === null) {
+        throw new Error('Enter a regular price or a sale price.');
       }
 
       const nextType =

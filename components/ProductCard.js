@@ -124,8 +124,8 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
 
   const price =
     Number(
-      product.salePrice ||
-      product.regularPrice ||
+      product.salePrice ??
+      product.regularPrice ??
       0
     );
 
@@ -137,7 +137,8 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
 
 
   const discount =
-    product.salePrice &&
+    product.salePrice != null &&
+    regularPrice > 0 &&
     regularPrice > price
       ? Math.round(
           (
