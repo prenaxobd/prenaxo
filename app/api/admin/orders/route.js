@@ -82,15 +82,17 @@ export async function POST(request) {
         );
       }
 
+      if (paymentMethod.type === 'GATEWAY') {
+        throw new Error('Online gateway orders must be started through customer checkout.');
+      }
+
       /*
        * ---------------------------------------------------------
        * Validate transaction ID
        * ---------------------------------------------------------
        */
 
-      const requiresTransactionId = ['BKASH', 'NAGAD'].includes(
-        paymentMethod.code
-      );
+      const requiresTransactionId = paymentMethod.requiresTransactionId;
 
       const paymentTransactionId =
         data.paymentTransactionId?.trim() || null;
@@ -213,6 +215,10 @@ export async function POST(request) {
        * ---------------------------------------------------------
        */
 
+      const paymentStatus = ['BANK_TRANSFER', 'MANUAL_WALLET'].includes(paymentMethod.type) && requiresTransactionId
+        ? 'PENDING_VERIFICATION'
+        : 'PENDING';
+
       const created = await tx.order.create({
         data: {
           orderNumber: `KB-${Date.now()}`,
@@ -244,7 +250,7 @@ export async function POST(request) {
 
           paymentTransactionId,
 
-          paymentStatus: 'PENDING',
+          paymentStatus,
 
           orderNote:
             data.orderNote?.trim() || null,
@@ -262,6 +268,15 @@ export async function POST(request) {
               productId: item.productId,
               attributeValueIds: item.attributeValueIds,
             })),
+          },
+          paymentEvents: {
+            create: {
+              status: paymentStatus,
+              source: 'SYSTEM',
+              note: requiresTransactionId
+                ? 'Staff created an order with a customer payment reference for review.'
+                : 'Staff created the order.',
+            },
           },
         },
       });

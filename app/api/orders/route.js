@@ -3,13 +3,16 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { getDeliveryConfig, calculateDelivery } from '@/lib/delivery';
+import { ensureDefaultPaymentMethods } from '@/lib/payment-methods';
+import { assertSslCommerzReady } from '@/lib/sslcommerz';
+import { createSslCommerzAttempt, reconcileSslCommerzAttempt, startSslCommerzAttempt } from '@/lib/payment-attempts';
 
 const schema = z.object({
   customerName: z.string().trim().min(2),
   customerEmail: z.string().trim().email().optional().or(z.literal('')).optional(),
   customerPhone: z.string().trim().min(8),
   shippingAddress: z.record(z.string(), z.string()),
-  paymentMethod: z.enum(['COD', 'BANK', 'BKASH', 'NAGAD']),
+  paymentMethod: z.string().trim().min(2).max(32).transform((value) => value.toUpperCase()),
   couponCode: z.string().optional(),
   paymentTransactionId: z.string().optional(),
   orderNote: z.string().optional(),
@@ -27,6 +30,32 @@ export async function POST(request) {
 
   try {
     const data = schema.parse(await request.json());
+    await ensureDefaultPaymentMethods();
+    const paymentMethod = await prisma.paymentMethod.findUnique({ where: { code: data.paymentMethod } });
+    if (!paymentMethod?.active) throw new Error('The selected payment method is not available.');
+    if (paymentMethod.type === 'GATEWAY') assertSslCommerzReady();
+
+    const pendingAttempt = await prisma.paymentAttempt.findFirst({
+      where: { checkoutLockUserId: user.id, status: { in: ['CREATED', 'PENDING'] } },
+      select: { merchantTransactionId: true, createdAt: true },
+    });
+    if (pendingAttempt) {
+      const staleAfter = 30 * 60 * 1000;
+      if (Date.now() - pendingAttempt.createdAt.getTime() >= staleAfter) {
+        await reconcileSslCommerzAttempt({ merchantTransactionId: pendingAttempt.merchantTransactionId });
+      }
+      const stillPending = await prisma.paymentAttempt.findFirst({
+        where: { checkoutLockUserId: user.id, status: { in: ['CREATED', 'PENDING'] } },
+        select: { id: true },
+      });
+      if (stillPending) throw new Error('An online payment is already in progress. Complete or wait for it to resolve before placing another order.');
+    }
+
+    const paymentTransactionId = data.paymentTransactionId?.trim() || null;
+    if (paymentMethod.requiresTransactionId && !paymentTransactionId) {
+      throw new Error(`Please enter your ${paymentMethod.name} transaction ID.`);
+    }
+
     const { threshold, zones } = await getDeliveryConfig();
     const customerEmail = (data.customerEmail || '').trim() || user.email || null;
 
@@ -79,6 +108,11 @@ export async function POST(request) {
     }
 
     const { charge: shippingCharge } = calculateDelivery(subtotal, zone, threshold);
+    const total = subtotal - discount + shippingCharge;
+    if (paymentMethod.type === 'GATEWAY' && (total < 10 || total > 500000)) {
+      throw new Error('Online payments must be between ৳10 and ৳500,000.');
+    }
+
     const productQuantities = new Map();
     const variantQuantities = new Map();
 
@@ -89,7 +123,7 @@ export async function POST(request) {
       }
     }
 
-    const order = await prisma.$transaction(async (tx) => {
+    const { order, attempt } = await prisma.$transaction(async (tx) => {
       const variantUpdates = [...variantQuantities].map(([id, quantity]) => tx.productVariant.updateMany({
         where: { id, stock: { gte: quantity } },
         data: { stock: { decrement: quantity } },
@@ -110,6 +144,10 @@ export async function POST(request) {
         throw new Error('A product in your cart is out of stock.');
       }
 
+      const isManualTransfer = ['BANK_TRANSFER', 'MANUAL_WALLET'].includes(paymentMethod.type);
+      const initialPaymentStatus = isManualTransfer && paymentMethod.requiresTransactionId
+        ? 'PENDING_VERIFICATION'
+        : 'PENDING';
       const created = await tx.order.create({
         data: {
           orderNumber: `KB-${Date.now()}`,
@@ -121,10 +159,11 @@ export async function POST(request) {
           subtotal,
           discount,
           shippingCharge,
-          total: subtotal - discount + shippingCharge,
+          total,
           paymentMethod: data.paymentMethod,
-          paymentTransactionId: data.paymentTransactionId || null,
+          paymentTransactionId: isManualTransfer ? paymentTransactionId : null,
           orderNote: data.orderNote || null,
+          paymentStatus: initialPaymentStatus,
         },
       });
 
@@ -141,27 +180,63 @@ export async function POST(request) {
         })),
       });
 
-      await tx.cartItem.deleteMany({
-        where: { cartId: cart.id },
+      await tx.paymentEvent.create({
+        data: {
+          orderId: created.id,
+          status: initialPaymentStatus,
+          source: 'SYSTEM',
+          note: isManualTransfer && paymentMethod.requiresTransactionId
+            ? 'Customer submitted a payment reference for review.'
+            : 'Order created.',
+        },
       });
 
-      await tx.cart.delete({
-        where: { userId: user.id },
-      });
+      const attempt = paymentMethod.type === 'GATEWAY'
+        ? await createSslCommerzAttempt(tx, created, paymentMethod, user.id)
+        : null;
 
-      return created;
+      if (paymentMethod.type !== 'GATEWAY') {
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+        await tx.cart.delete({ where: { userId: user.id } });
+      }
+
+      return { order: created, attempt };
     }, { maxWait: 10000, timeout: 30000 });
+
+    if (paymentMethod.type === 'GATEWAY') {
+      try {
+        const { redirectUrl } = await startSslCommerzAttempt(attempt, order, paymentMethod);
+
+        return NextResponse.json({
+          orderNumber: order.orderNumber,
+          total: Number(order.total),
+          paymentMethod: order.paymentMethod,
+          paymentMethodName: paymentMethod.name,
+          paymentMethodType: paymentMethod.type,
+          paymentStatus: order.paymentStatus,
+          paymentRedirectUrl: redirectUrl,
+        }, { status: 201 });
+      } catch (error) {
+        return NextResponse.json({
+          error: 'We could not confirm the online checkout link yet. Your order and inventory are safely held; contact support with this order number before retrying.',
+          orderNumber: order.orderNumber,
+          paymentStatus: order.paymentStatus,
+        }, { status: 503 });
+      }
+    }
 
     return NextResponse.json({
       orderNumber: order.orderNumber,
       total: Number(order.total),
       paymentMethod: order.paymentMethod,
+      paymentMethodName: paymentMethod.name,
+      paymentMethodType: paymentMethod.type,
       paymentStatus: order.paymentStatus,
     }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: error.message || 'Unable to place order.' },
-      { status: 400 }
+      { status: error.name === 'ZodError' ? 400 : error.message?.includes('not configured') ? 503 : 400 }
     );
   }
 }

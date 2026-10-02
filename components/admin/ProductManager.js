@@ -771,8 +771,10 @@ export default function ProductManager({
                       </td>
 
                       <td>
-                        {product.sku ||
-                          '—'}
+                        {product.sku || '—'}
+                        {product.regularPrice != null && product.salePrice != null && Number(product.regularPrice) > Number(product.salePrice) && (
+                          <small> - {Math.round(((Number(product.regularPrice) - Number(product.salePrice)) / Number(product.regularPrice)) * 100)}% OFF</small>
+                        )}
                       </td>
 
                       <td>

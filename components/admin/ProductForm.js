@@ -223,6 +223,9 @@ export default function ProductForm({
 
   const [comboSearch, setComboSearch] = useState('');
   const [comboResults, setComboResults] = useState([]);
+  const discountPercentage = form.regularPrice !== '' && form.salePrice !== '' && Number(form.regularPrice) > Number(form.salePrice)
+    ? Math.round(((Number(form.regularPrice) - Number(form.salePrice)) / Number(form.regularPrice)) * 100)
+    : 0;
 
   useEffect(() => {
     if (form.productType !== 'COMBO' || comboSearch.trim().length < 2) {
@@ -292,6 +295,45 @@ export default function ProductForm({
     setForm((current) => ({ ...current, variants: current.variants.map((variant, variantIndex) => variantIndex === index ? { ...variant, [name]: value } : variant) }));
   }
 
+  function addVariant() {
+    setForm((current) => ({
+      ...current,
+      variants: [...current.variants, {
+        size: '',
+        color: '',
+        price: '',
+        stock: 0,
+        sku: '',
+        attributeValueIds: [],
+      }],
+    }));
+  }
+
+  function removeVariant(index) {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.filter((_, variantIndex) => variantIndex !== index),
+    }));
+  }
+
+  function updateVariantAttribute(index, attribute, valueId) {
+    const attributeValueIds = new Set(attribute.values.map((value) => value.id));
+    setForm((current) => ({
+      ...current,
+      attributeValueIds: valueId
+        ? [...new Set([...current.attributeValueIds, valueId])]
+        : current.attributeValueIds,
+      variants: current.variants.map((variant, variantIndex) => {
+        if (variantIndex !== index) return variant;
+        const selectedIds = (variant.attributeValueIds || []).filter((id) => !attributeValueIds.has(id));
+        return {
+          ...variant,
+          attributeValueIds: valueId ? [...selectedIds, valueId] : selectedIds,
+        };
+      }),
+    }));
+  }
+
   const selectedCategory = categories.find((category) => category.id === form.categoryId);
   const configuredAttributes = (selectedCategory?.attributes || [])
     .map((categoryAttribute) => categoryAttribute?.attribute)
@@ -325,6 +367,12 @@ export default function ProductForm({
       attributeValueIds: checked
         ? [...new Set([...current.attributeValueIds, valueId])]
         : current.attributeValueIds.filter((id) => id !== valueId),
+      variants: checked
+        ? current.variants
+        : current.variants.map((variant) => ({
+            ...variant,
+            attributeValueIds: (variant.attributeValueIds || []).filter((id) => id !== valueId),
+          })),
     }));
   }
 
@@ -394,10 +442,6 @@ export default function ProductForm({
         throw new Error(
           'Please select a category.'
         );
-      }
-
-      if (form.regularPrice === '' && form.salePrice === '') {
-        throw new Error('Enter a regular price or a sale price.');
       }
 
       if (form.productType === 'COMBO' && form.comboItems.length === 0) {
@@ -928,7 +972,7 @@ export default function ProductForm({
 
                 <Field
                   label="SKU"
-                  help="Optional"
+                  help={discountPercentage ? `Optional - ${discountPercentage}% discount` : 'Optional'}
                 >
                   <input
                     value={
@@ -1219,6 +1263,63 @@ export default function ProductForm({
 
               {configuredAttributes.length === 0 && <p className={styles.cardDescription}>This category has no configured product attributes.</p>}
 
+            </section>
+
+            <section className={styles.card}>
+              <SectionTitle>Product Variants</SectionTitle>
+              <p className={styles.cardDescription}>Set option-specific SKU, price, stock and values. For options already used in an order or cart, keep SKU, price and option values unchanged; set stock to 0 to stop sales.</p>
+
+              <div className={styles.variantList}>
+                {form.variants.map((variant, index) => (
+                  <div className={styles.variantCard} key={variant.id || `new-variant-${index}`}>
+                    <div className={styles.variantCardHeader}>
+                      <strong>Variant {index + 1}</strong>
+                      <button type="button" onClick={() => removeVariant(index)} aria-label={`Remove variant ${index + 1}`}>
+                        <X size={14} />
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className={styles.formGridThree}>
+                      <Field label="Size">
+                        <input value={variant.size} onChange={event => updateVariant(index, 'size', event.target.value)} placeholder="e.g. Large" />
+                      </Field>
+                      <Field label="Color">
+                        <input value={variant.color} onChange={event => updateVariant(index, 'color', event.target.value)} placeholder="e.g. Black" />
+                      </Field>
+                      <Field label="Variant SKU" help="Leave blank to generate automatically">
+                        <input value={variant.sku} onChange={event => updateVariant(index, 'sku', event.target.value)} placeholder="Auto-generated" />
+                      </Field>
+                      <Field label="Variant Price" help="Optional; uses product price when blank">
+                        <PriceInput value={variant.price} onChange={value => updateVariant(index, 'price', value)} />
+                      </Field>
+                      <Field label="Variant Stock" required>
+                        <input type="number" min="0" step="1" value={variant.stock} onChange={event => updateVariant(index, 'stock', Math.max(0, Number(event.target.value) || 0))} />
+                      </Field>
+                    </div>
+
+                    {configuredAttributes.length > 0 && (
+                      <div className={styles.variantAttributeGrid}>
+                        {configuredAttributes.map(attribute => (
+                          <Field key={attribute.id} label={attribute.name}>
+                            <select
+                              value={attribute.values.find(value => variant.attributeValueIds.includes(value.id))?.id || ''}
+                              onChange={event => updateVariantAttribute(index, attribute, event.target.value)}
+                            >
+                              <option value="">Use product default</option>
+                              {attribute.values.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}
+                            </select>
+                          </Field>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button type="button" className={styles.addVariantButton} onClick={addVariant}>
+                <Plus size={15} /> Add variant
+              </button>
             </section>
 
             <section

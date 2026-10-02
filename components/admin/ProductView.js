@@ -118,7 +118,7 @@ export default function ProductView({
           }
         >
           <Link
-            href={`/admin/products/${product.id}/edit`}
+            href={`/admin/products/new?edit=${product.id}`}
             className={
               styles.editButton
             }
@@ -279,8 +279,12 @@ export default function ProductView({
               icon={<Tag size={16} />}
               label="SKU"
               value={
-                product.sku ||
-                'Auto generated'
+                <>
+                  {product.sku || 'Auto generated'}
+                  {product.regularPrice != null && product.salePrice != null && Number(product.regularPrice) > Number(product.salePrice) && (
+                    <> - {Math.round(((Number(product.regularPrice) - Number(product.salePrice)) / Number(product.regularPrice)) * 100)}% OFF</>
+                  )}
+                </>
               }
             />
 

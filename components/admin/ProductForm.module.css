@@ -234,6 +234,64 @@
   margin-top: 6px;
 }
 
+.variantList {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.variantCard {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e4eaf0;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+
+.variantCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #34445a;
+  font-size: 12px;
+}
+
+.variantCardHeader button,
+.addVariantButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #d8e1eb;
+  border-radius: 5px;
+  background: #fff;
+  color: #34445a;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.variantCardHeader button {
+  color: #b33f4b;
+}
+
+.variantAttributeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.addVariantButton {
+  margin-top: 12px;
+  border-color: #078954;
+  color: #087b4b;
+  font-weight: 700;
+}
+
 .attributeOption {
   position: relative;
   display: inline-flex;
@@ -1137,6 +1195,7 @@
 
   .formGrid,
   .formGridThree,
+  .variantAttributeGrid,
   .rightColumn {
     grid-template-columns: 1fr;
   }

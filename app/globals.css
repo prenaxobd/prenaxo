@@ -18098,7 +18098,22 @@ html[data-admin-theme='dark'] .admin-banner-table tbody tr:hover { background: r
 .admin-order-product-image img { width: 100%; height: 100%; object-fit: cover; }
 .order-items-table td { padding-top: 14px; padding-bottom: 14px; }
 .order-items-table td:last-child { color: #087a4b; }
-.payment-card { display: flex; align-items: center; justify-content: space-between; }
+.payment-card { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.payment-reference-summary { display: grid; gap: 5px; min-width: min(100%, 260px); padding: 11px 13px; border: 1px solid #dce8e2; border-radius: 7px; background: #f7fbf8; }
+.payment-reference-summary span { color: #758279; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.payment-reference-summary strong { color: #26364c; font-size: 13px; overflow-wrap: anywhere; }
+.payment-review-controls { display: grid; gap: 12px; flex: 1 1 100%; padding-top: 14px; border-top: 1px solid #e8eeeb; }
+.payment-review-controls label { display: grid; gap: 6px; color: #526174; font-size: 11px; font-weight: 700; }
+.payment-review-controls textarea { width: 100%; max-width: 620px; padding: 9px 11px; border: 1px solid #d5dfda; border-radius: 6px; background: #fff; color: #26364c; font: inherit; resize: vertical; }
+.payment-review-controls > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.payment-review-controls .order-payment-reject { border-color: #efc4c0; background: #fff6f5; color: #a43c34; }
+.payment-history ol { display: grid; gap: 0; margin: 14px 0 0; padding: 0; list-style: none; }
+.payment-history li { display: grid; gap: 5px; padding: 13px 0; border-top: 1px solid #edf1f4; }
+.payment-history li > div { display: flex; align-items: center; gap: 9px; }
+.payment-history li > div strong { color: #26364c; font-size: 12px; }
+.payment-history li > div span { color: #087a4b; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.payment-history li p { margin: 0; color: #617187; font-size: 11px; line-height: 1.5; }
+.payment-history li small { color: #8491a1; font-size: 10px; }
 .admin-table-pill { display: inline-flex; max-width: 140px; overflow: hidden; padding: 4px 8px; border-radius: 6px; background: #eef3ff; color: #52649a; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .admin-product-cell { display: flex; align-items: center; gap: 10px; min-width: 230px; }
 .admin-product-cell > span { display: grid; min-width: 0; gap: 3px; }

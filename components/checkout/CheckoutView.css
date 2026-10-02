@@ -443,7 +443,7 @@
 
 .payment-option {
   display: block;
-  padding: 11px 12px 0;
+  padding: 13px 14px 0;
   border: 1px solid #e0e5ea;
   border-radius: 7px;
   background: #fff;
@@ -468,8 +468,16 @@
 .payment-option-head {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding-bottom: 11px;
+  gap: 12px;
+  min-height: 48px;
+  padding-bottom: 12px;
+}
+
+.payment-logo {
+  width: 72px;
+  height: 38px;
+  flex: 0 0 72px;
+  object-fit: contain;
 }
 
 .payment-radio {
@@ -518,7 +526,7 @@
 
 .payment-name strong {
   color: var(--checkout-text);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -568,6 +576,53 @@
   font-size: 10px;
   font-weight: 700;
   word-break: break-word;
+}
+
+.payment-reference-field {
+  margin-top: 6px;
+  padding: 12px;
+  border: 1px solid #dce8df;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.payment-reference-field small {
+  display: block;
+  margin-top: 6px;
+  color: #68776e;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.gateway-payment-box {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.gateway-payment-box > p {
+  margin: 0;
+  color: #596a60;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.gateway-wallet-logos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid #e4e9e6;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.gateway-wallet-logos img {
+  width: auto;
+  max-width: 94px;
+  height: 30px;
+  object-fit: contain;
 }
 
 /* ---------------------------------------------------------
@@ -1140,6 +1195,10 @@
   .payment-option {
     padding: 10px 10px 0;
   }
+
+  .payment-option-head { gap: 9px; }
+  .payment-logo { width: 56px; height: 32px; flex-basis: 56px; }
+  .payment-name { align-items: flex-start; flex-direction: column; gap: 2px; }
 
   .payment-details {
     margin: 0 -10px;

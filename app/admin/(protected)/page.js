@@ -4,10 +4,26 @@ import { prisma } from '@/lib/prisma';
 
 const money = value => `৳${Number(value || 0).toLocaleString()}`;
 const date = value => new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+const percentageChange = (current, previous) => previous > 0
+  ? Math.round(((current - previous) / previous) * 1000) / 10
+  : null;
 
 export default async function AdminDashboard() {
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const currentPeriodStart = new Date(todayStart);
+  currentPeriodStart.setDate(currentPeriodStart.getDate() - 6);
+  const previousPeriodStart = new Date(currentPeriodStart);
+  previousPeriodStart.setDate(previousPeriodStart.getDate() - 7);
+  const thirtyDaysStart = new Date(todayStart);
+  thirtyDaysStart.setDate(thirtyDaysStart.getDate() - 29);
+
   const [
-    sales,
+    paidSales,
+    paidOrderCount,
     orders,
     customers,
     products,
@@ -16,15 +32,16 @@ export default async function AdminDashboard() {
     shipped,
     delivered,
     cancelled,
-    lowStock,
-    outOfStock,
-    pendingReviews,
     recentOrders,
-    recentCustomers,
-    topProducts,
-    paidOrders,
+    recentPaidOrders,
+    previousPeriodSales,
+    recentProductOrders,
+    paymentMethodSales,
+    activeProducts,
+    refundedOrderCount,
   ] = await Promise.all([
     prisma.order.aggregate({ where: { paymentStatus: 'PAID' }, _sum: { total: true } }),
+    prisma.order.count({ where: { paymentStatus: 'PAID' } }),
     prisma.order.count(),
     prisma.user.count({ where: { role: 'USER' } }),
     prisma.product.count(),
@@ -33,50 +50,87 @@ export default async function AdminDashboard() {
     prisma.order.count({ where: { status: 'SHIPPED' } }),
     prisma.order.count({ where: { status: 'DELIVERED' } }),
     prisma.order.count({ where: { status: 'CANCELLED' } }),
-    prisma.product.count({ where: { active: true, stock: { gt: 0, lte: 5 } } }),
-    prisma.product.count({ where: { active: true, stock: 0 } }),
-    prisma.review.count({ where: { approved: false } }),
     prisma.order.findMany({
       orderBy: { createdAt: 'desc' },
       take: 5,
       select: { orderNumber: true, customerName: true, total: true, status: true, createdAt: true },
     }),
-    prisma.user.findMany({
-      where: { role: 'USER' },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-      select: { name: true, email: true, createdAt: true },
-    }),
-    prisma.orderItem.groupBy({
-      by: ['productId', 'productName'],
-      _sum: { quantity: true },
-      orderBy: { _sum: { quantity: 'desc' } },
-      take: 5,
-    }),
     prisma.order.findMany({
-      where: { paymentStatus: 'PAID' },
-      orderBy: { createdAt: 'asc' },
+      where: {
+        paymentStatus: 'PAID',
+        createdAt: { gte: currentPeriodStart, lt: tomorrowStart },
+      },
       select: { total: true, createdAt: true },
     }),
+    prisma.order.aggregate({
+      where: {
+        paymentStatus: 'PAID',
+        createdAt: { gte: previousPeriodStart, lt: currentPeriodStart },
+      },
+      _sum: { total: true },
+    }),
+    prisma.order.findMany({
+      where: {
+        paymentStatus: 'PAID',
+        createdAt: { gte: thirtyDaysStart, lt: tomorrowStart },
+      },
+      select: {
+        items: {
+          select: { productId: true, productName: true, quantity: true, unitPrice: true },
+        },
+      },
+    }),
+    prisma.order.groupBy({
+      by: ['paymentMethod'],
+      where: { paymentStatus: 'PAID' },
+      _sum: { total: true },
+      orderBy: { _sum: { total: 'desc' } },
+    }),
+    prisma.product.findMany({
+      where: { active: true },
+      select: {
+        id: true,
+        name: true,
+        stock: true,
+        lowStock: true,
+        images: { orderBy: { sortOrder: 'asc' }, take: 1, select: { url: true } },
+      },
+    }),
+    prisma.order.count({ where: { paymentStatus: 'REFUNDED' } }),
   ]);
 
+  const lowStock = activeProducts.filter(product => product.stock > 0 && product.stock <= product.lowStock).length;
+  const outOfStock = activeProducts.filter(product => product.stock === 0).length;
+  const lowStockProducts = activeProducts
+    .filter(product => product.stock > 0 && product.stock <= product.lowStock)
+    .sort((first, second) => first.stock - second.stock)
+    .slice(0, 5);
+  const topProductTotals = new Map();
+  recentProductOrders.forEach(order => order.items.forEach(item => {
+    const product = topProductTotals.get(item.productId) || {
+      productId: item.productId,
+      productName: item.productName,
+      quantity: 0,
+      revenue: 0,
+    };
+    product.quantity += item.quantity;
+    product.revenue += item.quantity * Number(item.unitPrice);
+    topProductTotals.set(item.productId, product);
+  }));
+  const topProducts = [...topProductTotals.values()]
+    .sort((first, second) => second.quantity - first.quantity)
+    .slice(0, 5);
   const topProductDetails = await prisma.product.findMany({
     where: { id: { in: topProducts.map(item => item.productId) } },
     select: { id: true, name: true, images: { orderBy: { sortOrder: 'asc' }, take: 1, select: { url: true } } },
   });
   const topProductMap = new Map(topProductDetails.map(product => [product.id, product]));
-  const lowStockProducts = await prisma.product.findMany({
-    where: { active: true, stock: { lte: 12 } },
-    orderBy: { stock: 'asc' },
-    take: 5,
-    select: { id: true, name: true, stock: true, images: { orderBy: { sortOrder: 'asc' }, take: 1, select: { url: true } } },
-  });
 
   const last7Days = Array.from({ length: 7 }, (_, index) => {
     const day = new Date();
     day.setHours(0, 0, 0, 0);
     day.setDate(day.getDate() - (6 - index));
-    const total = paidOrders
+    const total = recentPaidOrders
       .filter(order => new Date(order.createdAt).toDateString() === day.toDateString())
       .reduce((sum, order) => sum + Number(order.total), 0);
 
@@ -87,8 +141,33 @@ export default async function AdminDashboard() {
   });
 
   const chartMax = Math.max(...last7Days.map(item => item.total), 1);
-  const todayKey = new Date().toDateString();
-  const todaySales = paidOrders.filter(order => new Date(order.createdAt).toDateString() === todayKey).reduce((sum, order) => sum + Number(order.total), 0);
+  const currentPeriodTotal = recentPaidOrders.reduce((sum, order) => sum + Number(order.total), 0);
+  const todayKey = todayStart.toDateString();
+  const todaySales = recentPaidOrders
+    .filter(order => new Date(order.createdAt).toDateString() === todayKey)
+    .reduce((sum, order) => sum + Number(order.total), 0);
+  const salesChange = percentageChange(currentPeriodTotal, Number(previousPeriodSales._sum.total || 0));
+  const averagePaidOrder = paidOrderCount
+    ? Number(paidSales._sum.total || 0) / paidOrderCount
+    : 0;
+  const totalPaymentMethodSales = paymentMethodSales.reduce((sum, item) => sum + Number(item._sum.total || 0), 0);
+  const paymentColors = ['#087A45', '#171C19', '#7c5ef5', '#d1d5db'];
+  const paymentSegments = paymentMethodSales.reduce((segments, item, index) => {
+    const start = segments.length ? segments[segments.length - 1].end : 0;
+    const percentage = totalPaymentMethodSales
+      ? (Number(item._sum.total || 0) / totalPaymentMethodSales) * 100
+      : 0;
+    return [...segments, {
+      color: paymentColors[index % paymentColors.length],
+      start,
+      end: start + percentage,
+    }];
+  }, []);
+  const paymentRingStyle = {
+    background: paymentSegments.length
+      ? `conic-gradient(${paymentSegments.map(segment => `${segment.color} ${segment.start}% ${segment.end}%`).join(', ')})`
+      : 'conic-gradient(#e2e8f0 0 100%)',
+  };
   const orderStatusValues = [
     { label: 'Pending', value: pending, color: '#9b8af2' },
     { label: 'Processing', value: processing, color: '#00a9a5' },
@@ -126,9 +205,11 @@ export default async function AdminDashboard() {
         <div className="stats-card green">
           <div className="stats-icon"><span>৳</span></div>
           <div className="stats-text">
-            <label>Total Sales</label>
-            <strong>{money(sales._sum.total)}</strong>
-            <small className="positive">↑ 12.5% vs last 7 days</small>
+              <label>Paid Sales (All Time)</label>
+              <strong>{money(paidSales._sum.total)}</strong>
+              <small className={salesChange === null ? 'muted' : salesChange >= 0 ? 'positive' : 'warning'}>
+                Last 7 days: {money(currentPeriodTotal)}{salesChange === null ? ' - no prior-period baseline' : ` - ${salesChange >= 0 ? '+' : ''}${salesChange}% vs previous 7 days`}
+              </small>
           </div>
         </div>
 
@@ -137,7 +218,7 @@ export default async function AdminDashboard() {
           <div className="stats-text">
             <label>Today&apos;s Sales</label>
             <strong>{money(todaySales)}</strong>
-            <small className="positive">{todaySales ? 'Live sales today' : 'No sales today'}</small>
+            <small className="muted">{todaySales ? 'Paid orders placed today' : 'No paid sales today'}</small>
           </div>
         </div>
 
@@ -153,9 +234,9 @@ export default async function AdminDashboard() {
         <div className="stats-card">
           <div className="stats-icon orange"><span>▣</span></div>
           <div className="stats-text">
-            <label>Total Customers</label>
+            <label>Registered Customers</label>
             <strong>{customers}</strong>
-            <small className="muted">Active customer accounts</small>
+            <small className="muted">Customer accounts</small>
           </div>
         </div>
 
@@ -164,7 +245,7 @@ export default async function AdminDashboard() {
           <div className="stats-text">
             <label>Total Products</label>
             <strong>{products}</strong>
-            <small className={lowStock || outOfStock ? 'warning' : 'positive'}>{lowStock} low stock </small>
+            <small className={lowStock || outOfStock ? 'warning' : 'positive'}>{lowStock} low stock, {outOfStock} out of stock</small>
           </div>
         </div>
 
@@ -184,7 +265,7 @@ export default async function AdminDashboard() {
             <div>
               <h2>Sales Overview</h2>
             </div>
-            <button type="button" className="filter-btn">Last 7 Days</button>
+            <span className="filter-btn">Paid orders - Last 7 Days</span>
           </div>
 
           <div className="line-chart" aria-label="Sales overview line chart">
@@ -228,22 +309,26 @@ export default async function AdminDashboard() {
         <section className="panel donut-panel sales-channel-panel">
           <div className="panel-header">
             <div>
-              <h2>Sales by Channel</h2>
+              <h2>Paid Sales by Payment Method</h2>
             </div>
           </div>
 
           <div className="channel-wrap">
-            <div className="channel-ring">
+            <div className="channel-ring" style={paymentRingStyle}>
               <div className="channel-center">
-                <strong>{money(sales._sum.total)}</strong>
-                <span>Total Sales</span>
+                <strong>{money(paidSales._sum.total)}</strong>
+                <span>Paid Sales</span>
               </div>
             </div>
             <ul className="channel-legend">
-              <li><span className="legend-dot green" /> Website <strong>{money(sales._sum.total)}</strong></li>
-              <li><span className="legend-dot blue" /> Mobile App <strong>{money(sales._sum.total / 2)}</strong></li>
-              <li><span className="legend-dot purple" /> Facebook <strong>{money(sales._sum.total / 4)}</strong></li>
-              <li><span className="legend-dot gray" /> Others <strong>{money(sales._sum.total / 7)}</strong></li>
+              {paymentMethodSales.map((item, index) => (
+                <li key={item.paymentMethod}>
+                  <span className="legend-dot" style={{ background: paymentColors[index % paymentColors.length] }} />
+                  {item.paymentMethod || 'Unspecified'}
+                  <strong>{money(item._sum.total)}</strong>
+                </li>
+              ))}
+              {!paymentMethodSales.length && <li>No paid orders yet.</li>}
             </ul>
           </div>
         </section>
@@ -287,7 +372,7 @@ export default async function AdminDashboard() {
         <section className="panel table-panel">
           <div className="panel-header">
             <div>
-              <h2>Top Selling Products</h2>
+              <h2>Top Selling Products (30 Days)</h2>
             </div>
             <Link href="/admin/products/analytics">View All</Link>
           </div>
@@ -297,8 +382,8 @@ export default async function AdminDashboard() {
               <thead>
                 <tr>
                   <th>Product</th>
-                  <th>Sold</th>
-                  <th>Revenue</th>
+                  <th>Units Sold</th>
+                  <th>Item Sales*</th>
                 </tr>
               </thead>
               <tbody>
@@ -310,13 +395,15 @@ export default async function AdminDashboard() {
                         <span title={product.productName}>{product.productName}</span>
                       </div>
                     </td>
-                    <td>{product._sum.quantity || 0}</td>
-                    <td>{money((product._sum.quantity || 0) * 1200)}</td>
+                    <td>{product.quantity}</td>
+                    <td>{money(product.revenue)}</td>
                   </tr>
                 ))}
+                {!topProducts.length && <tr><td colSpan="3">No paid product sales in the last 30 days.</td></tr>}
               </tbody>
             </table>
           </div>
+          <small className="muted">*Based on paid order line items; order-level discounts are not allocated.</small>
         </section>
 
         <section className="panel table-panel">
@@ -345,24 +432,24 @@ export default async function AdminDashboard() {
 
       <div className="footer-row">
         <div className="summary-card">
-          <label>Total Profit</label>
-          <strong>{money(sales._sum.total * 0.22)}</strong>
-          <small className="positive">↑ 14.5% vs last 7 days</small>
+          <label>Average Paid Order</label>
+          <strong>{money(averagePaidOrder)}</strong>
+          <small className="muted">All-time paid sales / paid orders</small>
         </div>
         <div className="summary-card">
-          <label>Returning Customers</label>
-          <strong>45.8%</strong>
-          <small className="muted">↑ 6.2% vs last 7 days</small>
+          <label>Paid Orders (Last 7 Days)</label>
+          <strong>{recentPaidOrders.length}</strong>
+          <small className="muted">Orders placed in this period</small>
         </div>
         <div className="summary-card">
-          <label>Conversion Rate</label>
-          <strong>3.25%</strong>
-          <small className="positive">↑ 8.7% vs last 7 days</small>
+          <label>Units Sold (Last 30 Days)</label>
+          <strong>{[...topProductTotals.values()].reduce((sum, product) => sum + product.quantity, 0)}</strong>
+          <small className="muted">From paid order line items</small>
         </div>
         <div className="summary-card">
-          <label>Average Order Value</label>
-          <strong>{money(Number(sales._sum.total || 0) / Math.max(orders || 1, 1))}</strong>
-          <small className="muted">↓ 5.6% vs last 7 days</small>
+          <label>Orders Marked Refunded</label>
+          <strong>{refundedOrderCount}</strong>
+          <small className="muted">All-time payment status count</small>
         </div>
 
         <div className="quick-actions">

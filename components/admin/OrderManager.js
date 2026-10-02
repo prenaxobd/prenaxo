@@ -38,6 +38,7 @@ const STATUS_OPTIONS = [
 
 const PAYMENT_OPTIONS = [
   'PENDING',
+  'PENDING_VERIFICATION',
   'PAID',
   'FAILED',
   'REFUNDED',
@@ -107,6 +108,7 @@ function getDeliveryType(order) {
 function getStatusLabel(status) {
   const labels = {
     PENDING: 'Pending',
+    PENDING_VERIFICATION: 'Review needed',
     PROCESSING: 'Processing',
     SHIPPED: 'Shipped',
     DELIVERED: 'Completed',
@@ -1067,23 +1069,6 @@ export default function OrderManager({
                               }
                             >
                               Completed
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={
-                                updatingId === order.id
-                              }
-                              onClick={() =>
-                                updateOrder(
-                                  order.id,
-                                  {
-                                    paymentStatus: 'PAID',
-                                  }
-                                )
-                              }
-                            >
-                              Mark Paid
                             </button>
 
                             <button

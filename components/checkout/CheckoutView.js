@@ -264,9 +264,7 @@ export default function CheckoutView() {
         form.paymentMethod
     );
 
-  const requiresTransactionId =
-    form.paymentMethod === 'BKASH' ||
-    form.paymentMethod === 'NAGAD';
+  const requiresTransactionId = Boolean(selectedPayment?.requiresTransactionId);
 
   function update(key, value) {
     setForm((current) => ({
@@ -371,13 +369,17 @@ export default function CheckoutView() {
         await response.json();
 
       if (!response.ok) {
+        if (data.orderNumber) {
+          setError(`${data.error || 'Online checkout is still pending.'} Order number: ${data.orderNumber}.`);
+          return;
+        }
         throw new Error(
           data.error ||
             'Unable to place order.'
         );
       }
 
-      if (typeof window !== 'undefined' && window.fbq) {
+      if ((selectedPayment?.type === 'COD' || data.paymentStatus === 'PAID') && typeof window !== 'undefined' && window.fbq) {
         window.fbq('track', 'Purchase', { currency: 'BDT' });
       }
 
@@ -385,6 +387,20 @@ export default function CheckoutView() {
         'khatibazar-coupon'
       );
       clearCart();
+
+      if (data.paymentRedirectUrl) {
+        const gatewayUrl = new URL(data.paymentRedirectUrl);
+        const approvedGatewayHosts = new Set(['sandbox.sslcommerz.com', 'securepay.sslcommerz.com']);
+        if (gatewayUrl.protocol !== 'https:' || !approvedGatewayHosts.has(gatewayUrl.hostname)) {
+          throw new Error('The payment provider returned an invalid checkout link. Contact support with your order number.');
+        }
+        const { paymentRedirectUrl, ...confirmation } = data;
+        try {
+          sessionStorage.setItem('prenaxo-order-confirmation', JSON.stringify(confirmation));
+        } catch {}
+        window.location.assign(gatewayUrl.toString());
+        return;
+      }
 
       try {
         sessionStorage.setItem(
@@ -831,15 +847,9 @@ export default function CheckoutView() {
                       form.paymentMethod ===
                       option.id;
 
-                    const isMobilePayment =
-                      option.id ===
-                        'BKASH' ||
-                      option.id ===
-                        'NAGAD';
-
-                    const isBank =
-                      option.id ===
-                      'BANK';
+                    const isManualPayment = ['BANK_TRANSFER', 'MANUAL_WALLET'].includes(option.type);
+                    const isCashOnDelivery = option.type === 'COD';
+                    const isGateway = option.type === 'GATEWAY';
 
                     return (
                       <label
@@ -874,6 +884,10 @@ export default function CheckoutView() {
                             <span />
                           </span>
 
+                          {option.logoUrl ? (
+                            <OptimizedImage className="payment-logo" src={option.logoUrl} alt="" width={92} height={48} sizes="92px" />
+                          ) : null}
+
                           <span className="payment-name">
                             <strong>
                               {option.title ||
@@ -897,211 +911,51 @@ export default function CheckoutView() {
                               </p>
                             ) : null}
 
-                            {/* BKASH / NAGAD */}
-
-                            {isMobilePayment ? (
+                            {isManualPayment ? (
                               <div className="mobile-payment-box">
                                 {option.accountNumber ? (
-                                  <div>
-                                    <span>
-                                      Send money to
-                                    </span>
-
-                                    <strong>
-                                      {
-                                        option.accountNumber
-                                      }
-                                    </strong>
-                                  </div>
+                                  <div><span>Account number</span><strong>{option.accountNumber}</strong></div>
                                 ) : null}
-
                                 {option.accountName ? (
-                                  <div
-                                    style={{
-                                      marginTop:
-                                        8,
-                                    }}
-                                  >
-                                    <span>
-                                      Account name
-                                    </span>
-
-                                    <strong>
-                                      {
-                                        option.accountName
-                                      }
-                                    </strong>
-                                  </div>
+                                  <div><span>Account name</span><strong>{option.accountName}</strong></div>
                                 ) : null}
-
-                                {option.instructions ? (
-                                  <p
-                                    style={{
-                                      marginTop:
-                                        10,
-                                    }}
-                                  >
-                                    {
-                                      option.instructions
-                                    }
-                                  </p>
-                                ) : null}
-
-                                <label className="checkout-field">
-                                  <span>
-                                    {option.name ||
-                                      option.title}{' '}
-                                    Transaction ID
-                                  </span>
-
-                                  <input
-                                    required
-                                    type="text"
-                                    placeholder="Enter transaction ID"
-                                    value={
-                                      form.paymentTransactionId
-                                    }
-                                    onChange={(
-                                      e
-                                    ) =>
-                                      update(
-                                        'paymentTransactionId',
-                                        e.target
-                                          .value
-                                      )
-                                    }
-                                  />
-
-                                  <small>
-                                    Enter the
-                                    transaction ID
-                                    after sending
-                                    the payment.
-                                  </small>
-                                </label>
-                              </div>
-                            ) : null}
-
-                            {/* BANK */}
-
-                            {isBank ? (
-                              <div className="mobile-payment-box">
                                 {option.bankName ? (
-                                  <div>
-                                    <span>
-                                      Bank name
-                                    </span>
-
-                                    <strong>
-                                      {
-                                        option.bankName
-                                      }
-                                    </strong>
-                                  </div>
+                                  <div><span>Bank</span><strong>{option.bankName}</strong></div>
                                 ) : null}
-
                                 {option.branchName ? (
-                                  <div
-                                    style={{
-                                      marginTop:
-                                        8,
-                                    }}
-                                  >
-                                    <span>
-                                      Branch
-                                    </span>
-
-                                    <strong>
-                                      {
-                                        option.branchName
-                                      }
-                                    </strong>
-                                  </div>
+                                  <div><span>Branch</span><strong>{option.branchName}</strong></div>
                                 ) : null}
-
-                                {option.accountNumber ? (
-                                  <div
-                                    style={{
-                                      marginTop:
-                                        8,
-                                    }}
-                                  >
-                                    <span>
-                                      Account number
-                                    </span>
-
-                                    <strong>
-                                      {
-                                        option.accountNumber
-                                      }
-                                    </strong>
-                                  </div>
-                                ) : null}
-
-                                {option.accountName ? (
-                                  <div
-                                    style={{
-                                      marginTop:
-                                        8,
-                                    }}
-                                  >
-                                    <span>
-                                      Account name
-                                    </span>
-
-                                    <strong>
-                                      {
-                                        option.accountName
-                                      }
-                                    </strong>
-                                  </div>
-                                ) : null}
-
                                 {option.routingNumber ? (
-                                  <div
-                                    style={{
-                                      marginTop:
-                                        8,
-                                    }}
-                                  >
-                                    <span>
-                                      Routing number
-                                    </span>
-
-                                    <strong>
-                                      {
-                                        option.routingNumber
-                                      }
-                                    </strong>
-                                  </div>
+                                  <div><span>Routing number</span><strong>{option.routingNumber}</strong></div>
                                 ) : null}
-
-                                {option.instructions ? (
-                                  <p
-                                    style={{
-                                      marginTop:
-                                        10,
-                                    }}
-                                  >
-                                    {
-                                      option.instructions
-                                    }
-                                  </p>
-                                ) : null}
+                                {option.instructions ? <p>{option.instructions}</p> : null}
+                                {option.requiresTransactionId ? <label className="checkout-field payment-reference-field">
+                                  <span>{option.name || option.title} transaction ID / transfer reference</span>
+                                  <input required type="text" maxLength={150} placeholder="Enter your transfer reference" value={form.paymentTransactionId} onChange={(event) => update('paymentTransactionId', event.target.value)} />
+                                  <small>Your payment remains under review until our team confirms the transfer.</small>
+                                </label> : null}
                               </div>
                             ) : null}
 
-                            {/* COD */}
-
-                            {option.id ===
-                              'COD' &&
-                            option.instructions ? (
-                              <p>
-                                {
-                                  option.instructions
-                                }
-                              </p>
+                            {isGateway ? (
+                              <div className="gateway-payment-box">
+                                <p>Continue to SSLCommerz secure checkout. Available channels depend on your merchant account.</p>
+                                <div className="gateway-wallet-logos" aria-label="Supported mobile banking brands">
+                                  <OptimizedImage src="https://res.cloudinary.com/ethp0qrs/image/upload/v1790904746/bkash-logo-horizontal-bangla-mobile-banking-app-icon-free-png.png" alt="bKash" width={112} height={46} sizes="112px" />
+                                  <OptimizedImage src="https://res.cloudinary.com/ethp0qrs/image/upload/v1790904660/Nagad-Logo.wine.png" alt="Nagad" width={78} height={46} sizes="78px" />
+                                  <OptimizedImage src="https://res.cloudinary.com/ethp0qrs/image/upload/v1790905387/rocket-color-logo-mobile-banking-icon-free-png.png" alt="Rocket" width={78} height={46} sizes="78px" />
+                                </div>
+                              </div>
                             ) : null}
+
+                            {isCashOnDelivery && option.instructions ? (
+                              <p>{option.instructions}</p>
+                            ) : null}
+
+                            {!['BANK_TRANSFER', 'MANUAL_WALLET', 'GATEWAY', 'COD'].includes(option.type) ? (
+                              <p>This payment method is not configured for checkout.</p>
+                            ) : null}
+
                           </div>
                         ) : null}
                       </label>

@@ -1,19 +1,29 @@
 import { prisma } from '@/lib/prisma';
+import { getUserPermissions, requirePermission } from '@/lib/admin';
+import { isSslCommerzConfigured } from '@/lib/sslcommerz';
 import { ensureDefaultPaymentMethods } from '@/lib/payment-methods';
 import PaymentMethodsManager from '@/components/admin/PaymentMethodsManager';
 
-export default async function PaymentMethodsPage() {
-  await ensureDefaultPaymentMethods();
+export const dynamic = 'force-dynamic';
 
-  const methods = await prisma.paymentMethod.findMany({
-    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-  });
+export default async function PaymentMethodsPage() {
+  const admin = await requirePermission('settings.view');
+  await ensureDefaultPaymentMethods();
+  const [methods, permissions] = await Promise.all([
+    prisma.paymentMethod.findMany({ orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] }),
+    getUserPermissions(admin.id),
+  ]);
 
   const initialMethods = methods.map((method) => ({
     id: method.id,
     code: method.code,
     name: method.name,
+    type: method.type,
     description: method.description || '',
+    logoUrl: method.logoUrl || '',
+    requiresTransactionId: method.requiresTransactionId,
+    gatewayProvider: method.gatewayProvider || '',
+    gatewayChannel: method.gatewayChannel || '',
     accountNumber: method.accountNumber || '',
     accountName: method.accountName || '',
     bankName: method.bankName || '',
@@ -36,7 +46,7 @@ export default async function PaymentMethodsPage() {
         </div>
         <span className="payment-methods-count">{initialMethods.length} methods</span>
       </div>
-      <PaymentMethodsManager initialMethods={initialMethods} />
+      <PaymentMethodsManager initialMethods={initialMethods} gatewayConfigured={isSslCommerzConfigured()} canManage={permissions.includes('settings.edit')} />
     </>
   );
 }

@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma';
+import { ensureDefaultPaymentMethods } from '@/lib/payment-methods';
 
 export async function GET() {
   try {
+    await ensureDefaultPaymentMethods();
     const methods = await prisma.paymentMethod.findMany({
       where: {
         active: true,
@@ -27,12 +29,13 @@ export async function GET() {
 
         accountNumber: method.accountNumber,
         accountName: method.accountName,
-
         bankName: method.bankName,
         branchName: method.branchName,
         routingNumber: method.routingNumber,
-
         instructions: method.instructions,
+        type: method.type,
+        logoUrl: method.logoUrl,
+        requiresTransactionId: method.requiresTransactionId,
       }))
     );
   } catch (error) {

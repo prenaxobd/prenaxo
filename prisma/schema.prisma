@@ -29,9 +29,31 @@ enum OrderStatus {
 
 enum PaymentStatus {
   PENDING
+  PENDING_VERIFICATION
   PAID
   FAILED
   REFUNDED
+}
+
+enum PaymentMethodType {
+  COD
+  BANK_TRANSFER
+  MANUAL_WALLET
+  GATEWAY
+}
+
+enum PaymentAttemptStatus {
+  CREATED
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum PaymentEventSource {
+  SYSTEM
+  ADMIN
+  GATEWAY
 }
 
 enum DiscountType {
@@ -155,6 +177,7 @@ model User {
   reviews  Review[]
 
   activities AdminActivity[]
+  paymentEvents PaymentEvent[]
 
   analyticsEvents AnalyticsEvent[]
 
@@ -722,6 +745,10 @@ model Order {
   paymentMethod String
 
   paymentTransactionId String?
+
+  paymentAttempts PaymentAttempt[]
+
+  paymentEvents PaymentEvent[]
 
   orderNote String? @db.Text
 
@@ -1410,7 +1437,17 @@ model PaymentMethod {
 
   name String
 
+  type PaymentMethodType @default(MANUAL_WALLET)
+
   description String? @db.Text
+
+  logoUrl String? @db.VarChar(512)
+
+  requiresTransactionId Boolean @default(false)
+
+  gatewayProvider String? @db.VarChar(32)
+
+  gatewayChannel String? @db.VarChar(64)
 
   accountNumber String?
 
@@ -1432,7 +1469,79 @@ model PaymentMethod {
 
   updatedAt DateTime @updatedAt
 
+  paymentAttempts PaymentAttempt[]
+
   @@index([active, sortOrder])
 
   @@map("paymentmethod")
+}
+
+model PaymentAttempt {
+  id String @id @default(cuid())
+
+  orderId String @db.VarChar(191)
+
+  paymentMethodId String? @db.VarChar(191)
+
+  methodCode String @db.VarChar(32)
+
+  provider String @db.VarChar(32)
+
+  checkoutLockUserId String? @unique @db.VarChar(191)
+
+  merchantTransactionId String @unique @db.VarChar(64)
+
+  providerSessionKey String? @unique @db.VarChar(64)
+
+  providerTransactionId String? @unique @db.VarChar(128)
+
+  amount Decimal @db.Decimal(10, 2)
+
+  currency String @default("BDT") @db.VarChar(3)
+
+  status PaymentAttemptStatus @default(CREATED)
+
+  inventoryReserved Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([orderId, status])
+
+  @@index([paymentMethodId])
+
+  @@map("paymentattempt")
+}
+
+model PaymentEvent {
+  id String @id @default(cuid())
+
+  orderId String @db.VarChar(191)
+
+  actorId String? @db.VarChar(191)
+
+  status PaymentStatus
+
+  source PaymentEventSource @default(SYSTEM)
+
+  note String? @db.Text
+
+  externalReference String? @db.VarChar(128)
+
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([orderId, createdAt])
+
+  @@index([actorId, createdAt])
+
+  @@map("paymentevent")
 }

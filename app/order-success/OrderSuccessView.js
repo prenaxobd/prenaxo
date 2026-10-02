@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ArrowRight, Check, Clock3, PackageCheck } from 'lucide-react';
 import styles from './order-success.module.css';
 
@@ -27,6 +27,52 @@ export default function OrderSuccessView({ orderNumber }) {
   );
   const ready = orderSnapshot !== '__loading__';
   const order = ready && orderSnapshot ? JSON.parse(orderSnapshot) : null;
+  const [verifiedPayment, setVerifiedPayment] = useState(null);
+  const purchaseTracked = useRef(false);
+
+  useEffect(() => {
+    if (!ready || !order?.orderNumber) return undefined;
+
+    let active = true;
+    let attempts = 0;
+    const refreshPaymentStatus = async () => {
+      try {
+        const response = await fetch(`/api/orders/${encodeURIComponent(order.orderNumber)}/payment-status`, { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active) setVerifiedPayment(data);
+      } catch {
+        // Preserve the saved receipt state when the status endpoint is temporarily unavailable.
+      }
+    };
+
+    refreshPaymentStatus();
+    const interval = window.setInterval(() => {
+      attempts += 1;
+      if (attempts >= 20) {
+        window.clearInterval(interval);
+        return;
+      }
+      refreshPaymentStatus();
+    }, 3000);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [ready, order?.orderNumber]);
+
+  const paymentStatus = verifiedPayment?.paymentStatus || order?.paymentStatus;
+  const paymentMethodType = verifiedPayment?.paymentMethodType || order?.paymentMethodType;
+  const paymentMethodName = verifiedPayment?.paymentMethodName || order?.paymentMethodName || order?.paymentMethod;
+
+  useEffect(() => {
+    if (paymentStatus !== 'PAID' || purchaseTracked.current || !order) return;
+    purchaseTracked.current = true;
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'Purchase', { currency: 'BDT', value: Number(order.total) });
+    }
+  }, [order, paymentStatus]);
 
   if (!ready) {
     return (
@@ -46,11 +92,23 @@ export default function OrderSuccessView({ orderNumber }) {
           <div className={styles.successMark}>
             <Check size={27} strokeWidth={2.5} />
           </div>
-          <p className={styles.eyebrow}>{order ? 'Order confirmed' : 'Order summary'}</p>
-          <h1>{order ? 'Your order is in good hands.' : 'Order details unavailable'}</h1>
+          <p className={styles.eyebrow}>{order ? 'Order received' : 'Order summary'}</p>
+          <h1>{order ? paymentStatus === 'PAID' ? 'Payment received.' : paymentStatus === 'FAILED' ? 'Payment not completed.' : 'Your order is in good hands.' : 'Order details unavailable'}</h1>
           <p className={styles.intro}>
             {order
-              ? 'Thank you for shopping with Prenaxo. We have received your order and will keep you updated as it moves forward.'
+              ? paymentStatus === 'PAID'
+                ? 'Your payment has been verified. We will keep you updated as your order moves forward.'
+                : paymentStatus === 'PENDING_VERIFICATION'
+                  ? 'We received your transfer reference. Our team will review it and update the payment status.'
+                  : paymentStatus === 'FAILED'
+                    ? 'The payment was not completed. Your order remains unpaid; contact support before trying again.'
+                    : paymentStatus === 'REFUNDED'
+                      ? 'A refund has been recorded for this order. Contact support if you need help.'
+                      : paymentMethodType === 'COD'
+                        ? 'Your order is confirmed. Payment is due when your order is delivered.'
+                        : ['BANK_TRANSFER', 'MANUAL_WALLET'].includes(paymentMethodType)
+                          ? 'Your order has been received. Our team will follow up with payment instructions.'
+                          : 'Your payment confirmation is pending. This page will update when the provider confirms it.'
               : 'We could not load this order. Please check your order link or contact our support team.'}
           </p>
         </header>
@@ -64,7 +122,7 @@ export default function OrderSuccessView({ orderNumber }) {
                   <h2 id="receipt-title">Your receipt</h2>
                 </div>
                 <span className={styles.status}>
-                  <span /> Confirmed
+                  <span /> {String(paymentStatus || 'PENDING').replaceAll('_', ' ')}
                 </span>
               </div>
 
@@ -75,12 +133,12 @@ export default function OrderSuccessView({ orderNumber }) {
                 </div>
                 <div className={styles.detailRow}>
                   <dt>Payment method</dt>
-                  <dd>{order.paymentMethod === 'COD' ? 'Cash on delivery' : order.paymentMethod}</dd>
+                  <dd>{paymentMethodName === 'Cash on Delivery' ? 'Cash on delivery' : paymentMethodName}</dd>
                 </div>
                 <div className={styles.detailRow}>
                   <dt>Payment status</dt>
                   <dd className={styles.paymentStatus}>
-                    <Clock3 size={15} aria-hidden="true" /> {order.paymentStatus}
+                    <Clock3 size={15} aria-hidden="true" /> {String(paymentStatus || 'PENDING').replaceAll('_', ' ')}
                   </dd>
                 </div>
                 <div className={`${styles.detailRow} ${styles.totalRow}`}>

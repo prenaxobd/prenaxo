@@ -56,7 +56,8 @@
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--border, #dfe3e8);
@@ -80,7 +81,8 @@
 }
 
 .field input:focus,
-.field textarea:focus {
+.field textarea:focus,
+.field select:focus {
   border-color: #05702d;
   box-shadow: 0 0 0 3px rgba(5, 112, 45, 0.1);
 }
@@ -90,6 +92,71 @@
   cursor: not-allowed;
   background: #f5f5f5;
 }
+
+.activeField,
+.transactionRule {
+  justify-content: center;
+}
+
+.activeField span,
+.transactionRule span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.activeField input,
+.transactionRule input {
+  width: 17px;
+  height: 17px;
+  accent-color: #087a4b;
+}
+
+.gatewayConfig {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #b8ddc8;
+  border-radius: 8px;
+  background: #f4faf6;
+}
+
+.gatewayConfig > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gatewayConfig strong { color: #174a32; font-size: 14px; }
+.gatewayConfig small { color: #667085; font-size: 12px; line-height: 1.5; }
+.configured,
+.notConfigured { font-size: 11px; font-weight: 800; }
+.configured { color: #087a4b; }
+.notConfigured { color: #b54708; }
+
+.preview {
+  display: grid;
+  gap: 9px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #dce5e9;
+  border-radius: 8px;
+  background: #f8fafb;
+}
+
+.preview > span { color: #657382; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.previewCard { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 12px; border: 1px solid #dce4e8; border-radius: 7px; background: #fff; }
+.previewCard > img { flex: 0 0 auto; width: 64px; height: 38px; object-fit: contain; }
+.previewCard > div:nth-child(2) { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.previewCard strong { color: #20352a; font-size: 13px; }
+.previewCard small { color: #748179; font-size: 11px; line-height: 1.4; }
+.previewCard > span:last-child { color: #087a4b; font-size: 10px; font-weight: 700; text-align: right; }
+.previewMark { display: grid; width: 42px; height: 36px; flex: 0 0 auto; place-items: center; border-radius: 5px; background: #e8f3ec; color: #087a4b; font-size: 12px; font-weight: 900; }
+.walletPreview { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 6px 2px 0; }
+.walletPreview img { width: auto; height: 27px; object-fit: contain; }
+.walletPreview small { flex-basis: 100%; color: #748179; font-size: 10px; }
 
 .sectionTitle {
   margin: 30px 0 16px;
@@ -186,6 +253,11 @@
   gap: 15px;
   margin-bottom: 16px;
 }
+
+.listTools { display: flex; align-items: center; gap: 14px; }
+.filters { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid #dce5e9; border-radius: 7px; background: #f5f8f7; }
+.filters button { min-height: 29px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: #62716a; font-size: 11px; font-weight: 700; cursor: pointer; }
+.filters .filterActive { background: #fff; color: #14633f; box-shadow: 0 1px 3px rgba(16, 24, 40, .12); }
 
 .count {
   color: var(--muted);
@@ -380,6 +452,9 @@
   .cardActions {
     width: 100%;
   }
+
+  .previewCard { flex-wrap: wrap; }
+  .previewCard > span:last-child { width: 100%; text-align: left; }
 }
 
 @media (max-width: 560px) {
@@ -413,6 +488,12 @@
   .button {
     width: 100%;
   }
+
+  .listHeader { align-items: flex-start; flex-direction: column; }
+  .listTools { align-items: flex-start; flex-direction: column; width: 100%; }
+  .filters { width: 100%; }
+  .filters button { flex: 1; }
+  .gatewayConfig > div { align-items: flex-start; flex-direction: column; }
 }
 
 .tableWrap {
@@ -459,14 +540,15 @@
 
 .methodIdentity {
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: 44px auto auto;
   align-items: center;
   gap: 5px 8px;
   min-width: 170px;
 }
 
+.methodIdentity > img { grid-row: span 2; width: 40px; height: 30px; object-fit: contain; }
 .methodIdentity strong { color: #26364c; font-size: 13px; }
-.methodIdentity small { grid-column: 1 / -1; max-width: 220px; overflow: hidden; color: #8491a1; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.methodIdentity small { grid-column: 2 / -1; max-width: 220px; overflow: hidden; color: #8491a1; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .methodIdentity .code { width: fit-content; min-height: 22px; padding: 0 7px; border-radius: 5px; background: #eef7ff; color: #3974a5; font-size: 9px; }
 
 .accountSummary { display: grid; gap: 4px; min-width: 185px; }

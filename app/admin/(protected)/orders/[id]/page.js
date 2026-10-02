@@ -8,9 +8,11 @@ export default async function AdminOrderDetails({ params }) {
     where: { id },
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
+      paymentEvents: { orderBy: { createdAt: 'desc' }, include: { actor: { select: { name: true, email: true } } } },
       items: { include: { variant: true, product: { select: { id: true, name: true, sku: true, images: { orderBy: { sortOrder: 'asc' }, take: 1 }, attributeValues: { include: { attributeValue: { include: { attribute: true } } } } } } } },
     },
   });
   if (!order) notFound();
-  return <OrderDetailManager initialOrder={{ ...order, subtotal: Number(order.subtotal), discount: Number(order.discount), shippingCharge: Number(order.shippingCharge), total: Number(order.total), items: order.items.map(item => ({ ...item, unitPrice: Number(item.unitPrice) })), createdAt: order.createdAt.toISOString() }} />;
+  const paymentMethod = await prisma.paymentMethod.findUnique({ where: { code: order.paymentMethod }, select: { type: true, name: true } });
+  return <OrderDetailManager initialOrder={{ ...order, paymentMethodType: paymentMethod?.type || 'MANUAL_WALLET', paymentMethodName: paymentMethod?.name || order.paymentMethod, subtotal: Number(order.subtotal), discount: Number(order.discount), shippingCharge: Number(order.shippingCharge), total: Number(order.total), items: order.items.map(item => ({ ...item, unitPrice: Number(item.unitPrice) })), createdAt: order.createdAt.toISOString() }} />;
 }

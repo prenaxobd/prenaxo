@@ -524,6 +524,11 @@
   background: #fff1dc;
 }
 
+.payment_pending_verification {
+  color: #9b5c03;
+  background: #fff5d8;
+}
+
 .payment_paid {
   color: #108556;
   background: #e4f8ee;

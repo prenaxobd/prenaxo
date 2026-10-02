@@ -336,15 +336,13 @@ export async function POST(request) {
 
     const parsed = productSchema.parse(body);
 
-    if (parsed.regularPrice === null && parsed.salePrice === null) {
-      throw new Error('Enter a regular price or a sale price.');
-    }
-
     const {
       images,
       comboItems,
       variants,
       attributeValueIds,
+      categoryId,
+      brandId,
       ...data
     } = parsed;
 
@@ -376,6 +374,10 @@ export async function POST(request) {
         data: {
           ...data,
           sku,
+          category: {
+            connect: { id: categoryId },
+          },
+          ...(brandId ? { brandRelation: { connect: { id: brandId } } } : {}),
 
           images: {
             create: imageRows(images),
@@ -475,24 +477,11 @@ export async function PATCH(request) {
           productType: true,
           sku: true,
           categoryId: true,
-          regularPrice: true,
-          salePrice: true,
         },
       });
 
       if (!existing) {
         throw new Error('Product not found.');
-      }
-
-      const nextRegularPrice = Object.hasOwn(data, 'regularPrice')
-        ? data.regularPrice
-        : existing.regularPrice;
-      const nextSalePrice = Object.hasOwn(data, 'salePrice')
-        ? data.salePrice
-        : existing.salePrice;
-
-      if (nextRegularPrice === null && nextSalePrice === null) {
-        throw new Error('Enter a regular price or a sale price.');
       }
 
       const nextType =
@@ -641,12 +630,74 @@ export async function PATCH(request) {
       }
 
       if (variants !== null) {
-        await tx.productVariant.deleteMany({ where: { productId: id } });
-        if (variants.length) {
-          for (const { id: variantId, attributeValueIds: variantValueIds = [], ...variant } of variants) {
-            const createdVariant = await tx.productVariant.create({ data: { ...variant, sku: variant.sku || await generateUniqueVariantSku(tx, existing.sku), productId: id } });
-            if (variantValueIds.length) await tx.productVariantAttributeValue.createMany({ data: variantValueIds.map((attributeValueId) => ({ variantId: createdVariant.id, attributeValueId })) });
+        const existingVariants = await tx.productVariant.findMany({
+          where: { productId: id },
+          include: { attributeValues: { select: { attributeValueId: true } } },
+        });
+        const existingVariantsById = new Map(existingVariants.map((variant) => [variant.id, variant]));
+        const submittedVariantIds = new Set();
+
+        for (const { id: variantId, attributeValueIds: variantValueIds = [], sku: submittedSku, ...variantData } of variants) {
+          if (variantId) {
+            if (submittedVariantIds.has(variantId)) throw new Error('A product option was submitted more than once.');
+            submittedVariantIds.add(variantId);
+            const existingVariant = existingVariantsById.get(variantId);
+            if (!existingVariant) throw new Error('A product option does not belong to this product.');
+
+            const nextSku = submittedSku || existingVariant.sku;
+            const existingValueIds = existingVariant.attributeValues.map((item) => item.attributeValueId).sort();
+            const nextValueIds = [...variantValueIds].sort();
+            const identityChanged = nextSku !== existingVariant.sku
+              || (variantData.size || null) !== existingVariant.size
+              || (variantData.color || null) !== existingVariant.color
+              || (variantData.price == null ? null : Number(variantData.price)) !== (existingVariant.price == null ? null : Number(existingVariant.price))
+              || existingValueIds.join('|') !== nextValueIds.join('|');
+            const [orderItemCount, cartItemCount] = await Promise.all([
+              tx.orderItem.count({ where: { variantId } }),
+              tx.cartItem.count({ where: { variantId } }),
+            ]);
+
+            if ((orderItemCount || cartItemCount) && identityChanged) {
+              throw new Error('This option is used by an order or cart. Its SKU, options and price cannot be changed; set stock to 0 to stop sales.');
+            }
+
+            await tx.productVariant.update({
+              where: { id: variantId },
+              data: { ...variantData, sku: nextSku },
+            });
+            await tx.productVariantAttributeValue.deleteMany({ where: { variantId } });
+            if (variantValueIds.length) {
+              await tx.productVariantAttributeValue.createMany({
+                data: variantValueIds.map((attributeValueId) => ({ variantId, attributeValueId })),
+              });
+            }
+          } else {
+            const createdVariant = await tx.productVariant.create({
+              data: {
+                ...variantData,
+                sku: submittedSku || await generateUniqueVariantSku(tx, updateData.sku || existing.sku),
+                productId: id,
+              },
+            });
+            if (variantValueIds.length) {
+              await tx.productVariantAttributeValue.createMany({
+                data: variantValueIds.map((attributeValueId) => ({ variantId: createdVariant.id, attributeValueId })),
+              });
+            }
           }
+        }
+
+        for (const variant of existingVariants) {
+          if (submittedVariantIds.has(variant.id)) continue;
+          const [orderItemCount, cartItemCount] = await Promise.all([
+            tx.orderItem.count({ where: { variantId: variant.id } }),
+            tx.cartItem.count({ where: { variantId: variant.id } }),
+          ]);
+          if (orderItemCount || cartItemCount) {
+            throw new Error('This option is used by an order or cart and cannot be removed. Set its stock to 0 to stop sales.');
+          }
+          await tx.productVariantAttributeValue.deleteMany({ where: { variantId: variant.id } });
+          await tx.productVariant.delete({ where: { id: variant.id } });
         }
       }
 
