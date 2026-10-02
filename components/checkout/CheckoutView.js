@@ -40,12 +40,59 @@ export default function CheckoutView() {
   useEffect(() => {
     if (!cartReady) return undefined;
 
+    let cancelled = false;
     const savedCoupon =
       localStorage.getItem('khatibazar-coupon');
 
+    async function loadPaymentOptions() {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+
+      try {
+        const response = await fetch('/api/payment-methods', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        const paymentData = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            paymentData.error || 'Unable to load payment methods.'
+          );
+        }
+
+        const methods = Array.isArray(paymentData) ? paymentData : [];
+        if (cancelled) return;
+
+        setPaymentOptions(methods);
+        setPaymentError(
+          methods.length ? '' : 'No payment method is currently available.'
+        );
+
+        const selectedMethod =
+          methods.find((method) => method.id === 'COD') || methods[0];
+        if (selectedMethod) {
+          setForm((current) => ({
+            ...current,
+            paymentMethod: selectedMethod.id,
+          }));
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setPaymentOptions([]);
+        setPaymentError(
+          err.name === 'AbortError'
+            ? 'Payment methods took too long to load.'
+            : err.message || 'Unable to load payment methods.'
+        );
+      } finally {
+        window.clearTimeout(timeoutId);
+        if (!cancelled) setPaymentLoading(false);
+      }
+    }
+
     async function loadCheckoutData() {
       try {
-        setPaymentLoading(true);
         setError('');
         setPaymentError('');
 
@@ -60,6 +107,7 @@ export default function CheckoutView() {
 
         if (!authData.user) {
           setAuthState('unauthenticated');
+          setPaymentLoading(false);
           return;
         }
 
@@ -80,16 +128,9 @@ export default function CheckoutView() {
           localCart = { items: [] };
         }
 
-        const [
-          cartResponse,
-          deliveryResponse,
-          paymentResponse,
-        ] = await Promise.all([
+        const [cartResponse, deliveryResponse] = await Promise.all([
           fetch('/api/cart'),
           fetch('/api/delivery'),
-          fetch('/api/payment-methods', {
-            cache: 'no-store',
-          }).catch(() => null),
         ]);
 
         const cartData =
@@ -97,10 +138,6 @@ export default function CheckoutView() {
 
         const deliveryData =
           await deliveryResponse.json();
-
-        const paymentData = paymentResponse
-          ? await paymentResponse.json().catch(() => ({}))
-          : {};
 
         let cartFromServer =
           cartResponse.ok && cartData
@@ -134,26 +171,8 @@ export default function CheckoutView() {
         setCart(fallbackCart);
         setDelivery(deliveryData);
 
-        const methods = paymentResponse?.ok && Array.isArray(paymentData)
-          ? paymentData
-          : [];
-
-        setPaymentOptions(methods);
-        setPaymentError(
-          paymentResponse?.ok
-            ? ''
-            : paymentData.error ||
-                'Unable to load payment methods.'
-        );
-
         const firstZone =
           deliveryData.zones?.[0];
-
-        const currentPayment =
-          methods.find(
-            (method) =>
-              method.id === 'COD'
-          );
 
         if (firstZone) {
           setForm((current) => ({
@@ -169,11 +188,6 @@ export default function CheckoutView() {
                     savedCoupon,
                 }
               : {}),
-
-            paymentMethod:
-              currentPayment?.id ||
-              methods[0]?.id ||
-              current.paymentMethod,
           }));
         } else {
           setForm((current) => ({
@@ -185,14 +199,12 @@ export default function CheckoutView() {
                     savedCoupon,
                 }
               : {}),
-
-            paymentMethod:
-              currentPayment?.id ||
-              methods[0]?.id ||
-              current.paymentMethod,
           }));
         }
+
+        void loadPaymentOptions();
       } catch (err) {
+        setPaymentLoading(false);
         setAuthState((current) =>
           current === 'loading' ? 'error' : current
         );
@@ -200,12 +212,13 @@ export default function CheckoutView() {
           err.message ||
             'Unable to load your checkout.'
         );
-      } finally {
-        setPaymentLoading(false);
       }
     }
 
     loadCheckoutData();
+    return () => {
+      cancelled = true;
+    };
   }, [cartReady]);
 
   const items = cart?.items || [];
