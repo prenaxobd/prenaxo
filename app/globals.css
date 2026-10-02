@@ -5319,17 +5319,6 @@ body.header-menu-open {
 
   user-select: none;
   -webkit-user-drag: none;
-
-  transition: transform 450ms ease;
-}
-
-
-/* =========================================================
-   RIGHT BANNER HOVER
-   ========================================================= */
-
-.home-hero-right:hover .home-hero-right-image {
-  transform: scale(1.015);
 }
 
 
@@ -5507,7 +5496,7 @@ body.header-menu-open {
 
     grid-template-columns:
       minmax(0, 69fr)
-      minmax(280px, 31fr);
+      minmax(340px, calc(31% + 55px));
 
     gap: 20px;
 
@@ -5536,7 +5525,7 @@ body.header-menu-open {
 
     grid-template-columns:
       minmax(0, 68fr)
-      minmax(250px, 32fr);
+      minmax(310px, calc(32% + 55px));
 
     gap: 18px;
 
@@ -5711,11 +5700,6 @@ body.header-menu-open {
 @media (prefers-reduced-motion: reduce) {
 
   .home-hero-slide {
-    transition: none;
-  }
-
-
-  .home-hero-right-image {
     transition: none;
   }
 
