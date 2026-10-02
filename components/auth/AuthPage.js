@@ -15,7 +15,11 @@ const features = [
 
 function safeRedirect() {
   const next = new URLSearchParams(window.location.search).get('next');
-  return next === '/admin' || next?.startsWith('/admin/') ? next : '/account';
+
+  if (!next || !next.startsWith('/')) return '/account';
+  if (next.startsWith('//')) return '/account';
+
+  return next;
 }
 
 export default function AuthPage({ mode = 'login' }) {
