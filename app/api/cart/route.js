@@ -33,7 +33,14 @@ export async function GET() {
     include: {
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              images: {
+                orderBy: { sortOrder: 'asc' },
+                take: 1,
+              },
+            },
+          },
           variant: true,
         },
       },
@@ -83,34 +90,41 @@ export async function POST(request) {
         const attributeValueIds = Array.isArray(item.attributeValueIds) ? item.attributeValueIds : [];
         const attributeSelectionKey = normalizeAttributeSelectionKey(attributeValueIds);
 
-        await tx.cartItem.upsert({
+        const existingItem = await tx.cartItem.findFirst({
           where: {
-            cartId_productId_variantId_attributeSelectionKey: {
-              cartId: cart.id,
-              productId,
-              variantId,
-              attributeSelectionKey,
-            },
-          },
-          update: {
-            quantity: { increment: quantity },
-            attributeValueIds,
-          },
-          create: {
             cartId: cart.id,
             productId,
             variantId,
             attributeSelectionKey,
-            quantity,
-            attributeValueIds,
           },
         });
+
+        if (existingItem) {
+          await tx.cartItem.update({
+            where: { id: existingItem.id },
+            data: {
+              quantity: { increment: quantity },
+              attributeValueIds,
+            },
+          });
+        } else {
+          await tx.cartItem.create({
+            data: {
+              cartId: cart.id,
+              productId,
+              variantId,
+              attributeSelectionKey,
+              quantity,
+              attributeValueIds,
+            },
+          });
+        }
       }
     });
 
     const refreshedCart = await prisma.cart.findUnique({
       where: { userId: user.id },
-      include: { items: { include: { product: true, variant: true } } },
+      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } }, variant: true } } },
     });
 
     return NextResponse.json({
@@ -170,7 +184,7 @@ export async function PATCH(request) {
 
     const refreshedCart = await prisma.cart.findUnique({
       where: { userId: user.id },
-      include: { items: { include: { product: true, variant: true } } },
+      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } }, variant: true } } },
     });
 
     return NextResponse.json({
@@ -217,7 +231,7 @@ export async function DELETE(request) {
 
     const refreshedCart = await prisma.cart.findUnique({
       where: { userId: user.id },
-      include: { items: { include: { product: true, variant: true } } },
+      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } }, variant: true } } },
     });
 
     return NextResponse.json({

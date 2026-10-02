@@ -12,10 +12,12 @@ import { mergeGuestCart } from '@/components/cart/guest-cart';
 export default function CheckoutView() {
   const router = useRouter();
   const { ready: cartReady, clearCart } = useCart();
+  const [authState, setAuthState] = useState('loading');
   const [cart, setCart] = useState(null);
   const [delivery, setDelivery] = useState(null);
   const [paymentOptions, setPaymentOptions] = useState([]);
   const [paymentLoading, setPaymentLoading] = useState(true);
+  const [paymentError, setPaymentError] = useState('');
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -44,6 +46,24 @@ export default function CheckoutView() {
     async function loadCheckoutData() {
       try {
         setPaymentLoading(true);
+        setError('');
+        setPaymentError('');
+
+        const authResponse = await fetch('/api/auth/me', {
+          cache: 'no-store',
+        });
+        const authData = await authResponse.json().catch(() => ({}));
+
+        if (!authResponse.ok) {
+          throw new Error('Unable to verify your session.');
+        }
+
+        if (!authData.user) {
+          setAuthState('unauthenticated');
+          return;
+        }
+
+        setAuthState('authenticated');
 
         let localCart = { items: [] };
 
@@ -69,7 +89,7 @@ export default function CheckoutView() {
           fetch('/api/delivery'),
           fetch('/api/payment-methods', {
             cache: 'no-store',
-          }),
+          }).catch(() => null),
         ]);
 
         const cartData =
@@ -78,8 +98,9 @@ export default function CheckoutView() {
         const deliveryData =
           await deliveryResponse.json();
 
-        const paymentData =
-          await paymentResponse.json();
+        const paymentData = paymentResponse
+          ? await paymentResponse.json().catch(() => ({}))
+          : {};
 
         let cartFromServer =
           cartResponse.ok && cartData
@@ -110,21 +131,20 @@ export default function CheckoutView() {
           );
         }
 
-        if (!paymentResponse.ok) {
-          throw new Error(
-            paymentData.error ||
-              'Unable to load payment methods.'
-          );
-        }
-
         setCart(fallbackCart);
         setDelivery(deliveryData);
 
-        const methods = Array.isArray(paymentData)
+        const methods = paymentResponse?.ok && Array.isArray(paymentData)
           ? paymentData
           : [];
 
         setPaymentOptions(methods);
+        setPaymentError(
+          paymentResponse?.ok
+            ? ''
+            : paymentData.error ||
+                'Unable to load payment methods.'
+        );
 
         const firstZone =
           deliveryData.zones?.[0];
@@ -173,6 +193,9 @@ export default function CheckoutView() {
           }));
         }
       } catch (err) {
+        setAuthState((current) =>
+          current === 'loading' ? 'error' : current
+        );
         setError(
           err.message ||
             'Unable to load your checkout.'
@@ -420,7 +443,7 @@ export default function CheckoutView() {
     }
   }
 
-  if (!cart && error) {
+  if (authState === 'unauthenticated') {
     return (
       <main className="container checkout-page">
         <div className="checkout-empty">
@@ -435,6 +458,34 @@ export default function CheckoutView() {
             className="btn"
           >
             Sign in
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (authState === 'error') {
+    return (
+      <main className="container checkout-page">
+        <div className="checkout-empty">
+          <h1>Unable to verify your session</h1>
+          <p>{error || 'Please try again.'}</p>
+          <Link href="/login?next=/checkout" className="btn">
+            Sign in
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (!cart && error) {
+    return (
+      <main className="container checkout-page">
+        <div className="checkout-empty">
+          <h1>Unable to load checkout</h1>
+          <p>{error}</p>
+          <Link href="/cart" className="btn">
+            Return to cart
           </Link>
         </div>
       </main>
@@ -833,8 +884,8 @@ export default function CheckoutView() {
                 className="checkout-error"
                 role="alert"
               >
-                No payment method is
-                currently available.
+                {paymentError ||
+                  'No payment method is currently available.'}
               </div>
             ) : null}
 
