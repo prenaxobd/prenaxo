@@ -46,7 +46,7 @@ export default async function PaymentMethodsPage() {
         </div>
         <span className="payment-methods-count">{initialMethods.length} methods</span>
       </div>
-      <PaymentMethodsManager initialMethods={initialMethods} gatewayConfigured={isSslCommerzConfigured()} canManage={permissions.includes('settings.edit')} />
+      <PaymentMethodsManager initialMethods={initialMethods} gatewayConfigured={isSslCommerzConfigured()} canManage={permissions.has('settings.edit')} />
     </>
   );
 }
