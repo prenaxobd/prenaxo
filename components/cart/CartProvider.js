@@ -1,6 +1,6 @@
 'use client';
 import OptimizedImage from '@/components/OptimizedImage';
-import { createContext, startTransition, useContext, useEffect, useState } from 'react';
+import { createContext, startTransition, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { X, Minus, Plus, Trash2, ShoppingBag, Ticket, ChevronDown, ArrowRight, LockKeyhole } from 'lucide-react';
 import { bn } from '@/lib/i18n';
@@ -11,6 +11,7 @@ const CartContext = createContext(null);
 function localCart() { try { return JSON.parse(localStorage.getItem('khatibazar-cart') || '{"items":[]}'); } catch { return { items: [] }; } }
 function saveLocal(cart) { localStorage.setItem('khatibazar-cart', JSON.stringify(cart)); }
 function attributeSelectionKey(ids = []) { return [...new Set(ids)].sort().join(','); }
+function matchesCartItem(item, payload) { return item.productId === payload.productId && (item.variantId || null) === (payload.variantId || null) && attributeSelectionKey(item.attributeValueIds) === attributeSelectionKey(payload.attributeValueIds); }
 
 function mergeCartItems(localItems = [], serverItems = []) {
   const normalizedLocal = localItems.filter(item => item && item.productId);
@@ -39,6 +40,9 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState({ items: [] });
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
+  const updateQueues = useRef(new Map());
+  const updateVersions = useRef(new Map());
+  const confirmedItems = useRef(new Map());
   useEffect(() => { const stored = localCart(); startTransition(() => { setCart(stored); }); fetch('/api/cart').then(async response => { if (!response.ok) return; const serverCart = await response.json(); const serverItems = serverCart?.items || [];
       if (stored.items.length) {
         try {
@@ -97,11 +101,84 @@ export function CartProvider({ children }) {
       });
       return;
     }
-    const response = await fetch(action === 'remove' ? `/api/cart?productId=${encodeURIComponent(payload.productId)}&variantId=${encodeURIComponent(payload.variantId || '')}&attributeSelectionKey=${encodeURIComponent(attributeSelectionKey(payload.attributeValueIds))}` : '/api/cart', { method: action === 'add' ? 'POST' : action === 'update' ? 'PATCH' : 'DELETE', headers: action !== 'remove' ? { 'Content-Type': 'application/json' } : undefined, body: action === 'remove' ? undefined : JSON.stringify(payload) });
-    if (response.ok) { const refreshed = await fetch('/api/cart'); if (refreshed.ok) setCart(await refreshed.json()); } else { const result = await response.json(); throw new Error(result.error || 'কার্ট আপডেট করা যায়নি।'); }
+    const sendRequest = () => fetch(action === 'remove' ? `/api/cart?productId=${encodeURIComponent(payload.productId)}&variantId=${encodeURIComponent(payload.variantId || '')}&attributeSelectionKey=${encodeURIComponent(attributeSelectionKey(payload.attributeValueIds))}` : '/api/cart', { method: action === 'add' ? 'POST' : action === 'update' ? 'PATCH' : 'DELETE', headers: action !== 'remove' ? { 'Content-Type': 'application/json' } : undefined, body: action === 'remove' ? undefined : JSON.stringify(payload) });
+    let response;
+
+    if (action === 'update') {
+      const queueKey = JSON.stringify([payload.productId, payload.variantId || null, attributeSelectionKey(payload.attributeValueIds)]);
+      const previousRequest = updateQueues.current.get(queueKey) || Promise.resolve();
+      const request = previousRequest.catch(() => {}).then(sendRequest);
+      updateQueues.current.set(queueKey, request);
+
+      try {
+        response = await request;
+      } finally {
+        if (updateQueues.current.get(queueKey) === request) updateQueues.current.delete(queueKey);
+      }
+    } else {
+      response = await sendRequest();
+    }
+
+    if (response.ok) {
+      const updatedCart = await response.json();
+      if (action !== 'update') setCart(updatedCart);
+    } else {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(result.error || 'কার্ট আপডেট করা যায়নি।');
+    }
   }
   async function add(product, quantity = 1) { try { await sync('add', { productId: product.id, variantId: product.variantId || null, attributeValueIds: product.attributeValueIds || [], quantity, product }); setOpen(true); return { ok: true }; } catch (error) { return { ok: false, error: error.message }; } }
-  async function update(productId, quantity, variantId = null, attributeValueIds = []) { try { await sync('update', { productId, variantId, attributeValueIds, quantity }); } catch (error) { return error.message; } }
+  async function update(productId, quantity, variantId = null, attributeValueIds = []) {
+    const payload = { productId, variantId, attributeValueIds, quantity };
+
+    if (cart.id) {
+      const key = JSON.stringify([productId, variantId || null, attributeSelectionKey(attributeValueIds)]);
+      const currentItem = cart.items.find(item => matchesCartItem(item, payload));
+      if (!confirmedItems.current.has(key)) confirmedItems.current.set(key, currentItem || null);
+      const version = (updateVersions.current.get(key) || 0) + 1;
+      updateVersions.current.set(key, version);
+
+      setCart(currentCart => ({
+        ...currentCart,
+        items: quantity <= 0
+          ? currentCart.items.filter(item => !matchesCartItem(item, payload))
+          : currentCart.items.map(item => matchesCartItem(item, payload) ? { ...item, quantity } : item),
+      }));
+
+      try {
+        await sync('update', payload);
+        confirmedItems.current.set(key, quantity <= 0 || !currentItem ? null : { ...currentItem, quantity });
+        if (updateVersions.current.get(key) === version) confirmedItems.current.delete(key);
+      } catch (error) {
+        if (updateVersions.current.get(key) === version) {
+          const confirmedItem = confirmedItems.current.get(key);
+          setCart(currentCart => {
+            const itemExists = currentCart.items.some(item => matchesCartItem(item, payload));
+            return {
+              ...currentCart,
+              items: confirmedItem
+                ? itemExists
+                  ? currentCart.items.map(item => matchesCartItem(item, payload) ? confirmedItem : item)
+                  : [...currentCart.items, confirmedItem]
+                : currentCart.items.filter(item => !matchesCartItem(item, payload)),
+            };
+          });
+          confirmedItems.current.delete(key);
+        }
+
+        return error.message;
+      }
+
+      return '';
+    }
+
+    try {
+      await sync('update', payload);
+      return '';
+    } catch (error) {
+      return error.message;
+    }
+  }
   async function remove(productId, variantId = null, attributeValueIds = []) { await sync('remove', { productId, variantId, attributeValueIds }); }
   function clearCart() { setCart({ items: [] }); setOpen(false); localStorage.removeItem('khatibazar-cart'); }
   const items = cart.items || [];
@@ -118,6 +195,7 @@ function CartDrawer({ items, count, subtotal, open, close, update, remove }) {
   const [coupon, setCoupon] = useState(null);
   const [couponMessage, setCouponMessage] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  const [updateError, setUpdateError] = useState('');
   const [deliveryConfig, setDeliveryConfig] = useState({ threshold: 2000, charge: 60 });
   const threshold = Number(deliveryConfig.threshold || 2000);
   const delivery = subtotal ? subtotal >= threshold ? 0 : Number(deliveryConfig.charge || 0) : 0;
@@ -173,11 +251,17 @@ function CartDrawer({ items, count, subtotal, open, close, update, remove }) {
     setCouponMessage('');
   }
 
+  async function changeQuantity(item, quantity) {
+    setUpdateError('');
+    const error = await update(item.productId, quantity, item.variantId, item.attributeValueIds);
+    if (error) setUpdateError(error);
+  }
+
   return <>
     {open && <button className="drawer-backdrop" aria-label="কার্ট বন্ধ করুন" onClick={close}/>}<aside className={`cart-drawer ${open ? 'is-open' : ''}`} aria-label="কার্ট" aria-hidden={!open}>
       <header className="drawer-head"><h2>আপনার কার্ট <span>({count})</span></h2><button onClick={close} aria-label="কার্ট বন্ধ করুন"><X size={20}/></button></header>
       <div className="drawer-progress"><strong>{subtotal >= threshold ? 'অভিনন্দন! আপনি ফ্রি ডেলিভারি পাচ্ছেন!' : `🚚 আরও ${bn.formatPrice(Math.max(0, threshold - subtotal))} কিনলে ফ্রি ডেলিভারি!`}</strong><div><span style={{ width: `${Math.min(100, subtotal / threshold * 100)}%` }}/></div><small><span>{bn.formatPrice(subtotal)} / {bn.formatPrice(threshold)}</span><b>ফ্রি ডেলিভারি</b></small></div>
-      <div className={`drawer-items ${isEmpty ? 'is-empty' : ''}`}>{isEmpty ? <div className="drawer-empty"><div className="drawer-empty-icon"><ShoppingBag size={28}/></div><h3>আপনার কার্ট এখন খালি</h3><p>পছন্দের পণ্যগুলো কার্টে যোগ করে কেনাকাটা শুরু করুন।</p><Link className="drawer-shop-now" href="/shop" onClick={close}>কেনাকাটা করুন <ArrowRight size={15}/></Link></div> : items.map(item => { const price = Number(item.variant?.price ?? item.product?.salePrice ?? item.product?.regularPrice ?? 0); const selectedLabels = item.product?.attributeValues?.filter(attributeValue => (item.attributeValueIds || []).includes(attributeValue.attributeValueId)).map(attributeValue => attributeValue.attributeValue?.name).filter(Boolean).join(' / '); return <div className="drawer-item" key={item.id}><div className="drawer-thumb">{item.product?.images?.[0]?.url ? <OptimizedImage src={item.product.images[0].url} alt=""/> : '📦'}</div><div className="drawer-item-info"><div className="drawer-item-top"><strong>{item.product?.name || 'পণ্য'}</strong><button className="drawer-remove" onClick={() => remove(item.productId, item.variantId, item.attributeValueIds)} aria-label="পণ্য মুছে ফেলুন"><Trash2 size={15}/></button></div><span>{item.variant ? [item.variant.color, item.variant.size].filter(Boolean).join(' / ') : selectedLabels} {bn.formatPrice(price)}</span><div className="drawer-item-bottom"><div className="drawer-qty"><button disabled={item.quantity <= 1} onClick={() => update(item.productId, item.quantity - 1, item.variantId, item.attributeValueIds)} aria-label="পরিমাণ কমান"><Minus size={13}/></button><span>{bn.formatNumber(item.quantity)}</span><button onClick={() => update(item.productId, item.quantity + 1, item.variantId, item.attributeValueIds)} aria-label="পরিমাণ বাড়ান"><Plus size={13}/></button></div><b>{bn.formatPrice(price * item.quantity)}</b></div></div></div>; })}</div>
+      <div className={`drawer-items ${isEmpty ? 'is-empty' : ''}`}>{isEmpty ? <div className="drawer-empty"><div className="drawer-empty-icon"><ShoppingBag size={28}/></div><h3>আপনার কার্ট এখন খালি</h3><p>পছন্দের পণ্যগুলো কার্টে যোগ করে কেনাকাটা শুরু করুন।</p><Link className="drawer-shop-now" href="/shop" onClick={close}>কেনাকাটা করুন <ArrowRight size={15}/></Link></div> : items.map(item => { const price = Number(item.variant?.price ?? item.product?.salePrice ?? item.product?.regularPrice ?? 0); const selectedLabels = item.product?.attributeValues?.filter(attributeValue => (item.attributeValueIds || []).includes(attributeValue.attributeValueId)).map(attributeValue => attributeValue.attributeValue?.name).filter(Boolean).join(' / '); return <div className="drawer-item" key={item.id}><div className="drawer-thumb">{item.product?.images?.[0]?.url ? <OptimizedImage src={item.product.images[0].url} alt=""/> : '📦'}</div><div className="drawer-item-info"><div className="drawer-item-top"><strong>{item.product?.name || 'পণ্য'}</strong><button className="drawer-remove" onClick={() => remove(item.productId, item.variantId, item.attributeValueIds)} aria-label="পণ্য মুছে ফেলুন"><Trash2 size={15}/></button></div><span>{item.variant ? [item.variant.color, item.variant.size].filter(Boolean).join(' / ') : selectedLabels} {bn.formatPrice(price)}</span><div className="drawer-item-bottom"><div className="drawer-qty"><button disabled={item.quantity <= 1} onClick={() => void changeQuantity(item, item.quantity - 1)} aria-label="পরিমাণ কমান"><Minus size={13}/></button><span>{bn.formatNumber(item.quantity)}</span><button onClick={() => void changeQuantity(item, item.quantity + 1)} aria-label="পরিমাণ বাড়ান"><Plus size={13}/></button></div><b>{bn.formatPrice(price * item.quantity)}</b></div></div></div>; })}{updateError && <p className="drawer-update-error" role="alert">{updateError}</p>}</div>
       <footer className="drawer-foot"><div className="drawer-summary"><p><span>সাবটোটাল</span><strong>{bn.formatPrice(subtotal)}</strong></p><p><span>ডেলিভারি চার্জ</span><strong>{delivery ? bn.formatPrice(delivery) : 'ফ্রি'}</strong></p><p><span>ডিসকাউন্ট</span><strong className="drawer-discount">-{bn.formatPrice(discount)}</strong></p><p className="drawer-total"><span>মোট</span><strong>{bn.formatPrice(total)}</strong></p></div><div className="drawer-options"><div className="drawer-coupon">{couponOpen ? <form onSubmit={applyCoupon}><div className="drawer-coupon-input"><input value={couponCode} onChange={event => { setCouponCode(event.target.value); setCouponMessage(''); }} placeholder="কুপন কোড লিখুন..." aria-label="কুপন কোড" disabled={couponLoading || isEmpty}/><button type="submit" disabled={couponLoading || isEmpty}>{couponLoading ? 'যাচাই...' : 'প্রয়োগ করুন'}</button></div>{couponMessage && <p className={coupon ? 'is-success' : ''} role="status">{couponMessage}</p>}{coupon && <button type="button" className="drawer-coupon-change" onClick={clearCoupon}>কুপন সরান</button>}</form> : <button type="button" className="drawer-option" disabled={isEmpty} onClick={() => setCouponOpen(true)}><span><Ticket size={15}/> <b>কুপন কোড ব্যবহার করুন</b></span><ChevronDown size={15}/></button>}</div><Link className="drawer-option" href="/cart" onClick={close}><span><ShoppingBag size={15}/> <b>কার্ট দেখুন</b></span><ArrowRight size={15}/></Link></div><Link className={`drawer-checkout ${isEmpty ? 'is-disabled' : ''}`} href={isEmpty ? '#' : '/checkout'} aria-disabled={isEmpty} onClick={event => { if (isEmpty) event.preventDefault(); else close(); }}><LockKeyhole size={15}/> চেকআউট করুন <ArrowRight size={16}/></Link><Link className="drawer-continue" href="/shop" onClick={close}>কেনাকাটা চালিয়ে যান</Link></footer>
     </aside>
   </>;
