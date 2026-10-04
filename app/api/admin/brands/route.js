@@ -146,12 +146,39 @@ export async function DELETE(request) {
   try {
     await requirePermission('brands.delete');
 
-    const id = new URL(request.url).searchParams.get(
-      'id'
-    );
+    const searchParams = new URL(request.url).searchParams;
+    const id = searchParams.get('id');
+    const permanent = searchParams.get('permanent') === 'true';
 
     if (!id) {
       throw new Error('Brand id is required.');
+    }
+
+    if (permanent) {
+      const brand = await prisma.$transaction(async tx => {
+        const existing = await tx.brand.findUnique({
+          where: { id },
+          select: { id: true, logo: true, image: true },
+        });
+        if (!existing) throw new Error('Brand not found.');
+
+        const product = await tx.product.findFirst({
+          where: { brandId: id },
+          select: { id: true },
+        });
+        if (product) throw new Error('Remove this brand from all products before permanently deleting it.');
+
+        await tx.brandSEO.deleteMany({ where: { brandId: id } });
+        return tx.brand.delete({ where: { id } });
+      });
+
+      for (const image of [brand.logo, brand.image]) {
+        const publicId = publicIdFromCloudinaryUrl(image);
+        if (publicId) await deleteImage(publicId).catch(() => {});
+      }
+
+      invalidatePublicCache('brands', 'products', 'homepage');
+      return Response.json({ id });
     }
 
     const brand = await prisma.brand.update({
@@ -176,4 +203,3 @@ export async function DELETE(request) {
     return jsonError(error);
   }
 }
-

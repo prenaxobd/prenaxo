@@ -45,6 +45,7 @@ export default function BrandManager({ initialBrands = [] }) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [actionId, setActionId] = useState(null);
+  const [pendingActionId, setPendingActionId] = useState(null);
 
   const visible = brands.filter((brand) =>
     `${brand.name || ''} ${brand.slug || ''}`
@@ -161,6 +162,33 @@ export default function BrandManager({ initialBrands = [] }) {
       );
     } catch (error) {
       setMessage(error.message || 'Unable to update brand.');
+    }
+  }
+
+  async function deletePermanently(brand) {
+    if (!confirm(`Permanently delete "${brand.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setPendingActionId(brand.id);
+    setMessage('');
+    try {
+      const response = await fetch(
+        `/api/admin/brands?id=${encodeURIComponent(brand.id)}&permanent=true`,
+        { method: 'DELETE' }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to delete brand.');
+      }
+
+      setBrands(items => items.filter(item => item.id !== brand.id));
+      setMessage(`"${brand.name}" was permanently deleted.`);
+    } catch (error) {
+      setMessage(error.message || 'Unable to delete brand.');
+    } finally {
+      setPendingActionId(null);
     }
   }
 
@@ -437,6 +465,7 @@ export default function BrandManager({ initialBrands = [] }) {
                     <button
                       type="button"
                       aria-label={`Actions for ${brand.name}`}
+                      disabled={pendingActionId !== null}
                       onClick={() =>
                         setActionId(
                           actionId === brand.id
@@ -452,6 +481,7 @@ export default function BrandManager({ initialBrands = [] }) {
                       <div className="admin-action-popover">
                         <button
                           type="button"
+                          disabled={pendingActionId !== null}
                           onClick={() => {
                             setActionId(null);
                             setForm({ ...brand });
@@ -474,6 +504,18 @@ export default function BrandManager({ initialBrands = [] }) {
                             ? 'Archive'
                             : 'Restore'}
                         </button>
+
+                        <button
+                          className="category-delete-action"
+                          type="button"
+                          disabled={pendingActionId !== null}
+                          onClick={() => {
+                            setActionId(null);
+                            deletePermanently(brand);
+                          }}
+                        >
+                          Delete permanently
+                        </button>
                       </div>
                     )}
                   </div>
@@ -492,4 +534,3 @@ export default function BrandManager({ initialBrands = [] }) {
     </>
   );
 }
-
