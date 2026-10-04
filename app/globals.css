@@ -18332,6 +18332,183 @@ body.cart-drawer-open { overflow: hidden; }
   .admin-login-card { padding: 26px 20px; }
 }
 
+.admin-nav-pending {
+  width: 0;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.admin-nav-pending.is-pending {
+  width: 14px;
+  opacity: .8;
+  animation: admin-nav-spin .65s linear infinite;
+}
+
+@keyframes admin-nav-spin {
+  to { transform: rotate(360deg); }
+}
+
+.admin-route-loading {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 12px 0 30px;
+}
+
+.admin-route-loading-heading {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.admin-loading-bar,
+.admin-loading-card,
+.admin-loading-row {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(100deg, #e9eef0 25%, #f7f9fa 45%, #e9eef0 65%);
+  background-size: 220% 100%;
+  animation: admin-loading-shimmer 1.35s ease-in-out infinite;
+}
+
+.admin-loading-eyebrow { width: 76px; height: 10px; }
+.admin-loading-title { width: min(280px, 70vw); height: 34px; }
+.admin-loading-description { width: min(360px, 82vw); height: 13px; }
+
+.admin-route-loading-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.admin-loading-card {
+  min-height: 112px;
+  border: 1px solid #e4eaed;
+  border-radius: 13px;
+}
+
+.admin-route-loading-table {
+  display: grid;
+  gap: 1px;
+  padding: 8px 14px;
+  border: 1px solid #e4eaed;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.admin-loading-row { height: 48px; border-radius: 5px; }
+.admin-route-loading-label { display: inline-block; margin-top: 14px; color: #738293; font-size: 12px; }
+
+@keyframes admin-loading-shimmer {
+  to { background-position-x: -220%; }
+}
+
+.category-primary-actions {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+
+.category-secondary-btn {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #0c8053;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #0d8056, #08734e);
+  box-shadow: 0 7px 16px rgba(8, 115, 78, .16);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.category-secondary-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #096e49, #056341);
+  box-shadow: 0 9px 19px rgba(8, 115, 78, .23);
+  transform: translateY(-1px);
+}
+
+.category-secondary-btn:disabled { cursor: not-allowed; opacity: .6; }
+.category-action-hint { color: #728095; font-size: 10px; text-align: right; }
+
+.category-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 22px 0 18px;
+}
+
+.category-overview-card {
+  position: relative;
+  display: grid;
+  min-height: 118px;
+  align-content: center;
+  gap: 7px;
+  overflow: hidden;
+  padding: 17px 19px;
+  border: 1px solid #e4eaed;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #fff 45%, #f5fbf7);
+  box-shadow: 0 6px 18px rgba(24, 44, 54, .035);
+}
+
+.category-overview-card::after {
+  position: absolute;
+  top: -30px;
+  right: -26px;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: rgba(15, 148, 95, .055);
+  content: '';
+}
+
+.category-overview-card > span {
+  color: #6c7b8c;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+
+.category-overview-card strong { color: #193a31; font-size: 25px; line-height: 1; }
+.category-overview-card small { color: #84919e; font-size: 10px; }
+
+.category-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e3e9ed;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(21, 43, 54, .04);
+}
+
+.category-table thead th { background: #f7f9fa; }
+.category-table tbody tr { transition: background .14s ease; }
+.category-table tbody tr:hover { background: #f4fbf7; }
+.category-delete-action { color: #b42318 !important; }
+.category-delete-action:hover { background: #fff1f0 !important; color: #912018 !important; }
+
+@media (max-width: 760px) {
+  .category-overview,
+  .admin-route-loading-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .category-page-heading { align-items: flex-start; }
+  .category-primary-actions { justify-items: start; }
+  .category-action-hint { text-align: left; }
+}
+
+@media (max-width: 440px) {
+  .category-overview { gap: 9px; }
+  .category-overview-card { min-height: 102px; padding: 13px; }
+  .category-overview-card strong { font-size: 22px; }
+}
 
 
 

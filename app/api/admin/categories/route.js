@@ -68,6 +68,20 @@ async function validateCategoryArchive(tx, categoryId) {
 	}
 }
 
+async function validateCategoryDeletion(tx, categoryId) {
+	const [productCount, childCount, homepageSectionCount, analyticsEventCount] = await Promise.all([
+		tx.product.count({ where: { categoryId } }),
+		tx.category.count({ where: { parentId: categoryId } }),
+		tx.homepageSection.count({ where: { categoryId } }),
+		tx.analyticsEvent.count({ where: { categoryId } }),
+	]);
+
+	if (productCount) throw new Error('Move all products before permanently deleting this category.');
+	if (childCount) throw new Error('Move or delete all subcategories before permanently deleting this category.');
+	if (homepageSectionCount) throw new Error('Remove this category from homepage sections before permanently deleting it.');
+	if (analyticsEventCount) throw new Error('This category has analytics history and cannot be permanently deleted. Archive it instead.');
+}
+
 function categoryError(error) {
 	const targets = Array.isArray(error?.meta?.target) ? error.meta.target : [error?.meta?.target];
 	if (error?.code === 'P2002' && targets.some(target => String(target).includes('slug'))) {
@@ -141,11 +155,19 @@ export async function PATCH(request) {
 export async function DELETE(request) {
 	try {
 		await requirePermission('categories.delete');
-		const id = new URL(request.url).searchParams.get('id');
+		const searchParams = new URL(request.url).searchParams;
+		const id = searchParams.get('id');
+		const permanent = searchParams.get('permanent') === 'true';
 		if (!id) throw new Error('Category id is required.');
 		const category = await prisma.$transaction(async tx => {
 			const existing = await tx.category.findUnique({ where: { id }, select: { id: true, active: true } });
 			if (!existing) throw new Error('Category not found.');
+			if (permanent) {
+				await validateCategoryDeletion(tx, id);
+				await tx.categoryAttribute.deleteMany({ where: { categoryId: id } });
+				await tx.categorySEO.deleteMany({ where: { categoryId: id } });
+				return tx.category.delete({ where: { id } });
+			}
 			if (existing.active) await validateCategoryArchive(tx, id);
 			return tx.category.update({ where: { id }, data: { active: false } });
 		});

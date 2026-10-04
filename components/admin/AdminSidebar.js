@@ -1,7 +1,7 @@
 'use client';
 import OptimizedImage from '@/components/OptimizedImage';
 
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -194,6 +194,11 @@ const navigation = [
   },
 ];
 
+function AdminNavPendingIndicator() {
+  const { pending } = useLinkStatus();
+  return <span className={`admin-nav-pending${pending ? ' is-pending' : ''}`} aria-hidden="true" />;
+}
+
 export default function AdminSidebar({
   permissions = [],
 }) {
@@ -313,6 +318,8 @@ export default function AdminSidebar({
                 <span>
                   {item.label}
                 </span>
+
+                <AdminNavPendingIndicator />
 
                 {active ? (
                   <FontAwesomeIcon

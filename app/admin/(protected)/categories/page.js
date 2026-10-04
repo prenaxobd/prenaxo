@@ -1,16 +1,18 @@
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
-import { getUserPermissions, requirePermission } from '@/lib/admin';
+import { getUserPermissions, requireAdmin } from '@/lib/admin';
 import CategoryManager from '@/components/admin/CategoryManager';
 
 export default async function Categories() {
 	let admin;
 	try {
-		admin = await requirePermission('categories.view');
+		admin = await requireAdmin();
 	} catch {
 		redirect('/admin');
 	}
-	const [categories, attributes, permissions] = await Promise.all([
+	const permissions = await getUserPermissions(admin.id);
+	if (!permissions.has('categories.view')) redirect('/admin');
+	const [categories, attributes] = await Promise.all([
 		prisma.category.findMany({
 			include: {
 				_count: { select: { products: true } },
@@ -23,7 +25,6 @@ export default async function Categories() {
 			where: { active: true },
 			orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
 		}),
-		getUserPermissions(admin.id),
 	]);
 
 	return (
