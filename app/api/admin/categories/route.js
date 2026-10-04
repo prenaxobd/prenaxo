@@ -69,17 +69,17 @@ async function validateCategoryArchive(tx, categoryId) {
 }
 
 async function validateCategoryDeletion(tx, categoryId) {
-	const [productCount, childCount, homepageSectionCount, analyticsEventCount] = await Promise.all([
-		tx.product.count({ where: { categoryId } }),
-		tx.category.count({ where: { parentId: categoryId } }),
-		tx.homepageSection.count({ where: { categoryId } }),
-		tx.analyticsEvent.count({ where: { categoryId } }),
+	const [product, child, homepageSection, analyticsEvent] = await Promise.all([
+		tx.product.findFirst({ where: { categoryId }, select: { id: true } }),
+		tx.category.findFirst({ where: { parentId: categoryId }, select: { id: true } }),
+		tx.homepageSection.findFirst({ where: { categoryId }, select: { id: true } }),
+		tx.analyticsEvent.findFirst({ where: { categoryId }, select: { id: true } }),
 	]);
 
-	if (productCount) throw new Error('Move all products before permanently deleting this category.');
-	if (childCount) throw new Error('Move or delete all subcategories before permanently deleting this category.');
-	if (homepageSectionCount) throw new Error('Remove this category from homepage sections before permanently deleting it.');
-	if (analyticsEventCount) throw new Error('This category has analytics history and cannot be permanently deleted. Archive it instead.');
+	if (product) throw new Error('Move all products before permanently deleting this category.');
+	if (child) throw new Error('Move or delete all subcategories before permanently deleting this category.');
+	if (homepageSection) throw new Error('Remove this category from homepage sections before permanently deleting it.');
+	if (analyticsEvent) throw new Error('This category has analytics history and cannot be permanently deleted. Archive it instead.');
 }
 
 function categoryError(error) {
@@ -170,7 +170,7 @@ export async function DELETE(request) {
 			}
 			if (existing.active) await validateCategoryArchive(tx, id);
 			return tx.category.update({ where: { id }, data: { active: false } });
-		});
+		}, permanent ? { timeout: 15000 } : undefined);
 		invalidatePublicCache('categories', 'products', 'homepage', 'seo');
 		return Response.json(category);
 	} catch (error) {
