@@ -117,9 +117,10 @@ export async function POST(request) {
     const variantQuantities = new Map();
 
     for (const item of cart.items) {
-      productQuantities.set(item.productId, (productQuantities.get(item.productId) || 0) + item.quantity);
       if (item.variantId) {
         variantQuantities.set(item.variantId, (variantQuantities.get(item.variantId) || 0) + item.quantity);
+      } else {
+        productQuantities.set(item.productId, (productQuantities.get(item.productId) || 0) + item.quantity);
       }
     }
 

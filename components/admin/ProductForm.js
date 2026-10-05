@@ -291,6 +291,15 @@ export default function ProductForm({
     }));
   }
 
+  function updateImageAlt(index, alt) {
+    setForm((current) => ({
+      ...current,
+      images: current.images.map((image, imageIndex) => (
+        imageIndex === index ? { ...image, alt } : image
+      )),
+    }));
+  }
+
   function updateVariant(index, name, value) {
     setForm((current) => ({ ...current, variants: current.variants.map((variant, variantIndex) => variantIndex === index ? { ...variant, [name]: value } : variant) }));
   }
@@ -1508,6 +1517,8 @@ export default function ProductForm({
                 </small>
               </div>
 
+              <p className={styles.galleryHint}>Start an image&apos;s alt text with its color (for example, White front view) to show matching photos when shoppers select that color.</p>
+
               <div
                 className={
                   styles.gallery
@@ -1519,88 +1530,53 @@ export default function ProductForm({
                     index
                   ) => (
                     <div
-                      className={
-                        styles.imageItem
-                      }
+                      className={styles.imageCard}
                       key={`${image.url}-${index}`}
                     >
-                      <OptimizedImage
-                        src={
-                          image.url
-                        }
-                        alt={
-                          image.alt ||
-                          form.name
-                        }
-                      />
-
-                      {index ===
-                        0 && (
-                        <span
-                          className={
-                            styles.primaryLabel
-                          }
-                        >
-                          Primary
-                        </span>
-                      )}
-
-                      <button
-                        type="button"
-                        className={
-                          styles.removeImage
-                        }
-                        onClick={() =>
-                          removeImage(
-                            index
-                          )
-                        }
-                      >
-                        <X
-                          size={13}
+                      <div className={styles.imageItem}>
+                        <OptimizedImage
+                          src={image.url}
+                          alt={image.alt || form.name}
                         />
-                      </button>
 
-                      <div
-                        className={
-                          styles.imageControls
-                        }
-                      >
-                        <button
-                          type="button"
-                          disabled={
-                            index ===
-                            0
-                          }
-                          onClick={() =>
-                            moveImage(
-                              index,
-                              'left'
-                            )
-                          }
-                        >
-                          ←
-                        </button>
+                        {index === 0 && (
+                          <span className={styles.primaryLabel}>Primary</span>
+                        )}
 
                         <button
                           type="button"
-                          disabled={
-                            index ===
-                            form
-                              .images
-                              .length -
-                              1
-                          }
-                          onClick={() =>
-                            moveImage(
-                              index,
-                              'right'
-                            )
-                          }
+                          className={styles.removeImage}
+                          onClick={() => removeImage(index)}
+                          aria-label={`Remove image ${index + 1}`}
                         >
-                          →
+                          <X size={13}/>
                         </button>
+
+                        <div className={styles.imageControls}>
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => moveImage(index, 'left')}
+                            aria-label={`Move image ${index + 1} left`}
+                          >←</button>
+
+                          <button
+                            type="button"
+                            disabled={index === form.images.length - 1}
+                            onClick={() => moveImage(index, 'right')}
+                            aria-label={`Move image ${index + 1} right`}
+                          >→</button>
+                        </div>
                       </div>
+
+                      <label className={styles.imageAlt}>
+                        Image alt / color
+                        <input
+                          value={image.alt || ''}
+                          onChange={(event) => updateImageAlt(index, event.target.value)}
+                          placeholder="e.g. White"
+                        />
+                      </label>
                     </div>
                   )
                 )}
@@ -2612,4 +2588,3 @@ function Field({
     </label>
   );
 }
-

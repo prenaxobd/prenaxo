@@ -21,6 +21,7 @@ import {
 import ProductReviews from '@/components/product/ProductReviews';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductActions from '@/components/product/ProductActions';
+import { ProductOptionProvider } from '@/components/product/ProductOptionContext';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import DeliveryChecker from '@/components/product/DeliveryChecker';
 import ProductDetailsTabs from '@/components/product/ProductDetailsTabs';
@@ -700,6 +701,7 @@ export default async function ProductPage({
         className="container product-main"
       >
 
+        <ProductOptionProvider>
         <div className="product-gallery-column">
 
           <ProductGallery
@@ -1039,6 +1041,9 @@ export default async function ProductPage({
           </div>
 
         </div>
+
+        </ProductOptionProvider>
+
       </section>
 
 

@@ -6,7 +6,6 @@ import { useState } from 'react';
 const tabs = [
   ['description', 'Description'],
   ['specifications', 'Specifications'],
-  ['size', 'Size Guide'],
   ['shipping', 'Shipping'],
   ['returns', 'Return Policy'],
 ];
@@ -81,14 +80,6 @@ export default function ProductDetailsTabs({ product, sku, inStock }) {
               {colors.length > 0 && <div><span>Colors</span><strong>{colors.join(', ')}</strong></div>}
               {sizes.length > 0 && <div><span>Sizes</span><strong>{sizes.join(', ')}</strong></div>}
             </div>
-          </div>
-        )}
-
-        {activeTab === 'size' && (
-          <div className="product-description-block">
-            <span className="details-eyebrow">Available options</span>
-            <h2>Size Guide</h2>
-            {sizes.length > 0 ? <p className="details-lead">Available sizes: <strong>{sizes.join(', ')}</strong></p> : <p className="muted">Size information is not available for this product.</p>}
           </div>
         )}
 

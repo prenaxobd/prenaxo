@@ -4,6 +4,7 @@ import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { ArrowLeft, Minus, Plus, ShieldCheck, ShoppingBag, Trash2, Truck } from 'lucide-react';
 import { useCart } from '@/components/cart/CartProvider';
+import { getCartItemImage, getCartItemOptionLabels } from '@/components/cart/cart-options';
 
 export default function CartView() {
   const cart = useCart();
@@ -52,20 +53,15 @@ export default function CartView() {
           {items.map((item) => {
             const price = Number(item.variant?.price ?? item.product?.salePrice ?? item.product?.regularPrice ?? 0);
             const regular = Number(item.product?.regularPrice || 0);
-            const selectedOptions = item.variant
-              ? [item.variant.color, item.variant.size].filter(Boolean).join(' / ')
-              : item.product?.attributeValues
-                  ?.filter((attributeValue) => (item.attributeValueIds || []).includes(attributeValue.attributeValueId))
-                  .map((attributeValue) => attributeValue.attributeValue?.name)
-                  .filter(Boolean)
-                  .join(' / ');
+            const selectedOptions = getCartItemOptionLabels(item);
+            const image = getCartItemImage(item);
 
             return (
               <article className="cart-row" key={item.id}>
                 <div className="cart-product">
                   <Link className="cart-product-image" href={`/product/${item.product?.slug}`} aria-label={item.product?.name || 'View product'}>
-                    {item.product?.images?.[0]?.url
-                      ? <OptimizedImage src={item.product.images[0].url} alt={item.product.name || ''}/>
+                    {image?.url
+                      ? <OptimizedImage src={image.url} alt={image.alt || item.product.name || ''}/>
                       : <ShoppingBag size={24}/>}
                   </Link>
                   <div className="cart-product-info">

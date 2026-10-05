@@ -13,20 +13,73 @@ import {
 } from 'lucide-react';
 
 import { useState } from 'react';
+import { useProductOptionSelection } from '@/components/product/ProductOptionContext';
+import { getColorOptionImage } from '@/components/product/product-option-images';
+
+function normalizeAlt(value) {
+  return ` ${String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+}
 
 export default function ProductGallery({
   product,
   discount = 0,
 }) {
-  const images = product.images || [];
+  const productImages = product.images || [];
+  const optionSelection = useProductOptionSelection();
+  const selectedAttributeValueIds = optionSelection?.selectedAttributeValueIds || [];
+  const attributeValues = product.attributeValues || [];
+  const colorValues = attributeValues
+    .filter((item) => {
+      const attribute = item.attributeValue?.attribute;
+      return normalizeAlt(attribute?.slug || attribute?.name).includes(' color ');
+    })
+    .map((item) => item.attributeValue)
+    .filter(Boolean);
+  const selectedColors = colorValues.filter((value) =>
+    selectedAttributeValueIds.includes(value.id)
+  );
+  const hasColorImageLabels = productImages.some((image) =>
+    colorValues.some((value) =>
+      normalizeAlt(image.alt).startsWith(normalizeAlt(value.name))
+    )
+  );
+  const selectedColorImages = selectedColors
+    .map((value) => getColorOptionImage(product, value))
+    .filter(Boolean);
+  const hasMappedImagesForEveryColor = selectedColors.length > 0 &&
+    selectedColorImages.length === selectedColors.length;
+  const images = selectedColors.length && hasColorImageLabels
+    ? productImages.filter((image) => {
+        const alt = normalizeAlt(image.alt);
+        const imageHasColorLabel = colorValues.some((value) =>
+          alt.startsWith(normalizeAlt(value.name))
+        );
+        return !imageHasColorLabel || selectedColors.some((value) =>
+          alt.startsWith(normalizeAlt(value.name))
+        );
+      })
+    : hasMappedImagesForEveryColor
+      ? [...new Map(selectedColorImages.map((image) => [image.url, image])).values()]
+    : productImages;
 
-  const [active, setActive] = useState(0);
+  const [galleryState, setGalleryState] = useState({ colorKey: '', active: 0 });
   const [lightbox, setLightbox] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-
+  const selectedColorKey = selectedColors.map((value) => value.id).sort().join(',');
+  const active = galleryState.colorKey === selectedColorKey ? galleryState.active : 0;
+  const activeIndex = Math.min(active, Math.max(0, images.length - 1));
   const current =
-    images[active]?.url || null;
+    images[activeIndex]?.url || null;
+
+  function setActive(nextActive) {
+    setGalleryState((currentState) => ({
+      colorKey: selectedColorKey,
+      active: typeof nextActive === 'function'
+        ? nextActive(currentState.colorKey === selectedColorKey ? currentState.active : 0)
+        : nextActive,
+    }));
+  }
 
   function previous() {
     setActive((value) =>
@@ -97,7 +150,7 @@ export default function ProductGallery({
             <OptimizedImage
               src={current}
               alt={
-                images[active]?.alt ||
+                images[activeIndex]?.alt ||
                 product.name
               }
               className="main-product-image"
@@ -209,7 +262,7 @@ export default function ProductGallery({
                   type="button"
                   key={image.id || image.url}
                   className={
-                    index === active
+                    index === activeIndex
                       ? 'active'
                       : ''
                   }

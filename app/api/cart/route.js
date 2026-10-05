@@ -37,7 +37,13 @@ export async function GET() {
             include: {
               images: {
                 orderBy: { sortOrder: 'asc' },
-                take: 1,
+              },
+              attributeValues: {
+                include: {
+                  attributeValue: {
+                    include: { attribute: true },
+                  },
+                },
               },
             },
           },
@@ -124,7 +130,7 @@ export async function POST(request) {
 
     const refreshedCart = await prisma.cart.findUnique({
       where: { userId: user.id },
-      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } }, variant: true } } },
+      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' } }, attributeValues: { include: { attributeValue: { include: { attribute: true } } } } } }, variant: true } } },
     });
 
     return NextResponse.json({
@@ -184,7 +190,7 @@ export async function PATCH(request) {
 
     const refreshedCart = await prisma.cart.findUnique({
       where: { userId: user.id },
-      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } }, variant: true } } },
+      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' } }, attributeValues: { include: { attributeValue: { include: { attribute: true } } } } } }, variant: true } } },
     });
 
     return NextResponse.json({
@@ -231,7 +237,7 @@ export async function DELETE(request) {
 
     const refreshedCart = await prisma.cart.findUnique({
       where: { userId: user.id },
-      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } }, variant: true } } },
+      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' } }, attributeValues: { include: { attributeValue: { include: { attribute: true } } } } } }, variant: true } } },
     });
 
     return NextResponse.json({
