@@ -15,7 +15,7 @@ export default async function Categories() {
 	const [categories, attributes] = await Promise.all([
 		prisma.category.findMany({
 			include: {
-				_count: { select: { products: true } },
+				_count: { select: { products: { where: { active: true } } } },
 				attributes: { include: { attribute: true } },
 				parent: { select: { id: true, name: true } },
 			},

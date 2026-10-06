@@ -113,7 +113,7 @@ export default function CategoryManager({ initialCategories, attributes = [], pe
   }
 
   async function deletePermanently(category) {
-    if (!confirm(`Permanently delete "${category.name}"? This cannot be undone.`)) return;
+    if (!confirm(`Permanently delete "${category.name}"? Archived products will be kept without a category. This cannot be undone.`)) return;
     setPendingActionId(category.id);
     setMessage('');
     try {
@@ -123,7 +123,7 @@ export default function CategoryManager({ initialCategories, attributes = [], pe
         return;
       }
       setCategories(items => items.filter(item => item.id !== category.id));
-      setMessage(`"${category.name}" was permanently deleted.`);
+      setMessage(`"${category.name}" was permanently deleted. Archived products were kept without a category.`);
     } catch {
       setMessage('Unable to delete category. Check your connection and try again.');
     } finally {
@@ -202,11 +202,11 @@ export default function CategoryManager({ initialCategories, attributes = [], pe
       </section><MediaUploader label="Category image" multiple={false} images={form.image ? [{ url: form.image, isPrimary: true }] : []} onChange={images => updateForm('image', images[0]?.url || '')} /></div>
       <div className="admin-form-actions"><button className="btn" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save category'}</button></div>
     </form>}
-    <div className="admin-table-wrap category-table-wrap"><table className="table category-table"><thead><tr><th>Image</th><th>Category</th><th>Parent</th><th>Slug</th><th>Products</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{categoryRows.map(category => <tr key={category.id}>
+    <div className="admin-table-wrap category-table-wrap"><table className="table category-table"><thead><tr><th>Image</th><th>Category</th><th>Parent</th><th>Slug</th><th>Active products</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{categoryRows.map(category => <tr key={category.id}>
       <td>{category.image ? <OptimizedImage className="admin-thumbnail" src={category.image} alt={category.name} onError={event => { event.currentTarget.style.display = 'none'; }} /> : <div className="no-image">No image</div>}</td>
       <td><div className="category-name-cell" style={{ '--category-depth': category.depth }}><span className="category-tree-mark" aria-hidden="true">{category.depth ? '↳' : '•'}</span><strong title={category.name}>{category.name}</strong></div></td>
       <td>{category.parent?.name || <span className="category-root-label">Root</span>}</td><td>{category.slug}</td><td><span className="stock">{category._count.products}</span></td><td><span className={category.active ? 'status active' : 'status'}>{category.active ? 'Active' : 'Archived'}</span></td><td><span className="admin-date">{category.createdAt ? new Date(category.createdAt).toLocaleDateString('en-GB') : '—'}</span></td>
-      <td>{(canEdit || canCreate || canArchive) && <div className="admin-action-menu"><button type="button" aria-label={`Actions for ${category.name}`} disabled={isSaving || pendingActionId !== null} onClick={() => setActionId(actionId === category.id ? null : category.id)}>⋮</button>{actionId === category.id && <div className="admin-action-popover">{canEdit && <button type="button" onClick={() => openEdit(category)}>Edit</button>}{canCreate && category.active && <button type="button" onClick={() => openSubcategory(category)}>Add subcategory</button>}{category.active ? canArchive && <button type="button" onClick={() => { setActionId(null); archive(category.id); }}>Archive</button> : canEdit && <button type="button" onClick={() => { setActionId(null); restore(category.id); }}>Restore</button>}{canArchive && <button className="category-delete-action" type="button" onClick={() => { setActionId(null); deletePermanently(category); }}>Delete permanently</button>}</div>}</div>}</td>
+      <td>{(canEdit || canCreate || canArchive) && <div className="admin-action-menu"><button type="button" aria-label={`Actions for ${category.name}`} disabled={isSaving || pendingActionId !== null} onClick={() => setActionId(actionId === category.id ? null : category.id)}>⋮</button>{actionId === category.id && <div className="admin-action-popover">{canEdit && <button type="button" onClick={() => openEdit(category)}>Edit</button>}{canCreate && category.active && <button type="button" onClick={() => openSubcategory(category)}>Add subcategory</button>}{category.active ? canArchive && <button type="button" onClick={() => { setActionId(null); archive(category.id); }}>Archive</button> : canEdit && <button type="button" onClick={() => { setActionId(null); restore(category.id); }}>Restore</button>}{canArchive && category._count.products === 0 && <button className="category-delete-action" type="button" onClick={() => { setActionId(null); deletePermanently(category); }}>Delete permanently</button>}</div>}</div>}</td>
     </tr>)}</tbody></table></div>
   </>;
 }

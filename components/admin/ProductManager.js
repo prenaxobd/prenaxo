@@ -15,6 +15,7 @@ import {
   Star,
   Package,
   X,
+  Trash2,
 } from 'lucide-react';
 
 import styles from './ProductManager.module.css';
@@ -366,6 +367,38 @@ export default function ProductManager({
         error?.message ||
           'Unable to archive product.'
       );
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
+  async function deleteProductPermanently(id) {
+    if (!window.confirm('Permanently delete this archived product? This cannot be undone.')) {
+      return;
+    }
+
+    setLoadingId(id);
+
+    try {
+      const response = await fetch(
+        `/api/admin/products?id=${encodeURIComponent(id)}&permanent=true`,
+        { method: 'DELETE' }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Unable to delete product.');
+      }
+
+      setProducts((current) => current.filter((product) => product.id !== id));
+      setSelected((current) => current.filter((selectedId) => selectedId !== id));
+      setMenuId(null);
+
+      if (data.warning) {
+        alert(data.warning);
+      }
+    } catch (error) {
+      alert(error?.message || 'Unable to delete product.');
     } finally {
       setLoadingId(null);
     }
@@ -972,20 +1005,24 @@ export default function ProductManager({
                                 Edit
                               </Link>
 
-                              <button
-                                type="button"
-                                disabled={
-                                  loadingId ===
-                                  product.id
-                                }
-                                onClick={() =>
-                                  archiveProduct(
-                                    product.id
-                                  )
-                                }
-                              >
-                                Archive
-                              </button>
+                              {product.active ? (
+                                <button
+                                  type="button"
+                                  disabled={loadingId === product.id}
+                                  onClick={() => archiveProduct(product.id)}
+                                >
+                                  Archive
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={loadingId === product.id}
+                                  onClick={() => deleteProductPermanently(product.id)}
+                                >
+                                  <Trash2 size={14} />
+                                  Delete permanently
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>

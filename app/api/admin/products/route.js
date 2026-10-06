@@ -775,23 +775,103 @@ export async function DELETE(request) {
   try {
     await requirePermission('products.delete');
 
-    const id = new URL(request.url).searchParams.get('id');
+    const searchParams = new URL(request.url).searchParams;
+    const id = searchParams.get('id');
+    const permanent = searchParams.get('permanent') === 'true';
 
     if (!id) {
       throw new Error('Product id is required.');
     }
 
-    const product = await prisma.product.update({
-      where: {
-        id,
-      },
-      data: {
-        active: false,
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.product.findUnique({
+        where: { id },
+        select: {
+          active: true,
+          images: { select: { url: true } },
+          variants: { select: { id: true } },
+        },
+      });
+
+      if (!existing) {
+        throw new Error('Product not found.');
+      }
+
+      if (!permanent) {
+        const product = await tx.product.update({
+          where: { id },
+          data: { active: false },
+        });
+        return { product, imageUrls: [] };
+      }
+
+      if (existing.active) {
+        throw new Error('Only archived products can be permanently deleted.');
+      }
+
+      const variantIds = existing.variants.map((variant) => variant.id);
+      const [orderItem, review, analyticsEvent, inventoryMovement, includedInCombo] = await Promise.all([
+        tx.orderItem.findFirst({
+          where: {
+            OR: [
+              { productId: id },
+              ...(variantIds.length ? [{ variantId: { in: variantIds } }] : []),
+            ],
+          },
+          select: { id: true },
+        }),
+        tx.review.findFirst({ where: { productId: id }, select: { id: true } }),
+        tx.analyticsEvent.findFirst({ where: { productId: id }, select: { id: true } }),
+        tx.inventoryMovement.findFirst({ where: { productId: id }, select: { id: true } }),
+        tx.productComboItem.findFirst({ where: { includedProductId: id }, select: { id: true } }),
+      ]);
+
+      if (orderItem) throw new Error('This product has order history and cannot be permanently deleted.');
+      if (review) throw new Error('This product has customer reviews and cannot be permanently deleted.');
+      if (analyticsEvent) throw new Error('This product has analytics history and cannot be permanently deleted.');
+      if (inventoryMovement) throw new Error('This product has inventory history and cannot be permanently deleted.');
+      if (includedInCombo) throw new Error('Remove this product from combo products before permanently deleting it.');
+
+      await tx.cartItem.deleteMany({ where: { productId: id } });
+      await tx.wishlistItem.deleteMany({ where: { productId: id } });
+      await tx.productComboItem.deleteMany({ where: { comboProductId: id } });
+      await tx.productAttributeValue.deleteMany({ where: { productId: id } });
+      await tx.productSEO.deleteMany({ where: { productId: id } });
+      await tx.productImage.deleteMany({ where: { productId: id } });
+
+      if (variantIds.length) {
+        await tx.productVariantAttributeValue.deleteMany({ where: { variantId: { in: variantIds } } });
+        await tx.productVariant.deleteMany({ where: { id: { in: variantIds } } });
+      }
+
+      const product = await tx.product.delete({ where: { id } });
+      return { product, imageUrls: existing.images.map((image) => image.url) };
     });
 
     invalidatePublicCache('products', 'homepage', 'seo');
-    return Response.json(product);
+
+    if (!permanent) {
+      return Response.json(result.product);
+    }
+
+    const cleanupResults = await Promise.all(
+      result.imageUrls.map(async (imageUrl) => {
+        const publicId = publicIdFromCloudinaryUrl(imageUrl);
+        if (!publicId) return true;
+        try {
+          await deleteImage(publicId);
+          return true;
+        } catch (error) {
+          console.error('Unable to remove product image after permanent deletion.', error);
+          return false;
+        }
+      })
+    );
+    const warning = cleanupResults.some((successful) => !successful)
+      ? 'Product deleted, but one or more product images could not be removed.'
+      : null;
+
+    return Response.json({ deleted: true, warning });
   } catch (error) {
     return jsonError(error);
   }

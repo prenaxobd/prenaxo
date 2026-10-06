@@ -15,7 +15,7 @@ const schema = z.object({
 });
 
 const include = {
-	_count: { select: { products: true } },
+	_count: { select: { products: { where: { active: true } } } },
 	attributes: { include: { attribute: true } },
 	parent: { select: { id: true, name: true } },
 };
@@ -69,14 +69,14 @@ async function validateCategoryArchive(tx, categoryId) {
 }
 
 async function validateCategoryDeletion(tx, categoryId) {
-	const [product, child, homepageSection, analyticsEvent] = await Promise.all([
-		tx.product.findFirst({ where: { categoryId }, select: { id: true } }),
+	const [activeProduct, child, homepageSection, analyticsEvent] = await Promise.all([
+		tx.product.findFirst({ where: { categoryId, active: true }, select: { id: true } }),
 		tx.category.findFirst({ where: { parentId: categoryId }, select: { id: true } }),
 		tx.homepageSection.findFirst({ where: { categoryId }, select: { id: true } }),
 		tx.analyticsEvent.findFirst({ where: { categoryId }, select: { id: true } }),
 	]);
 
-	if (product) throw new Error('Move all products before permanently deleting this category.');
+	if (activeProduct) throw new Error('Move all active products before permanently deleting this category.');
 	if (child) throw new Error('Move or delete all subcategories before permanently deleting this category.');
 	if (homepageSection) throw new Error('Remove this category from homepage sections before permanently deleting it.');
 	if (analyticsEvent) throw new Error('This category has analytics history and cannot be permanently deleted. Archive it instead.');
@@ -164,6 +164,10 @@ export async function DELETE(request) {
 			if (!existing) throw new Error('Category not found.');
 			if (permanent) {
 				await validateCategoryDeletion(tx, id);
+				await tx.product.updateMany({
+					where: { categoryId: id, active: false },
+					data: { categoryId: null },
+				});
 				await tx.categoryAttribute.deleteMany({ where: { categoryId: id } });
 				await tx.categorySEO.deleteMany({ where: { categoryId: id } });
 				return tx.category.delete({ where: { id } });

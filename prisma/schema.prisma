@@ -440,9 +440,9 @@ model Product {
   featured Boolean @default(false)
   active   Boolean @default(true)
 
-  categoryId String
+  categoryId String?
 
-  category Category @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   images ProductImage[]
 
   variants ProductVariant[]
@@ -927,6 +927,7 @@ model HomepageSection {
 
   sortOrder Int @default(0)
 
+  @@index([categoryId])
   @@map("homepagesection")
 }
 
