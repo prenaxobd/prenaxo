@@ -147,30 +147,30 @@ export async function PATCH(request) {
 		const existing = await prisma.category.findUnique({ where: { id }, select: { image: true, active: true, parentId: true } });
 		if (!existing) throw new Error('Category not found.');
 		if (data.active === false && existing.active) await requirePermission('categories.delete');
-		const category = await prisma.$transaction(async tx => {
-			const changesParent = Object.hasOwn(data, 'parentId');
-			const parentId = Object.hasOwn(data, 'parentId') ? data.parentId : existing.parentId;
-			const isArchiving = data.active === false && existing.active;
-			const categoryHierarchy = (changesParent && parentId) || isArchiving ? await getCategoryHierarchy(tx) : null;
-			if (changesParent && parentId) validateParent(categoryHierarchy, id, parentId);
-			if (isArchiving) await validateCategoryArchive(tx, id, categoryHierarchy);
-			return tx.category.update({
-				where: { id },
-				data: {
-					...data,
-					...(attributeIds !== undefined
-						? {
-							attributes: {
-								deleteMany: {},
-								create: attributeIds.map(attributeId => ({
-									attribute: { connect: { id: attributeId } },
-								})),
-							},
-						}
-						: {}),
-				},
-				include,
-			});
+		const changesParent = Object.hasOwn(data, 'parentId');
+		const parentId = changesParent ? data.parentId : existing.parentId;
+		const isArchiving = data.active === false && existing.active;
+		const categoryHierarchy = (changesParent && parentId) || isArchiving
+			? await getCategoryHierarchy(prisma)
+			: null;
+		if (changesParent && parentId) validateParent(categoryHierarchy, id, parentId);
+		if (isArchiving) await validateCategoryArchive(prisma, id, categoryHierarchy);
+		const category = await prisma.category.update({
+			where: { id },
+			data: {
+				...data,
+				...(attributeIds !== undefined
+					? {
+						attributes: {
+							deleteMany: {},
+							create: attributeIds.map(attributeId => ({
+								attribute: { connect: { id: attributeId } },
+							})),
+						},
+					}
+					: {}),
+			},
+			include,
 		});
 		if (existing.image && existing.image !== category.image) {
 			const publicId = publicIdFromCloudinaryUrl(existing.image);
