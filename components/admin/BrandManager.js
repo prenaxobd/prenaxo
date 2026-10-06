@@ -38,7 +38,7 @@ function BrandLogo({ src, name }) {
   );
 }
 
-export default function BrandManager({ initialBrands = [] }) {
+export default function BrandManager({ initialBrands = [], permissions = [] }) {
   const [brands, setBrands] = useState(initialBrands);
   const [form, setForm] = useState(null);
   const [message, setMessage] = useState('');
@@ -46,6 +46,10 @@ export default function BrandManager({ initialBrands = [] }) {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [actionId, setActionId] = useState(null);
   const [pendingActionId, setPendingActionId] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const canCreate = permissions.includes('brands.create');
+  const canEdit = permissions.includes('brands.edit');
+  const canArchive = permissions.includes('brands.delete');
 
   const visible = brands.filter((brand) =>
     `${brand.name || ''} ${brand.slug || ''}`
@@ -57,6 +61,7 @@ export default function BrandManager({ initialBrands = [] }) {
 
   async function save(event) {
     event.preventDefault();
+    setIsSaving(true);
 
     try {
       const response = await fetch('/api/admin/brands', {
@@ -111,6 +116,8 @@ export default function BrandManager({ initialBrands = [] }) {
       setMessage('Brand saved successfully.');
     } catch (error) {
       setMessage(error.message || 'Unable to save brand.');
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -124,6 +131,7 @@ export default function BrandManager({ initialBrands = [] }) {
       return;
     }
 
+    setPendingActionId(id);
     try {
       const response = await fetch(
         `/api/admin/brands?id=${encodeURIComponent(id)}`,
@@ -162,6 +170,8 @@ export default function BrandManager({ initialBrands = [] }) {
       );
     } catch (error) {
       setMessage(error.message || 'Unable to update brand.');
+    } finally {
+      setPendingActionId(null);
     }
   }
 
@@ -205,16 +215,19 @@ export default function BrandManager({ initialBrands = [] }) {
           </p>
         </div>
 
-        <button
-          className="btn"
-          type="button"
-          onClick={() => {
-            setForm({ ...empty });
-            setMessage('');
-          }}
-        >
-          + Add brand
-        </button>
+        {canCreate && (
+          <button
+            className="btn"
+            type="button"
+            disabled={isSaving}
+            onClick={() => {
+              setForm({ ...empty });
+              setMessage('');
+            }}
+          >
+            + Add brand
+          </button>
+        )}
       </div>
 
       {message && (
@@ -223,13 +236,14 @@ export default function BrandManager({ initialBrands = [] }) {
         </p>
       )}
 
-      {form && (
+      {form && (form.id ? canEdit : canCreate) && (
         <form className="admin-form brand-form" onSubmit={save}>
           <div className="admin-form-head">
             <h2>{form.id ? 'Edit brand' : 'Add brand'}</h2>
 
             <button
               type="button"
+              disabled={isSaving}
               onClick={() => setForm(null)}
             >
               Cancel
@@ -368,8 +382,8 @@ export default function BrandManager({ initialBrands = [] }) {
             </section>
           </div>
 
-          <button className="btn" type="submit">
-            Save brand
+          <button className="btn" type="submit" disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save brand'}
           </button>
         </form>
       )}
@@ -462,60 +476,75 @@ export default function BrandManager({ initialBrands = [] }) {
 
                 <td>
                   <div className="admin-action-menu">
-                    <button
-                      type="button"
-                      aria-label={`Actions for ${brand.name}`}
-                      disabled={pendingActionId !== null}
-                      onClick={() =>
-                        setActionId(
-                          actionId === brand.id
-                            ? null
-                            : brand.id
-                        )
-                      }
-                    >
-                      ⋮
-                    </button>
+                    {(canEdit || canArchive) && (
+                      <button
+                        type="button"
+                        aria-label={`Actions for ${brand.name}`}
+                        disabled={pendingActionId !== null || isSaving}
+                        onClick={() =>
+                          setActionId(
+                            actionId === brand.id
+                              ? null
+                              : brand.id
+                          )
+                        }
+                      >
+                        ⋮
+                      </button>
+                    )}
 
                     {actionId === brand.id && (
                       <div className="admin-action-popover">
-                        <button
-                          type="button"
-                          disabled={pendingActionId !== null}
-                          onClick={() => {
-                            setActionId(null);
-                            setForm({ ...brand });
-                          }}
-                        >
-                          Edit
-                        </button>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            disabled={pendingActionId !== null || isSaving}
+                            onClick={() => {
+                              setActionId(null);
+                              setForm({ ...brand });
+                            }}
+                          >
+                            Edit
+                          </button>
+                        )}
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActionId(null);
-                            archive(
-                              brand.id,
-                              brand.active
-                            );
-                          }}
-                        >
-                          {brand.active
-                            ? 'Archive'
-                            : 'Restore'}
-                        </button>
+                        {brand.active ? canArchive && (
+                          <button
+                            type="button"
+                            disabled={pendingActionId !== null}
+                            onClick={() => {
+                              setActionId(null);
+                              archive(brand.id, true);
+                            }}
+                          >
+                            Archive
+                          </button>
+                        ) : canEdit && (
+                          <button
+                            type="button"
+                            disabled={pendingActionId !== null}
+                            onClick={() => {
+                              setActionId(null);
+                              archive(brand.id, false);
+                            }}
+                          >
+                            Restore
+                          </button>
+                        )}
 
-                        <button
-                          className="category-delete-action"
-                          type="button"
-                          disabled={pendingActionId !== null}
-                          onClick={() => {
-                            setActionId(null);
-                            deletePermanently(brand);
-                          }}
-                        >
-                          Delete permanently
-                        </button>
+                        {canArchive && (
+                          <button
+                            className="category-delete-action"
+                            type="button"
+                            disabled={pendingActionId !== null}
+                            onClick={() => {
+                              setActionId(null);
+                              deletePermanently(brand);
+                            }}
+                          >
+                            Delete permanently
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

@@ -20,12 +20,19 @@ const include = {
 	parent: { select: { id: true, name: true } },
 };
 
-async function validateParent(tx, categoryId, parentId) {
+async function getCategoryHierarchy(tx) {
+	return tx.category.findMany({
+		select: { id: true, parentId: true, active: true },
+	});
+}
+
+function validateParent(categories, categoryId, parentId) {
 	if (!parentId) return;
 	if (categoryId && categoryId === parentId) {
 		throw new Error('A category cannot be its own parent.');
 	}
 
+	const categoriesById = new Map(categories.map(category => [category.id, category]));
 	const visited = new Set();
 	let currentId = parentId;
 
@@ -35,11 +42,7 @@ async function validateParent(tx, categoryId, parentId) {
 		}
 		visited.add(currentId);
 
-		const parent = await tx.category.findUnique({
-			where: { id: currentId },
-			select: { id: true, parentId: true, active: true },
-		});
-
+		const parent = categoriesById.get(currentId);
 		if (!parent) throw new Error('Parent category not found.');
 		if (!parent.active) throw new Error('Choose an active parent category.');
 		if (categoryId && parent.id === categoryId) {
@@ -49,22 +52,30 @@ async function validateParent(tx, categoryId, parentId) {
 	}
 }
 
-async function validateCategoryArchive(tx, categoryId) {
+async function validateCategoryArchive(tx, categoryId, categories) {
 	const productCount = await tx.product.count({ where: { categoryId } });
 	if (productCount) throw new Error('Move all products before archiving this category.');
 
+	const childrenByParent = new Map();
+	for (const category of categories) {
+		if (!category.parentId) continue;
+		const children = childrenByParent.get(category.parentId) || [];
+		children.push(category);
+		childrenByParent.set(category.parentId, children);
+	}
+
 	const visited = new Set([categoryId]);
-	let parentIds = [categoryId];
-	while (parentIds.length) {
-		const children = await tx.category.findMany({
-			where: { parentId: { in: parentIds } },
-			select: { id: true, active: true },
-		});
+	const pending = [categoryId];
+	while (pending.length) {
+		const children = childrenByParent.get(pending.pop()) || [];
 		if (children.some(child => child.active)) {
 			throw new Error('Archive or move active subcategories before archiving this category.');
 		}
-		parentIds = children.map(child => child.id).filter(id => !visited.has(id));
-		parentIds.forEach(id => visited.add(id));
+		for (const child of children) {
+			if (visited.has(child.id)) continue;
+			visited.add(child.id);
+			pending.push(child.id);
+		}
 	}
 }
 
@@ -105,7 +116,9 @@ export async function POST(request) {
 		const parsed = schema.parse(await request.json());
 		const { attributeIds, ...data } = parsed;
 		const category = await prisma.$transaction(async tx => {
-			await validateParent(tx, null, data.parentId);
+			if (data.parentId) {
+				validateParent(await getCategoryHierarchy(tx), null, data.parentId);
+			}
 			const created = await tx.category.create({ data });
 			if (attributeIds.length) {
 				await tx.categoryAttribute.createMany({ data: attributeIds.map(attributeId => ({ categoryId: created.id, attributeId })) });
@@ -130,8 +143,11 @@ export async function PATCH(request) {
 		if (!existing) throw new Error('Category not found.');
 		if (data.active === false && existing.active) await requirePermission('categories.delete');
 		const category = await prisma.$transaction(async tx => {
-			await validateParent(tx, id, Object.hasOwn(data, 'parentId') ? data.parentId : existing.parentId);
-			if (data.active === false && existing.active) await validateCategoryArchive(tx, id);
+			const parentId = Object.hasOwn(data, 'parentId') ? data.parentId : existing.parentId;
+			const isArchiving = data.active === false && existing.active;
+			const categoryHierarchy = parentId || isArchiving ? await getCategoryHierarchy(tx) : null;
+			if (parentId) validateParent(categoryHierarchy, id, parentId);
+			if (isArchiving) await validateCategoryArchive(tx, id, categoryHierarchy);
 			await tx.category.update({ where: { id }, data });
 			if (attributeIds) {
 				await tx.categoryAttribute.deleteMany({ where: { categoryId: id } });
@@ -172,7 +188,10 @@ export async function DELETE(request) {
 				await tx.categorySEO.deleteMany({ where: { categoryId: id } });
 				return tx.category.delete({ where: { id } });
 			}
-			if (existing.active) await validateCategoryArchive(tx, id);
+			if (existing.active) {
+				const categoryHierarchy = await getCategoryHierarchy(tx);
+				await validateCategoryArchive(tx, id, categoryHierarchy);
+			}
 			return tx.category.update({ where: { id }, data: { active: false } });
 		}, permanent ? { timeout: 15000 } : undefined);
 		invalidatePublicCache('categories', 'products', 'homepage', 'seo');
