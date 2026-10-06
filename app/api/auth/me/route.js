@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { createSession, getCurrentUser } from '@/lib/auth';
 
 export async function GET() {
   try {
@@ -16,6 +16,8 @@ export async function GET() {
       );
     }
 
+    await createSession(user.id, { rememberMe: true });
+
     return NextResponse.json(
       {
         user: {
@@ -27,6 +29,9 @@ export async function GET() {
       },
       {
         status: 200,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
       }
     );
   } catch (error) {

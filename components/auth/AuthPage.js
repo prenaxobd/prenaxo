@@ -4,7 +4,7 @@ import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Tag, Truck, UserRound } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './AuthPage.css';
 
 const features = [
@@ -29,6 +29,34 @@ export default function AuthPage({ mode = 'login' }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    async function redirectExistingSession() {
+      try {
+        const response = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Unable to verify your current session.');
+        const data = await response.json();
+        if (active && data.user) {
+          window.location.replace(safeRedirect());
+          return;
+        }
+      } catch {
+        if (active) setError('We could not verify your current sign-in. You can try again or sign in below.');
+      } finally {
+        if (active) setCheckingSession(false);
+      }
+    }
+
+    redirectExistingSession();
+    return () => {
+      active = false;
+    };
+  }, [isLogin]);
 
   function update(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -56,7 +84,7 @@ export default function AuthPage({ mode = 'login' }) {
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
       const payload = isLogin
-        ? { identifier: form.email.trim(), password: form.password }
+        ? { identifier: form.email.trim(), password: form.password, rememberMe }
         : { name: form.name.trim(), identifier: form.email.trim(), password: form.password };
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -66,7 +94,7 @@ export default function AuthPage({ mode = 'login' }) {
       const result = await response.json();
       if (!response.ok) throw new Error(isLogin ? 'Invalid email/mobile number or password.' : (result.error || 'Unable to create your account.'));
       window.dispatchEvent(new Event('auth-state-changed'));
-      window.location.assign(isLogin ? safeRedirect() : '/login?registered=1');
+      window.location.assign(safeRedirect());
     } catch (submitError) {
       setError(submitError.message || 'Something went wrong. Please try again.');
       setLoading(false);
@@ -74,8 +102,24 @@ export default function AuthPage({ mode = 'login' }) {
   }
 
   async function continueWithGoogle() {
-    if (loading) return;
-    await signIn('google', { callbackUrl: safeRedirect() });
+    if (loading || googleLoading) return;
+    setGoogleLoading(true);
+    setError('');
+    try {
+      await signIn('google', { callbackUrl: safeRedirect() });
+    } catch (signInError) {
+      console.error('Google sign-in failed:', signInError);
+      setError('Google sign-in could not be completed. Please try again.');
+      setGoogleLoading(false);
+    }
+  }
+
+  if (checkingSession) {
+    return (
+      <main className="auth-page">
+        <p className="auth-session-check" role="status">Checking your account...</p>
+      </main>
+    );
   }
 
   return (
@@ -108,12 +152,12 @@ export default function AuthPage({ mode = 'login' }) {
               <label><span>Email / Mobile Number</span><div className="auth-input-wrap"><Mail size={17} /><input value={form.email} onChange={(event) => update('email', event.target.value)} placeholder="Enter your email or mobile number" required autoComplete={isLogin ? 'username' : 'email'} /></div></label>
               <label><span>Password</span><div className="auth-input-wrap"><LockKeyhole size={17} /><input type={showPassword ? 'text' : 'password'} value={form.password} onChange={(event) => update('password', event.target.value)} placeholder="Enter your password" required minLength={isLogin ? undefined : 8} autoComplete={isLogin ? 'current-password' : 'new-password'} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
               {!isLogin && <label><span>Confirm Password</span><div className="auth-input-wrap"><LockKeyhole size={17} /><input type={showConfirmPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={(event) => update('confirmPassword', event.target.value)} placeholder="Confirm your password" required minLength={8} autoComplete="new-password" /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>{showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>}
-              {isLogin && <div className="auth-options"><label className="auth-remember"><input type="checkbox" /> <span>Remember me</span></label><span className="auth-forgot" title="Customer password reset is not configured yet">Forgot Password?</span></div>}
+              {isLogin && <div className="auth-options"><label className="auth-remember"><input type="checkbox" checked={rememberMe} onChange={event => setRememberMe(event.target.checked)} /> <span>Stay signed in for up to 90 days</span></label><span className="auth-forgot" title="Customer password reset is not configured yet">Forgot Password?</span></div>}
               {error && <p className="auth-error" role="alert">{error}</p>}
               <button className="auth-submit" type="submit" disabled={loading}>{loading ? (isLogin ? 'Signing in...' : 'Creating account...') : <>{isLogin ? 'Sign In' : 'Create Account'} <ArrowRight size={17} /></>}</button>
             </form>
             <div className="auth-divider"><span>OR</span></div>
-            <button className="auth-google" type="button" onClick={continueWithGoogle} disabled={loading}><OptimizedImage className="auth-google-mark" src="/uploads/google.webp" alt="" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling.hidden = false; }} /> <span className="auth-google-fallback" hidden>G</span> Continue with Google</button>
+            <button className="auth-google" type="button" onClick={continueWithGoogle} disabled={loading || googleLoading}><OptimizedImage className="auth-google-mark" src="/uploads/google.webp" alt="" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling.hidden = false; }} /> <span className="auth-google-fallback" hidden>G</span> {googleLoading ? 'Connecting to Google...' : 'Continue with Google'}</button>
             <p className="auth-legal">By signing in, you agree to our <Link href="/terms">Terms &amp; Conditions</Link> and <Link href="/privacy">Privacy Policy</Link>.</p>
           </div>
         </section>

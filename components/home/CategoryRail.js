@@ -34,10 +34,11 @@ export default function CategoryRail({ categories }) {
     };
   }, []);
 
-  const maxIndex = Math.max(0, items.length - perView);
+  const visibleCount = Math.min(perView, Math.max(1, items.length - 1));
+  const maxIndex = Math.max(0, items.length - visibleCount);
 
   useEffect(() => {
-    if (items.length <= perView || paused) return;
+    if (items.length <= 1 || paused) return;
 
     const timer = setInterval(() => {
       setActive((current) =>
@@ -83,7 +84,7 @@ export default function CategoryRail({ categories }) {
 
   const visibleActive = Math.min(active, maxIndex);
   const translate =
-    -(visibleActive * (100 / perView));
+    -(visibleActive * (100 / visibleCount));
 
   return (
     <section className="home-section home-category-section">
@@ -100,7 +101,7 @@ export default function CategoryRail({ categories }) {
             <h2>Shop by category</h2>
           </div>
 
-          <Link href="/shop-menu">
+          <Link href="/shop">
             View all
             <ArrowRight size={16} />
           </Link>
@@ -128,7 +129,7 @@ export default function CategoryRail({ categories }) {
               <div
                 className="home-carousel-item"
                 style={{
-                  flex: `0 0 ${100 / perView}%`,
+                  flex: `0 0 ${100 / visibleCount}%`,
                 }}
                 key={category.id}
               >
@@ -158,10 +159,6 @@ export default function CategoryRail({ categories }) {
                     {category.name}
                   </strong>
 
-                  <small>
-                    {category._count?.products || 0} products
-                  </small>
-
                 </Link>
 
               </div>
@@ -171,7 +168,7 @@ export default function CategoryRail({ categories }) {
           </div>
 
 
-          {items.length > perView && (
+          {items.length > visibleCount && (
 
             <>
 
@@ -200,7 +197,7 @@ export default function CategoryRail({ categories }) {
         </div>
 
 
-        {items.length > perView && (
+        {items.length > visibleCount && (
 
           <div className="home-carousel-dots">
 

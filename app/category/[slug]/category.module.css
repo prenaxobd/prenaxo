@@ -1,4 +1,42 @@
 .page { padding: 28px 0 76px; background: #f8faf9; }
+.fashionShopPage { padding-top: 0; }
+.fashionShopPage :global(.shop-breadcrumb) { gap: 9px; color: #75808a; font-size: 12px; }
+.fashionShopPage :global(.shop-heading) { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 22px; }
+.fashionShopPage :global(.shop-heading h1) { min-width: 0; color: #172033; }
+.fashionShopPage :global(.shop-result-pill) { padding: 7px 11px; border: 1px solid #e8ecea; border-radius: 999px; background: #fff; color: #66717d; font-size: 12px; }
+.fashionShopPage :global(.shop-filters) { overflow: hidden; border-color: #e9edeb; border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 23, 42, .035); }
+.fashionShopPage :global(.shop-filter-head) { padding: 18px 18px 15px; }
+.fashionShopPage :global(.shop-filter-head h2) { font-size: 17px; }
+.fashionShopPage :global(.shop-filter-section) { padding: 17px 0; }
+.fashionShopPage :global(.shop-filter-section h3) { margin-bottom: 10px; color: #77818c; font-size: 10px; letter-spacing: .12em; }
+.fashionShopPage :global(.shop-filter-scroll-list) { display: grid; max-height: 224px; gap: 2px; overflow-y: auto; padding: 2px 5px 2px 0; overscroll-behavior: contain; scrollbar-color: #cbd3d0 transparent; scrollbar-width: thin; }
+.fashionShopPage :global(.shop-filter-scroll-list::-webkit-scrollbar) { width: 5px; }
+.fashionShopPage :global(.shop-filter-scroll-list::-webkit-scrollbar-track) { background: transparent; }
+.fashionShopPage :global(.shop-filter-scroll-list::-webkit-scrollbar-thumb) { border-radius: 999px; background: #cbd3d0; }
+.fashionShopPage :global(.shop-filter-scroll-list .shop-filter-radio) { min-height: 37px; padding: 7px 9px; border-radius: 8px; font-size: 12px; }
+.fashionShopPage :global(.shop-filter-scroll-list .shop-filter-radio:hover) { background: #f8f5f4; }
+.fashionShopPage :global(.shop-filter-scroll-list .shop-filter-radio input:checked + span) { color: var(--brand-primary); font-weight: 700; }
+.fashionShopPage :global(.shop-filter-scroll-list .shop-filter-radio input:checked + span::before) { border-color: var(--brand-primary); }
+.fashionShopPage :global(.shop-filter-scroll-list .shop-filter-radio span::before) { width: 13px; height: 13px; }
+.fashionShopPage :global(.shop-toolbar) { min-height: 64px; margin-bottom: 14px; border-radius: 12px; }
+.fashionShopPage.fashionShopPage :global(.shop-grid) { gap: 14px; }
+.fashionShopPage :global(.shop-no-results) { border-color: #e8ecea; border-radius: 14px; }
+@media (max-width: 900px) {
+  .fashionShopPage :global(.shop-layout) { grid-template-columns: 220px minmax(0, 1fr); gap: 14px; }
+  .fashionShopPage.fashionShopPage :global(.shop-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}
+@media (max-width: 767px) {
+  .fashionShopPage :global(.shop-layout) { display: block; }
+  .fashionShopPage.fashionShopPage :global(.shop-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+}
+@media (max-width: 700px) {
+  .fashionShopPage { padding-top: 0; }
+  .fashionShopPage :global(.shop-heading) { flex-direction: row; align-items: center; margin-bottom: 17px; }
+  .fashionShopPage :global(.shop-heading h1) { font-size: clamp(21px, 6vw, 26px); }
+  .fashionShopPage :global(.shop-result-pill) { display: inline-flex; }
+  .fashionShopPage :global(.shop-filters) { overflow: visible; }
+  .fashionShopPage :global(.shop-filter-scroll-list) { max-height: 210px; }
+}
 .hero { position: relative; min-height: 330px; display: flex; align-items: center; overflow: hidden; margin-bottom: 28px; padding: 42px 56px; border-radius: 18px; background: #f4e8d4; }
 .heroImage { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .hero::after { content: ''; position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(255, 255, 255, .84) 0%, rgba(255, 255, 255, .68) 36%, rgba(255, 255, 255, .32) 56%, transparent 76%); }
@@ -12,10 +50,20 @@
 .contentHead { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .contentHead h2 { margin: 4px 0 0; color: #172033; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; letter-spacing: -.04em; }
 .count { color: #7d8792; font-size: 12px; }
+.catalogue { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; gap: 22px; }
+.catalogueFullWidth { grid-template-columns: minmax(0, 1fr); }
+.sidebar { position: sticky; top: 20px; display: grid; gap: 5px; padding: 18px; border: 1px solid #edf0ee; border-radius: 16px; background: #fff; box-shadow: 0 10px 28px rgba(15, 23, 42, .03); }
+.sidebar h3 { margin: 0 0 8px; color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.sidebar a { padding: 10px 11px; border-radius: 9px; color: #52615a; font-size: 13px; font-weight: 600; text-decoration: none; transition: background .18s ease, color .18s ease; }
+.sidebar a:hover, .sidebar a.selectedSubcategory { background: rgba(214, 40, 40, .07); color: var(--primary); }
+.products { min-width: 0; }
 .products :global(.shop-grid) { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.empty { margin: 0; padding: 36px 20px; border: 1px solid #edf0ee; border-radius: 14px; background: #fff; color: #64748b; text-align: center; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 28px; }
 .pagination a, .pagination span { display: inline-flex; min-width: 34px; height: 34px; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid #e1e7e4; border-radius: 7px; background: #fff; color: #52615a; font-size: 11px; font-weight: 700; text-decoration: none; }
 .pagination a:hover, .pagination .active { border-color: var(--primary); background: var(--primary); color: #fff; }
 .pagination .disabled { color: #b5bdb9; cursor: not-allowed; }
-@media (max-width: 1000px) { .products :global(.shop-grid) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 700px) { .page { padding-top: 14px; } .hero { min-height: 230px; margin-bottom: 22px; padding: 20px 18px; background-position: 62% center; } .hero::after { background: linear-gradient(90deg, rgba(255, 255, 255, .84) 0%, rgba(255, 255, 255, .68) 44%, rgba(255, 255, 255, .3) 66%, transparent 82%); } .hero h1 { margin: 8px 0; font-size: 29px; } .hero p { max-width: 240px; font-size: 12px; line-height: 1.45; } .heroButton { gap: 6px; margin-top: 14px; padding: 8px 11px; font-size: 10px; } .heroButton svg { width: 13px; height: 13px; } .contentHead h2 { font-size: 20px; } .products :global(.shop-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .pagination { margin-top: 22px; gap: 4px; } .pagination a, .pagination span { min-width: 31px; height: 31px; padding: 0 7px; font-size: 10px; } }
+@media (max-width: 1100px) { .products :global(.shop-grid) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 800px) { .catalogue { grid-template-columns: 190px minmax(0, 1fr); gap: 14px; } .sidebar { padding: 13px; } .products :global(.shop-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+@media (max-width: 800px) { .catalogueFullWidth { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) { .page { padding-top: 14px; } .hero { min-height: 230px; margin-bottom: 22px; padding: 20px 18px; background-position: 62% center; } .hero::after { background: linear-gradient(90deg, rgba(255, 255, 255, .84) 0%, rgba(255, 255, 255, .68) 44%, rgba(255, 255, 255, .3) 66%, transparent 82%); } .hero h1 { margin: 8px 0; font-size: 29px; } .hero p { max-width: 240px; font-size: 12px; line-height: 1.45; } .heroButton { gap: 6px; margin-top: 14px; padding: 8px 11px; font-size: 10px; } .heroButton svg { width: 13px; height: 13px; } .contentHead h2 { font-size: 20px; } .catalogue { grid-template-columns: 1fr; } .sidebar { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; } .sidebar h3 { grid-column: 1 / -1; } .sidebar a { padding: 9px 7px; font-size: 12px; } .products :global(.shop-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .pagination { margin-top: 22px; gap: 4px; } .pagination a, .pagination span { min-width: 31px; height: 31px; padding: 0 7px; font-size: 10px; } }

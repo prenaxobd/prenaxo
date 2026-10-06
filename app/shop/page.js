@@ -1,5 +1,5 @@
 import { getShopProducts } from '@/lib/products';
-import { getPublicBrands, getPublicCategories } from '@/lib/public-data';
+import { getPublicBrands, getPublicCategories, getPublicPriceBounds } from '@/lib/public-data';
 import ShopBrowser from '@/components/shop/ShopBrowser';
 
 import {
@@ -24,15 +24,13 @@ export async function generateMetadata({
 
   const hasFilter =
     params?.category ||
+    params?.subcategory ||
     params?.brand ||
     params?.search ||
     params?.q;
 
 
-  const title =
-    settings?.metaTitle
-      ? `Shop | ${SITE_NAME}`
-      : `Shop Quality Products | ${SITE_NAME}`;
+  const title = 'Buy Best Quality Products & Trends | Prenaxo';
 
 
   const description =
@@ -40,7 +38,9 @@ export async function generateMetadata({
 
 
   return {
-    title,
+    title: {
+      absolute: title,
+    },
 
     description,
 
@@ -113,12 +113,28 @@ export async function generateMetadata({
 
 export default async function Shop({ searchParams }) {
   const params = await searchParams;
+  const categories = await getPublicCategories();
+  const requestedCategory = params?.category || 'all';
+  const requestedSubcategory = params?.subcategory || 'all';
+  const matchedCategory = requestedCategory === 'all'
+    ? null
+    : categories.find(category => category.slug === requestedCategory || category.name === requestedCategory);
+  const matchedSubcategory = matchedCategory?.parentId
+    ? matchedCategory
+    : requestedSubcategory !== 'all'
+      ? categories.find(category => category.slug === requestedSubcategory
+        && (!matchedCategory || category.parentId === matchedCategory.id))
+      : null;
+  const matchedParent = matchedSubcategory?.parentId
+    ? categories.find(category => category.id === matchedSubcategory.parentId)
+    : matchedCategory;
   const priceRange = {
     min: params?.min || '',
     max: params?.max || '',
   };
   const filters = {
-    category: params?.category || 'all',
+    category: matchedParent?.slug || (matchedCategory ? matchedCategory.slug : requestedCategory),
+    subcategory: matchedSubcategory?.slug || requestedSubcategory,
     brand: params?.brand || 'all',
     search: params?.search || params?.q || '',
     priceRange,
@@ -131,7 +147,7 @@ export default async function Shop({ searchParams }) {
   const [
     productData,
     brands,
-    categories,
+    priceBounds,
   ] = await Promise.all([
     getShopProducts({
       ...filters,
@@ -142,7 +158,7 @@ export default async function Shop({ searchParams }) {
     }),
 
     getPublicBrands(),
-    getPublicCategories(),
+    getPublicPriceBounds(matchedParent?.slug || matchedCategory?.slug || ''),
   ]);
 
 
@@ -155,6 +171,8 @@ export default async function Shop({ searchParams }) {
       initialFilters={filters}
       brands={brands}
       categories={categories}
+      priceBounds={priceBounds}
+      pageTitle="Buy Best Quality Products & Trends"
     />
   );
 }

@@ -51,7 +51,7 @@ export default function BrandRail({ brands = [] }) {
   useEffect(() => {
     function updatePerView() {
       if (window.innerWidth <= 640) {
-        setPerView(2);
+        setPerView(2.5);
       } else if (window.innerWidth <= 900) {
         setPerView(3);
       } else {
@@ -67,7 +67,7 @@ export default function BrandRail({ brands = [] }) {
     };
   }, []);
 
-  const maxIndex = Math.max(0, items.length - perView);
+  const maxIndex = Math.max(0, items.length - Math.ceil(perView));
 
   useEffect(() => {
     if (items.length <= perView || paused) return;

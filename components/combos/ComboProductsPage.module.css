@@ -160,3 +160,96 @@
   .trustSection { grid-template-columns: 1fr; }
 }
 
+.pageShell { width: min(1280px, calc(100% - 40px)); }
+.contentLayout { grid-template-columns: 240px minmax(0, 1fr); gap: 24px; }
+.productGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.productCard { display: flex; flex-direction: column; height: 100%; border-color: #e5ebe6; border-radius: 14px; }
+.imageWrap { height: 210px; padding: 12px; background: linear-gradient(180deg, #fbfcfa 0%, #fff 100%); }
+.imageWrap img { transition: transform .25s ease; }
+.productCard:hover .imageWrap img { transform: scale(1.035); }
+.wishlistButton { width: 38px; height: 38px; }
+.cardBody { display: flex; flex: 1; flex-direction: column; padding: 14px; }
+.productName { min-height: 38px; }
+.priceRow { flex-wrap: wrap; gap: 5px 8px; }
+.savings { margin-top: 4px; }
+.cardActions { margin-top: auto; padding-top: 12px; }
+.cartButton { min-height: 42px; }
+.cardReveal { opacity: 0; transform: translateY(16px); transition: opacity 420ms ease, transform 420ms cubic-bezier(.22, .61, .36, 1); }
+.cardVisible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 1080px) {
+  .contentLayout { grid-template-columns: 220px minmax(0, 1fr); gap: 20px; }
+  .productGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+}
+
+@media (max-width: 780px) {
+  .pageShell { width: min(100% - 28px, 620px); }
+  .contentLayout { display: block; }
+  .productGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .imageWrap { height: 190px; padding: 10px; }
+  .cardBody { padding: 12px; }
+  .mobileToolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
+  .mobileToolbar > button { justify-content: center; min-width: 0; padding-inline: 7px; white-space: nowrap; }
+  .mobileCount { color: #718078; font-size: 10px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .mobileSort { min-width: 0; width: 100%; min-height: 0; margin: 0; font-size: inherit; }
+  .mobileSort > span { display: none; }
+  .mobileSort :global(.shop-toolbar-sort) { width: 100%; min-width: 0; border-radius: 7px; }
+  .mobileSort :global(.shop-sort-trigger) { min-width: 0; min-height: 36px; gap: 4px; padding: 0 24px 0 7px; }
+  .mobileSort :global(.shop-sort-value) { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+  .mobileSort :global(.shop-sort-icon) { right: 6px; }
+  .desktopToolbar { display: none; }
+}
+
+@media (max-width: 430px) {
+  .heroHeader { min-height: 250px; margin-bottom: 18px; padding: 22px 16px 18px; }
+  .heroHeader {
+    background-image: linear-gradient(90deg, rgba(248, 238, 228, .99) 0%, rgba(248, 238, 228, .94) 68%, rgba(248, 238, 228, .24) 100%), url('/uploads/combo_hero_bg.webp');
+    background-position: center, 68% center;
+    background-size: cover, cover;
+  }
+  .heroHeader h1 { font-size: clamp(32px, 9vw, 38px); }
+  .heroHeader p { max-width: 260px; font-size: 12px; }
+  .heroButton { margin-top: 16px; padding: 10px 14px; }
+  .featureCards { display: none; }
+  .featureCard { gap: 4px; }
+  .featureCard > span { width: 28px; height: 28px; }
+  .featureCard > span svg { width: 16px; height: 16px; }
+  .featureCard strong { font-size: 9px; }
+  .featureCard small { font-size: 7px; }
+  .productGrid { gap: 10px; }
+  .imageWrap { height: 160px; padding: 6px; }
+  .cardBody { padding: 9px; }
+  .cardCategory { font-size: 10px; }
+  .productName { min-height: 34px; margin-top: 5px; font-size: 12px; line-height: 1.4; }
+  .itemCount { font-size: 10px; }
+  .rating { margin-top: 5px; font-size: 12px; }
+  .priceRow { margin-top: 7px; }
+  .priceRow strong { font-size: 15px; }
+  .priceRow del { font-size: 10px; }
+  .savings { font-size: 9px; }
+  .cardActions { padding-top: 8px; }
+  .cartButton { min-height: 38px; font-size: 11px; }
+  .cartButton svg { width: 14px; height: 14px; }
+}
+
+@media (max-width: 480px) {
+  .heroHeader { min-height: 250px; margin-bottom: 18px; }
+  .featureCards { display: none; }
+}
+
+@media (max-width: 360px) {
+  .pageShell { width: calc(100% - 24px); }
+  .productGrid { gap: 8px; }
+  .imageWrap { height: 145px; }
+  .cardBody { padding: 8px; }
+  .cartButton { min-height: 36px; gap: 5px; font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardReveal,
+  .cardVisible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

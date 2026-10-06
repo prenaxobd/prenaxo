@@ -1,4 +1,5 @@
 .auth-page { min-height: 100vh; padding: 28px; background: #f5f6f8; color: #172033; }
+.auth-session-check { display: grid; min-height: 70vh; place-items: center; margin: 0; color: #657080; font-size: 14px; font-weight: 600; }
 .auth-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(440px, 1fr); width: min(1180px, 100%); min-height: 730px; margin: 0 auto; overflow: hidden; border: 1px solid #e9e1dc; border-radius: 22px; background: #fff; box-shadow: 0 24px 70px rgba(28, 34, 43, .12); }
 .auth-promo { position: relative; min-height: 730px; overflow: hidden; background: #f8eee6; }
 .auth-promo-image, .auth-promo-overlay { position: absolute; inset: 0; }

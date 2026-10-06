@@ -17,34 +17,6 @@ import ProductCard from '@/components/ProductCard';
 
 
 /* =========================================================
-   PRICE RANGES
-========================================================= */
-
-const priceRanges = [
-  {
-    label: 'Any price',
-    min: '',
-    max: '',
-  },
-  {
-    label: 'Under ৳500',
-    min: '',
-    max: '500',
-  },
-  {
-    label: '৳500 - ৳1,000',
-    min: '500',
-    max: '1000',
-  },
-  {
-    label: 'Over ৳1,000',
-    min: '1000',
-    max: '',
-  },
-];
-
-
-/* =========================================================
    PRODUCTS PER PAGE
 ========================================================= */
 
@@ -90,16 +62,24 @@ export default function ShopBrowser({
   initialFilters = {},
   brands: availableBrands = [],
   categories: availableCategories = [],
+  priceBounds = { min: 0, max: 0 },
+  pageTitle = 'Shop Best Quality Products Online',
+  basePath = '/shop',
+  lockedCategory = null,
+  pageClassName = '',
 }) {
 
   const router = useRouter();
 
-  const [category, setCategory] = useState(initialFilters.category || 'all');
+  const [category, setCategory] = useState(lockedCategory || initialFilters.category || 'all');
+  const [subcategory, setSubcategory] = useState(initialFilters.subcategory || 'all');
+  const [search, setSearch] = useState(initialFilters.search || '');
 
   const [brand, setBrand] = useState(initialFilters.brand || 'all');
 
-  const [priceRange, setPriceRange] =
-    useState(initialFilters.priceRange || priceRanges[0]);
+  const [priceRange, setPriceRange] = useState(
+    initialFilters.priceRange || { min: '', max: '' }
+  );
 
   const [ratingFilter, setRatingFilter] =
     useState(initialFilters.ratingFilter || 0);
@@ -169,11 +149,13 @@ export default function ShopBrowser({
     }
 
     startTransition(() => setCurrentPage(1));
-  }, [availability, brand, category, priceRange, ratingFilter, sort]);
+  }, [availability, brand, category, priceRange, ratingFilter, sort, subcategory]);
 
   useEffect(() => {
     const query = new URLSearchParams();
-    if (category !== 'all') query.set('category', category);
+    if (category !== 'all' && category !== lockedCategory) query.set('category', category);
+    if (subcategory !== 'all') query.set('subcategory', subcategory);
+    if (search) query.set('search', search);
     if (brand !== 'all') query.set('brand', brand);
     if (priceRange.min) query.set('min', priceRange.min);
     if (priceRange.max) query.set('max', priceRange.max);
@@ -182,30 +164,33 @@ export default function ShopBrowser({
     if (sort !== 'newest') query.set('sort', sort);
     if (currentPage > 1) query.set('page', String(currentPage));
 
-    const nextUrl = query.toString() ? `/shop?${query}` : '/shop';
-    router.replace(nextUrl, { scroll: false });
-  }, [availability, brand, category, currentPage, priceRange, ratingFilter, router, sort]);
+    const nextUrl = query.toString() ? `${basePath}?${query}` : basePath;
+    const timeoutId = window.setTimeout(() => {
+      router.replace(nextUrl, { scroll: false });
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [availability, basePath, brand, category, currentPage, lockedCategory, priceRange, ratingFilter, router, search, sort, subcategory]);
 
 
   /* =======================================================
      CATEGORIES
   ======================================================= */
 
-  const categories = useMemo(() => {
-
-    const namesFromCategories = Array.isArray(availableCategories)
-      ? availableCategories
-          .map((item) => item?.name)
-          .filter(Boolean)
-      : [];
-
-    return Array.from(
-      new Set([
-        ...namesFromCategories,
-      ])
-    ).sort((a, b) => a.localeCompare(b));
-
-  }, [availableCategories]);
+  const categories = useMemo(
+    () => (Array.isArray(availableCategories) ? availableCategories : [])
+      .filter(item => item?.active !== false && !item?.parentId)
+    .filter(item => !lockedCategory || item.slug === lockedCategory)
+    .sort((first, second) => first.name.localeCompare(second.name)),
+    [availableCategories, lockedCategory]
+  );
+  const selectedParentCategory = categories.find(item => item.slug === category);
+  const subcategories = useMemo(
+    () => selectedParentCategory
+      ? availableCategories.filter(item => item.parentId === selectedParentCategory.id && item.active !== false)
+      : [],
+    [availableCategories, selectedParentCategory]
+  );
 
 
   /* =======================================================
@@ -296,17 +281,18 @@ export default function ShopBrowser({
 
   function clearFilters() {
 
-    setCategory('all');
+    setCategory(lockedCategory || 'all');
+    setSubcategory('all');
+    setSearch('');
 
     setBrand('all');
 
-    setPriceRange(
-      priceRanges[0]
-    );
+    setPriceRange({ min: '', max: '' });
 
     setRatingFilter(0);
 
     setAvailability('all');
+    setSort('newest');
 
     setCurrentPage(1);
 
@@ -329,7 +315,7 @@ export default function ShopBrowser({
     setCurrentPage(page);
     const query = new URLSearchParams(window.location.search);
     query.set('page', String(page));
-    router.push(`/shop?${query.toString()}`, { scroll: false });
+    router.push(`${basePath}?${query.toString()}`, { scroll: false });
 
     window.scrollTo({
       top: 0,
@@ -430,7 +416,7 @@ export default function ShopBrowser({
 
   return (
 
-    <main className="shop-page">
+    <main className={`shop-page ${pageClassName}`}>
 
       <div className="container shop-page-inner">
 
@@ -444,17 +430,26 @@ export default function ShopBrowser({
           aria-label="Breadcrumb"
         >
 
-          <span className="shop-breadcrumb-item">
+          <Link className="shop-breadcrumb-item" href="/">
             Home
-          </span>
+          </Link>
 
           <span className="shop-breadcrumb-separator">
             /
           </span>
 
-          <span className="shop-breadcrumb-current">
-            Shop All
-          </span>
+          {lockedCategory && (
+            <>
+              <Link className="shop-breadcrumb-item" href="/shop">Shop All</Link>
+              <span className="shop-breadcrumb-separator">/</span>
+              <span className="shop-breadcrumb-current">{pageTitle}</span>
+            </>
+          )}
+          {!lockedCategory && (
+            <Link className="shop-breadcrumb-current" href="/shop" aria-current="page">
+              Shop All
+            </Link>
+          )}
 
         </nav>
 
@@ -465,9 +460,7 @@ export default function ShopBrowser({
 
         <header className="shop-heading">
 
-          <h1>
-            Shop All
-          </h1>
+          <h1>{pageTitle}</h1>
 
           <span className="shop-result-pill">
 
@@ -593,11 +586,17 @@ export default function ShopBrowser({
           <FilterPanel
 
             categories={categories}
+            allCategories={availableCategories}
+            subcategories={subcategories}
+            priceBounds={priceBounds}
+            lockedCategory={lockedCategory}
 
             brands={brands}
 
             category={category}
             setCategory={setCategory}
+            subcategory={subcategory}
+            setSubcategory={setSubcategory}
 
             brand={brand}
             setBrand={setBrand}
@@ -926,11 +925,17 @@ export default function ShopBrowser({
 function FilterPanel({
 
   categories,
+  allCategories,
+  subcategories,
+  priceBounds,
+  lockedCategory,
 
   brands,
 
   category,
   setCategory,
+  subcategory,
+  setSubcategory,
 
   brand,
   setBrand,
@@ -954,6 +959,39 @@ function FilterPanel({
   close,
 
 }) {
+
+  const sliderMin = Number(priceBounds.min) || 0;
+  const sliderMax = Math.max(Number(priceBounds.max) || 0, sliderMin + 1);
+  const sliderValue = priceRange.max
+    ? Math.min(Math.max(Number(priceRange.max) - 1, sliderMin), sliderMax)
+    : sliderMax;
+  const selectedPriceCeiling = priceRange.max
+    ? Math.min(Number(priceRange.max) - 1, sliderMax)
+    : sliderMax;
+
+  const brandOptions = [
+    <FilterRadio
+      key="all-brands"
+      label="All brands"
+      checked={brand === 'all'}
+      onChange={() => setBrand('all')}
+    />,
+    ...brands.map(item => (
+      <FilterRadio
+        key={item.id}
+        label={item.name}
+        checked={brand === item.name}
+        onChange={() => setBrand(item.name)}
+      />
+    )),
+  ];
+
+  const categoryTree = categories.map(parent => ({
+    ...parent,
+    children: allCategories
+      .filter(item => item.parentId === parent.id && item.active !== false)
+      .sort((first, second) => first.name.localeCompare(second.name)),
+  }));
 
   return (
 
@@ -992,6 +1030,14 @@ function FilterPanel({
           </h2>
 
           <button
+            className="shop-filter-clear-header"
+            type="button"
+            onClick={clearFilters}
+          >
+            Clear all
+          </button>
+
+          <button
             className="shop-filter-close"
             type="button"
             aria-label="Close filters"
@@ -1007,36 +1053,40 @@ function FilterPanel({
             CATEGORY
         ================================================= */}
 
-        <FilterSection
-          title="Categories"
-        >
-
-          <FilterRadio
-            label="All categories"
-            checked={
-              category === 'all'
-            }
-            onChange={() =>
-              setCategory('all')
-            }
-          />
-
-          {categories.map(item => (
-
-            <FilterRadio
-              key={item}
-              label={item}
-              checked={
-                category === item
-              }
-              onChange={() =>
-                setCategory(item)
-              }
+        {lockedCategory ? (
+          subcategories.length > 0 && (
+            <FilterSection title="Categories">
+              <div className="shop-filter-scroll-list shop-filter-subcategories" role="group" aria-label="Filter by subcategory">
+                <FilterRadio
+                  label="All in this category"
+                  checked={subcategory === 'all'}
+                  onChange={() => setSubcategory('all')}
+                />
+                {subcategories.map(item => (
+                  <FilterRadio
+                    key={item.id}
+                    label={item.name}
+                    checked={subcategory === item.slug}
+                    onChange={() => setSubcategory(item.slug)}
+                  />
+                ))}
+              </div>
+            </FilterSection>
+          )
+        ) : (
+          <FilterSection title="Categories">
+            <CategoryFilter
+              categories={categoryTree}
+              category={category}
+              subcategory={subcategory}
+              onSelectCategory={value => {
+                setCategory(value);
+                setSubcategory('all');
+              }}
+              onSelectSubcategory={setSubcategory}
             />
-
-          ))}
-
-        </FilterSection>
+          </FilterSection>
+        )}
 
 
         {/* =================================================
@@ -1049,30 +1099,9 @@ function FilterPanel({
             title="Brand"
           >
 
-            <FilterRadio
-              label="All brands"
-              checked={
-                brand === 'all'
-              }
-              onChange={() =>
-                setBrand('all')
-              }
-            />
-
-            {brands.map(item => (
-
-              <FilterRadio
-                key={item.id}
-                label={item.name}
-                checked={
-                  brand === item.name
-                }
-                onChange={() =>
-                  setBrand(item.name)
-                }
-              />
-
-            ))}
+            <div className="shop-filter-scroll-list shop-filter-brands" role="group" aria-label="Filter by brand">
+              {brandOptions}
+            </div>
 
           </FilterSection>
 
@@ -1083,26 +1112,31 @@ function FilterPanel({
             PRICE
         ================================================= */}
 
-        <FilterSection
-          title="Price range"
-        >
-
-          {priceRanges.map(item => (
-
-            <FilterRadio
-              key={item.label}
-              label={item.label}
-              checked={
-                priceRange.label ===
-                item.label
-              }
-              onChange={() =>
-                setPriceRange(item)
-              }
+        <FilterSection title="Price range">
+          <div className="shop-price-range-control">
+            <input
+              className="shop-price-range-slider"
+              type="range"
+              min={sliderMin}
+              max={sliderMax}
+              step="1"
+              value={sliderValue}
+              aria-label="Maximum product price"
+              aria-valuetext={`Up to ৳${selectedPriceCeiling.toLocaleString('en-BD')}`}
+              onChange={event => {
+                const value = Number(event.target.value);
+                setPriceRange({
+                  min: '',
+                  max: value >= sliderMax ? '' : String(value + 1),
+                });
+              }}
             />
-
-          ))}
-
+            <div className="shop-price-range-values" aria-hidden="true">
+              <span>৳{sliderMin.toLocaleString('en-BD')}</span>
+              <span className="shop-price-range-current">Up to ৳{selectedPriceCeiling.toLocaleString('en-BD')}</span>
+              <span>৳{Number(priceBounds.max || 0).toLocaleString('en-BD')}</span>
+            </div>
+          </div>
         </FilterSection>
 
 
@@ -1227,17 +1261,6 @@ function FilterPanel({
           <div className="shop-filter-actions">
             <button
               type="button"
-              className="shop-filter-clear-btn"
-              onClick={() => {
-                clearFilters();
-                close();
-              }}
-            >
-              Clear All
-            </button>
-
-            <button
-              type="button"
               className="shop-filter-apply-btn"
               onClick={() => close()}
             >
@@ -1284,6 +1307,95 @@ function FilterSection({
 
 }
 
+function CategoryFilter({
+  categories,
+  category,
+  subcategory,
+  onSelectCategory,
+  onSelectSubcategory,
+}) {
+  const [openParentId, setOpenParentId] = useState(null);
+
+  function selectParent(item) {
+    onSelectCategory(item.slug);
+    if (item.children.length) setOpenParentId(item.id);
+    else setOpenParentId(null);
+  }
+
+  return (
+    <div className="shop-filter-scroll-list shop-filter-category-list" role="group" aria-label="Filter by category">
+        <button
+          type="button"
+          className={`shop-category-option ${category === 'all' ? 'is-selected' : ''}`}
+          aria-pressed={category === 'all'}
+          onClick={() => {
+            onSelectCategory('all');
+            setOpenParentId(null);
+          }}
+        >
+          <span>All categories</span>
+        </button>
+        {categories.map(item => {
+          const isSelected = category === item.slug;
+          const isOpen = openParentId === item.id;
+
+          return (
+            <div
+              key={item.id}
+              className="shop-category-option-group"
+              onMouseEnter={() => item.children.length && setOpenParentId(item.id)}
+              onMouseLeave={() => setOpenParentId(current => current === item.id ? null : current)}
+              onFocus={() => item.children.length && setOpenParentId(item.id)}
+            >
+              <button
+                type="button"
+                className={`shop-category-option ${isSelected ? 'is-selected' : ''} ${isOpen ? 'is-open' : ''}`}
+                aria-pressed={isSelected}
+                aria-haspopup={item.children.length ? 'true' : undefined}
+                aria-expanded={item.children.length ? isOpen : undefined}
+                onClick={() => selectParent(item)}
+              >
+                <span>{item.name}</span>
+                {item.children.length > 0 && <ChevronRight size={15} aria-hidden="true" />}
+              </button>
+              {isOpen && item.children.length > 0 && (
+                <div className="shop-category-submenu" aria-label={`${item.name} subcategories`}>
+                  <button
+                    type="button"
+                    className={`shop-category-suboption ${category === item.slug && subcategory === 'all' ? 'is-selected' : ''}`}
+                    aria-pressed={category === item.slug && subcategory === 'all'}
+                    onClick={() => {
+                      onSelectCategory(item.slug);
+                      onSelectSubcategory('all');
+                      setOpenParentId(null);
+                    }}
+                  >
+                    <span>All in {item.name}</span>
+                  </button>
+                  {item.children.map(child => (
+                    <button
+                      key={child.id}
+                      type="button"
+                      className={`shop-category-suboption ${category === item.slug && subcategory === child.slug ? 'is-selected' : ''}`}
+                      aria-pressed={category === item.slug && subcategory === child.slug}
+                      onClick={() => {
+                        onSelectCategory(item.slug);
+                        onSelectSubcategory(child.slug);
+                        setOpenParentId(null);
+                      }}
+                    >
+                      <span>{child.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+  );
+}
+
 
 /* =========================================================
    FILTER RADIO
@@ -1322,4 +1434,3 @@ function FilterRadio({
   );
 
 }
-

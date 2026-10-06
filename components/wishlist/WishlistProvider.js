@@ -53,6 +53,7 @@ export function WishlistProvider({ children }) {
       else next.delete(String(productId));
       return [...next];
     });
+    window.dispatchEvent(new Event('wishlist-updated'));
 
     return data;
   }

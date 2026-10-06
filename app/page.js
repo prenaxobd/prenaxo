@@ -6,6 +6,7 @@ import CategoryRail from '@/components/home/CategoryRail';
 import BrandRail from '@/components/home/BrandRail';
 import ProductRail from '@/components/home/ProductRail';
 import ReviewRail from '@/components/home/ReviewRail';
+import HomeScrollReveal from '@/components/home/HomeScrollReveal';
 
 import {
   SITE_NAME,
@@ -234,9 +235,13 @@ export default async function Home() {
             CATEGORY RAIL
             ===================================================== */}
 
-        <CategoryRail
-          categories={data.categories}
-        />
+        <HomeScrollReveal>
+          <div className="home-scroll-reveal">
+            <CategoryRail
+              categories={data.categories}
+            />
+          </div>
+        </HomeScrollReveal>
 
         {/* =====================================================
             PRODUCT SECTIONS
@@ -244,29 +249,36 @@ export default async function Home() {
 
         {configuredSections.map((section) => (
           <React.Fragment key={section.id}>
-            <ProductRail
-              title={section.title}
-              eyebrow={section.eyebrow}
-              products={productsFor(
-                section.type,
-                data,
-                section
-              )}
-              href={
-                section.href ||
-                (
-                  section.type === 'CATEGORY'
-                    ? `/category/${section.category?.slug || ''}`
-                    : '/shop'
-                )
-              }
-            />
+            <HomeScrollReveal>
+              <div className="home-scroll-reveal">
+                <ProductRail
+                  title={section.title}
+                  eyebrow={section.eyebrow}
+                  products={productsFor(
+                    section.type,
+                    data,
+                    section
+                  )}
+                  href={
+                    section.href ||
+                    (
+                      section.type === 'CATEGORY'
+                        ? `/category/${section.category?.slug || ''}`
+                        : '/shop'
+                    )
+                  }
+                />
+              </div>
+            </HomeScrollReveal>
 
             {section.type === 'DEALS' ? (
-              <BrandRail
-                key={`${section.id}-brands`}
-                brands={data.brands}
-              />
+              <HomeScrollReveal>
+                <div className="home-scroll-reveal">
+                  <BrandRail
+                    brands={data.brands}
+                  />
+                </div>
+              </HomeScrollReveal>
             ) : null}
           </React.Fragment>
         ))}
@@ -275,9 +287,13 @@ export default async function Home() {
             REVIEW RAIL
             ===================================================== */}
 
-        <ReviewRail
-          reviews={data.reviews}
-        />
+        <HomeScrollReveal>
+          <div className="home-scroll-reveal">
+            <ReviewRail
+              reviews={data.reviews}
+            />
+          </div>
+        </HomeScrollReveal>
 
       </main>
     </>
