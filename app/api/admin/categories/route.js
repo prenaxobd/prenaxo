@@ -115,15 +115,20 @@ export async function POST(request) {
 		await requirePermission('categories.create');
 		const parsed = schema.parse(await request.json());
 		const { attributeIds, ...data } = parsed;
-		const category = await prisma.$transaction(async tx => {
-			if (data.parentId) {
-				validateParent(await getCategoryHierarchy(tx), null, data.parentId);
-			}
-			const created = await tx.category.create({ data });
-			if (attributeIds.length) {
-				await tx.categoryAttribute.createMany({ data: attributeIds.map(attributeId => ({ categoryId: created.id, attributeId })) });
-			}
-			return tx.category.findUnique({ where: { id: created.id }, include });
+		if (data.parentId) {
+			const categories = await getCategoryHierarchy(prisma);
+			validateParent(categories, null, data.parentId);
+		}
+		const category = await prisma.category.create({
+			data: {
+				...data,
+				attributes: {
+					create: attributeIds.map(attributeId => ({
+						attribute: { connect: { id: attributeId } },
+					})),
+				},
+			},
+			include,
 		});
 		invalidatePublicCache('categories', 'products', 'homepage');
 		return Response.json(category, { status: 201 });
@@ -143,19 +148,29 @@ export async function PATCH(request) {
 		if (!existing) throw new Error('Category not found.');
 		if (data.active === false && existing.active) await requirePermission('categories.delete');
 		const category = await prisma.$transaction(async tx => {
+			const changesParent = Object.hasOwn(data, 'parentId');
 			const parentId = Object.hasOwn(data, 'parentId') ? data.parentId : existing.parentId;
 			const isArchiving = data.active === false && existing.active;
-			const categoryHierarchy = parentId || isArchiving ? await getCategoryHierarchy(tx) : null;
-			if (parentId) validateParent(categoryHierarchy, id, parentId);
+			const categoryHierarchy = (changesParent && parentId) || isArchiving ? await getCategoryHierarchy(tx) : null;
+			if (changesParent && parentId) validateParent(categoryHierarchy, id, parentId);
 			if (isArchiving) await validateCategoryArchive(tx, id, categoryHierarchy);
-			await tx.category.update({ where: { id }, data });
-			if (attributeIds) {
-				await tx.categoryAttribute.deleteMany({ where: { categoryId: id } });
-				if (attributeIds.length) {
-					await tx.categoryAttribute.createMany({ data: attributeIds.map(attributeId => ({ categoryId: id, attributeId })) });
-				}
-			}
-			return tx.category.findUnique({ where: { id }, include });
+			return tx.category.update({
+				where: { id },
+				data: {
+					...data,
+					...(attributeIds !== undefined
+						? {
+							attributes: {
+								deleteMany: {},
+								create: attributeIds.map(attributeId => ({
+									attribute: { connect: { id: attributeId } },
+								})),
+							},
+						}
+						: {}),
+				},
+				include,
+			});
 		});
 		if (existing.image && existing.image !== category.image) {
 			const publicId = publicIdFromCloudinaryUrl(existing.image);
