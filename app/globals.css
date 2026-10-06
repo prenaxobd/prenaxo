@@ -8878,12 +8878,18 @@ body.header-menu-open {
   box-shadow: 0 14px 30px rgba(214, 40, 40, 0.22);
   z-index: 80;
   transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.2s ease;
+  animation: helpCenterFabPulse 2.8s ease-in-out infinite;
 }
 
 .help-center-fab:hover {
   transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 18px 34px rgba(214, 40, 40, 0.28);
-  filter: brightness(0.98);
+  box-shadow: 0 16px 32px rgba(214, 40, 40, 0.24);
+  filter: brightness(1.04);
+  animation-play-state: paused;
+}
+
+.help-center-fab[aria-expanded="true"] {
+  animation: none;
 }
 
 .help-center-fab:focus-visible,
@@ -8898,6 +8904,23 @@ body.header-menu-open {
   height: 26px;
 }
 
+@keyframes helpCenterFabPulse {
+  0%, 100% {
+    box-shadow: 0 14px 30px rgba(214, 40, 40, 0.22), 0 0 0 0 rgba(214, 40, 40, 0.18);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 15px 31px rgba(214, 40, 40, 0.25), 0 0 0 7px rgba(214, 40, 40, 0.055);
+    filter: brightness(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .help-center-fab {
+    animation: none;
+  }
+}
+
 .help-center-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -8909,6 +8932,100 @@ body.header-menu-open {
   backdrop-filter: blur(1px);
   z-index: 20000;
   animation: helpCenterFade 0.2s ease;
+}
+
+.scroll-to-top-button {
+  position: fixed;
+  right: 100px;
+  bottom: 28px;
+  z-index: 80;
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  animation: scrollToTopEnter .2s ease-out both;
+  transition: transform .2s ease;
+}
+
+.scroll-to-top-button:hover {
+  transform: translateY(-3px);
+}
+
+.scroll-to-top-button:focus-visible {
+  outline: 3px solid rgba(214, 40, 40, .3);
+  outline-offset: 3px;
+}
+
+.scroll-to-top-progress {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+
+.scroll-to-top-track,
+.scroll-to-top-progress-value {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.scroll-to-top-track {
+  stroke: rgba(214, 40, 40, .3);
+}
+
+.scroll-to-top-progress-value {
+  stroke: var(--brand-primary);
+  stroke-dasharray: 144.51;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .12s linear;
+}
+
+.scroll-to-top-icon {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(214, 40, 40, .24);
+  transition: background .2s ease, box-shadow .2s ease;
+}
+
+.scroll-to-top-button:hover .scroll-to-top-icon {
+  background: var(--brand-primary);
+  box-shadow: 0 8px 22px rgba(214, 40, 40, .32);
+}
+
+@keyframes scrollToTopEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 600px) {
+  .scroll-to-top-button {
+    right: 16px;
+    bottom: 176px;
+    width: 54px;
+    height: 54px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-to-top-button,
+  .scroll-to-top-icon,
+  .scroll-to-top-progress-value {
+    animation: none;
+    transition: none;
+  }
 }
 
 .help-center-modal {

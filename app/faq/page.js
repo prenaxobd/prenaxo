@@ -1,2 +1,11 @@
-const faqs=[['Where do you deliver?','We deliver across Dhaka and Bangladesh. Delivery charges are calculated at checkout.'],['How long does delivery take?','Dhaka orders usually arrive within 1–2 working days. Outside Dhaka typically takes 2–4 working days.'],['Can I pay on delivery?','Yes. Cash on delivery is available, along with mobile banking and bank payment options.'],['How do I track my order?','Sign in and open Order history to see the current status of every order.']];
-export default function FAQ(){return <main className="container page-title"><div className="eyebrow" style={{color:'var(--coral)'}}>Need to know</div><h1>Frequently asked</h1><div style={{maxWidth:760}}>{faqs.map(([q,a])=><details key={q} style={{borderTop:'1px solid var(--line)',padding:'20px 0'}}><summary style={{fontWeight:700,cursor:'pointer'}}>{q}</summary><p className="muted">{a}</p></details>)}</div></main>}
+import FaqPage from '@/components/faq/FaqPage';
+
+export const metadata = {
+  title: 'Frequently Asked Questions | Prenaxo',
+  description:
+    'Find answers about placing orders, payments, delivery, tracking, returns and getting help with your Prenaxo order.',
+};
+
+export default function FAQ() {
+  return <FaqPage />;
+}

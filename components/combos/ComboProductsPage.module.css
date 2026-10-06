@@ -160,7 +160,7 @@
   .trustSection { grid-template-columns: 1fr; }
 }
 
-.pageShell { width: min(1280px, calc(100% - 40px)); }
+.pageShell { width: min(1400px, calc(100% - 48px)); }
 .contentLayout { grid-template-columns: 240px minmax(0, 1fr); gap: 24px; }
 .productGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .productCard { display: flex; flex-direction: column; height: 100%; border-color: #e5ebe6; border-radius: 14px; }

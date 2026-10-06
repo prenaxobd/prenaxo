@@ -70,6 +70,8 @@ export default function HelpCenterButton() {
         type="button"
         className="help-center-fab"
         aria-label="Open Prenaxo Help Center"
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
         title="Help Center"
         onClick={() => setIsOpen(true)}
       >
