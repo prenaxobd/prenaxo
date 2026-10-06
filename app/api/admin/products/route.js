@@ -636,28 +636,59 @@ export async function PATCH(request) {
         });
         const existingVariantsById = new Map(existingVariants.map((variant) => [variant.id, variant]));
         const submittedVariantIds = new Set();
+        const identityChangedVariantIds = new Set();
+        const attributeValuesChangedVariantIds = new Set();
+
+        for (const { id: variantId, attributeValueIds: variantValueIds = [], sku: submittedSku, ...variantData } of variants) {
+          if (!variantId) continue;
+          if (submittedVariantIds.has(variantId)) throw new Error('A product option was submitted more than once.');
+          submittedVariantIds.add(variantId);
+          const existingVariant = existingVariantsById.get(variantId);
+          if (!existingVariant) throw new Error('A product option does not belong to this product.');
+
+          const nextSku = submittedSku || existingVariant.sku;
+          const existingValueIds = existingVariant.attributeValues.map((item) => item.attributeValueId).sort();
+          const nextValueIds = [...variantValueIds].sort();
+          const attributeValuesChanged = existingValueIds.join('|') !== nextValueIds.join('|');
+          if (attributeValuesChanged) attributeValuesChangedVariantIds.add(variantId);
+          if (
+            nextSku !== existingVariant.sku
+            || (variantData.size || null) !== existingVariant.size
+            || (variantData.color || null) !== existingVariant.color
+            || (variantData.price == null ? null : Number(variantData.price)) !== (existingVariant.price == null ? null : Number(existingVariant.price))
+            || attributeValuesChanged
+          ) {
+            identityChangedVariantIds.add(variantId);
+          }
+        }
+
+        const removedVariants = existingVariants.filter((variant) => !submittedVariantIds.has(variant.id));
+        const protectedVariantIds = [
+          ...identityChangedVariantIds,
+          ...removedVariants.map((variant) => variant.id),
+        ];
+        const [orderItems, cartItems] = protectedVariantIds.length
+          ? await Promise.all([
+              tx.orderItem.groupBy({
+                by: ['variantId'],
+                where: { variantId: { in: protectedVariantIds } },
+              }),
+              tx.cartItem.groupBy({
+                by: ['variantId'],
+                where: { variantId: { in: protectedVariantIds } },
+              }),
+            ])
+          : [[], []];
+        const usedVariantIds = new Set([
+          ...orderItems.map((item) => item.variantId),
+          ...cartItems.map((item) => item.variantId),
+        ]);
 
         for (const { id: variantId, attributeValueIds: variantValueIds = [], sku: submittedSku, ...variantData } of variants) {
           if (variantId) {
-            if (submittedVariantIds.has(variantId)) throw new Error('A product option was submitted more than once.');
-            submittedVariantIds.add(variantId);
             const existingVariant = existingVariantsById.get(variantId);
-            if (!existingVariant) throw new Error('A product option does not belong to this product.');
-
             const nextSku = submittedSku || existingVariant.sku;
-            const existingValueIds = existingVariant.attributeValues.map((item) => item.attributeValueId).sort();
-            const nextValueIds = [...variantValueIds].sort();
-            const identityChanged = nextSku !== existingVariant.sku
-              || (variantData.size || null) !== existingVariant.size
-              || (variantData.color || null) !== existingVariant.color
-              || (variantData.price == null ? null : Number(variantData.price)) !== (existingVariant.price == null ? null : Number(existingVariant.price))
-              || existingValueIds.join('|') !== nextValueIds.join('|');
-            const [orderItemCount, cartItemCount] = await Promise.all([
-              tx.orderItem.count({ where: { variantId } }),
-              tx.cartItem.count({ where: { variantId } }),
-            ]);
-
-            if ((orderItemCount || cartItemCount) && identityChanged) {
+            if (identityChangedVariantIds.has(variantId) && usedVariantIds.has(variantId)) {
               throw new Error('This option is used by an order or cart. Its SKU, options and price cannot be changed; set stock to 0 to stop sales.');
             }
 
@@ -665,11 +696,13 @@ export async function PATCH(request) {
               where: { id: variantId },
               data: { ...variantData, sku: nextSku },
             });
-            await tx.productVariantAttributeValue.deleteMany({ where: { variantId } });
-            if (variantValueIds.length) {
-              await tx.productVariantAttributeValue.createMany({
-                data: variantValueIds.map((attributeValueId) => ({ variantId, attributeValueId })),
-              });
+            if (attributeValuesChangedVariantIds.has(variantId)) {
+              await tx.productVariantAttributeValue.deleteMany({ where: { variantId } });
+              if (variantValueIds.length) {
+                await tx.productVariantAttributeValue.createMany({
+                  data: variantValueIds.map((attributeValueId) => ({ variantId, attributeValueId })),
+                });
+              }
             }
           } else {
             const createdVariant = await tx.productVariant.create({
@@ -687,17 +720,13 @@ export async function PATCH(request) {
           }
         }
 
-        for (const variant of existingVariants) {
-          if (submittedVariantIds.has(variant.id)) continue;
-          const [orderItemCount, cartItemCount] = await Promise.all([
-            tx.orderItem.count({ where: { variantId: variant.id } }),
-            tx.cartItem.count({ where: { variantId: variant.id } }),
-          ]);
-          if (orderItemCount || cartItemCount) {
-            throw new Error('This option is used by an order or cart and cannot be removed. Set its stock to 0 to stop sales.');
-          }
-          await tx.productVariantAttributeValue.deleteMany({ where: { variantId: variant.id } });
-          await tx.productVariant.delete({ where: { id: variant.id } });
+        if (removedVariants.some((variant) => usedVariantIds.has(variant.id))) {
+          throw new Error('This option is used by an order or cart and cannot be removed. Set its stock to 0 to stop sales.');
+        }
+        if (removedVariants.length) {
+          const removedVariantIds = removedVariants.map((variant) => variant.id);
+          await tx.productVariantAttributeValue.deleteMany({ where: { variantId: { in: removedVariantIds } } });
+          await tx.productVariant.deleteMany({ where: { id: { in: removedVariantIds } } });
         }
       }
 
@@ -748,7 +777,7 @@ export async function PATCH(request) {
       return id;
     }, {
       maxWait: 10000,
-      timeout: 15000,
+      timeout: 30000,
     });
 
     const product = await prisma.product.findUnique({
