@@ -8994,14 +8994,14 @@ body.header-menu-open {
   height: 44px;
   place-items: center;
   border-radius: 50%;
-  background: var(--brand-primary);
-  color: #fff;
+  background: #fff;
+  color: var(--brand-primary);
   box-shadow: 0 6px 18px rgba(214, 40, 40, .24);
   transition: background .2s ease, box-shadow .2s ease;
 }
 
 .scroll-to-top-button:hover .scroll-to-top-icon {
-  background: var(--brand-primary);
+  background: #fff;
   box-shadow: 0 8px 22px rgba(214, 40, 40, .32);
 }
 
