@@ -80,7 +80,7 @@ export async function generateMetadata({
 
   const canonical = getCanonical(
     category.seo?.canonicalUrl,
-    `/category/${category.slug}`
+    `/category/${category.slug.trim()}`
   );
 
 
@@ -201,6 +201,9 @@ export default async function CategoryPage({
   const page = Math.min(currentPage, totalPages);
   const serializedProducts = category.products.map((product) => ({
     ...product,
+    category: product.category
+      ? { ...product.category, name: product.category.name.trim() }
+      : null,
     regularPrice: product.regularPrice?.toString() || null,
     salePrice: product.salePrice?.toString() || null,
     costPrice: product.costPrice?.toString() || null,
@@ -211,7 +214,7 @@ export default async function CategoryPage({
 
   const categoryUrl =
     absoluteUrl(
-      `/category/${category.slug}`
+      `/category/${category.slug.trim()}`
     );
 
 
@@ -219,11 +222,16 @@ export default async function CategoryPage({
     category.image
       ? absoluteUrl(category.image)
       : null;
-  const isFashionCategory = ['mans-clothing', 'womens-fashion'].includes(category.slug);
-  const fashionTitle = category.slug === 'mans-clothing' ? "Men's Fashion" : "Women's Fashion";
+  const normalizedCategorySlug = category.slug.trim();
+  const isShopBrowserCategory = ['mans-clothing', 'womens-fashion', 'lamp-light', 'watches', 'honey', 'honey-nuts'].includes(normalizedCategorySlug);
+  const shopPageTitle = category.slug === 'mans-clothing'
+    ? "Men's Fashion"
+    : category.slug === 'womens-fashion'
+      ? "Women's Fashion"
+      : category.name;
 
-  let fashionShopProps = null;
-  if (isFashionCategory) {
+  let categoryShopProps = null;
+  if (isShopBrowserCategory) {
     const filters = {
       category: category.slug,
       subcategory: subcategorySlug || 'all',
@@ -244,8 +252,13 @@ export default async function CategoryPage({
       getPublicPriceBounds(category.slug),
     ]);
 
-    fashionShopProps = {
-      products: productData.products,
+    categoryShopProps = {
+      products: productData.products.map(product => ({
+        ...product,
+        category: product.category
+          ? { ...product.category, name: product.category.name.trim() }
+          : null,
+      })),
       total: productData.total,
       totalPages: productData.totalPages,
       currentPage: productData.page,
@@ -260,12 +273,16 @@ export default async function CategoryPage({
         sort: filters.sort,
       },
       brands,
-      categories,
+      categories: categories.map(item => ({
+        ...item,
+        name: item.name.trim(),
+      })),
       priceBounds,
-      pageTitle: fashionTitle,
-      basePath: `/category/${category.slug}`,
+      pageTitle: shopPageTitle.trim(),
+      basePath: `/category/${normalizedCategorySlug}`,
       lockedCategory: category.slug,
-      pageClassName: styles.fashionShopPage,
+      pageClassName: styles.categoryShopPage,
+      contentId: 'category-products',
     };
   }
 
@@ -285,7 +302,7 @@ export default async function CategoryPage({
       `${categoryUrl}#collection`,
 
     name:
-      category.name,
+      category.name.trim(),
 
     url:
       categoryUrl,
@@ -387,8 +404,34 @@ export default async function CategoryPage({
       />
 
 
-      {fashionShopProps ? (
-        <ShopBrowser key={category.slug} {...fashionShopProps} />
+      {categoryShopProps ? (
+        <>
+          {['lamp-light', 'honey', 'honey-nuts'].includes(category.slug.trim()) && (
+            <section className={`${styles.hero} ${styles.categoryHeroBanner}`}>
+              {categoryHeroImage && (
+                <OptimizedImage
+                  src={categoryHeroImage}
+                  alt=""
+                  className={styles.heroImage}
+                  width={1600}
+                  height={650}
+                  sizes="100vw"
+                  loading="eager"
+                  fetchPriority="high"
+                />
+              )}
+              <div className={styles.heroContent}>
+                <span className={styles.eyebrow}>EXPLORE THE COLLECTION</span>
+                <h1>{category.name.trim()}{' '}<strong>Collection</strong></h1>
+                <p>{category.description || `Explore ${category.name} and all the products in its subcategories.`}</p>
+                <a className={styles.heroButton} href="#category-products">
+                  Explore the collection <ArrowRight size={16} />
+                </a>
+              </div>
+            </section>
+          )}
+          <ShopBrowser key={category.slug} {...categoryShopProps} />
+        </>
       ) : (
       <main className={styles.page}>
         <div className="container">

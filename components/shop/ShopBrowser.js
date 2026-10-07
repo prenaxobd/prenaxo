@@ -67,6 +67,7 @@ export default function ShopBrowser({
   basePath = '/shop',
   lockedCategory = null,
   pageClassName = '',
+  contentId,
 }) {
 
   const router = useRouter();
@@ -458,7 +459,7 @@ export default function ShopBrowser({
             HEADING
         ================================================= */}
 
-        <header className="shop-heading">
+        <header id={contentId} className="shop-heading">
 
           <h1>{pageTitle}</h1>
 
