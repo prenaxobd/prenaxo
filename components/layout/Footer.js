@@ -79,14 +79,6 @@ export default async function Footer() {
                 </a>
               </div>
 
-              <div className="footer-apps" aria-label="Download our apps">
-                <a href="https://www.apple.com/app-store/" target="_blank" rel="noreferrer" aria-label="Download on the App Store">
-                  <OptimizedImage src="/uploads/app-store.svg" alt="App Store" />
-                </a>
-                <a href="https://play.google.com/store" target="_blank" rel="noreferrer" aria-label="Get it on Google Play">
-                  <OptimizedImage src="/uploads/google-play.svg" alt="Google Play" />
-                </a>
-              </div>
             </div>
           </div>
 

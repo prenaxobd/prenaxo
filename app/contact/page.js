@@ -383,7 +383,7 @@ export default function Contact() {
                   </h3>
 
                   <p>
-                    Dhaka, Bangladesh
+                    Kaladaha, Fulbaria, Mymensingh 2216, Bangladesh
                   </p>
 
                 </div>
@@ -529,7 +529,7 @@ export default function Contact() {
 
               <iframe
                 title="Prenaxo Location"
-                src="https://www.google.com/maps?q=Dhaka,Bangladesh&output=embed"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d5319.870990483989!2d90.26849062735404!3d24.55213935268439!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x37563f986990eb97%3A0xb0b8c2fe778b872e!2z4Kaw4Ka-4Kau4Kao4KaX4KawIOCmleCnh-CmqOCnjeCmpuCnjeCmsOCngOCnnyDgppzgpr7gpq7gp4cg4Kau4Ka44Kac4Ka_4Kam!5e1!3m2!1sen!2sbd!4v1791371854791!5m2!1sen!2sbd"
                 loading="lazy"
               />
 
@@ -560,7 +560,7 @@ export default function Contact() {
 
 
               <a
-                href="https://maps.google.com/?q=Dhaka,Bangladesh"
+                href="https://maps.google.com/?q=24.55213935268439%2C90.26849062735404"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="visit-button"
