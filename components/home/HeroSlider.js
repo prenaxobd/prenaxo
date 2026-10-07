@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const AUTOPLAY_MS = 4500;
 const SWIPE_THRESHOLD = 50;
 
-function BannerImage({ banner, priority = false }) {
+function BannerImage({ banner, priority = false, sizes }) {
   const image = banner?.desktopImage || banner?.image;
 
   if (!image) return null;
@@ -17,10 +17,9 @@ function BannerImage({ banner, priority = false }) {
       src={image}
       alt=""
       className="home-hero-image"
-      sizes="100vw"
-      priority={priority}
-      loading={priority ? 'eager' : 'lazy'}
-      fetchPriority={priority ? 'high' : 'auto'}
+      sizes={sizes}
+      quality={65}
+      {...(priority ? { preload: true } : { loading: 'eager' })}
       draggable="false"
     />
   );
@@ -254,10 +253,13 @@ export default function HeroSlider({
                     index !== active
                   }
                 >
-                  <BannerImage
-                    banner={banner}
-                    priority={index === 0}
-                  />
+                  {index === active && (
+                    <BannerImage
+                      banner={banner}
+                      priority={index === 0}
+                      sizes="(max-width: 480px) calc(100vw - 30px), (max-width: 767px) calc(100vw - 32px), 69vw"
+                    />
+                  )}
                 </div>
               );
             })}

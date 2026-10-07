@@ -299,6 +299,16 @@
   border-radius: 50%;
 }
 
+.single-product-page .gallery-wishlist.is-saved {
+  border-color: var(--product-red);
+  color: var(--product-red);
+}
+
+.single-product-page .gallery-wishlist:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .single-product-page .gallery-share {
   top: 62px;
   right: 15px;

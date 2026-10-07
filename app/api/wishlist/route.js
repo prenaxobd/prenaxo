@@ -36,21 +36,20 @@ export async function POST(request) {
 
   try {
     const { productId } = wishlistItemSchema.parse(await request.json());
-    const product = await prisma.product.findFirst({
-      where: { id: productId, active: true },
-      select: { id: true },
-    });
+    const [product, wishlist] = await Promise.all([
+      prisma.product.findFirst({
+        where: { id: productId, active: true },
+        select: { id: true },
+      }),
+      prisma.wishlist.upsert({
+        where: { userId: user.id },
+        create: { userId: user.id },
+        update: {},
+        select: { id: true },
+      }),
+    ]);
 
-    if (!product) {
-      return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
-    }
-
-    const wishlist = await prisma.wishlist.upsert({
-      where: { userId: user.id },
-      create: { userId: user.id },
-      update: {},
-      select: { id: true },
-    });
+    if (!product) return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
     const existingItem = await prisma.wishlistItem.findUnique({
       where: {
         wishlistId_productId: {

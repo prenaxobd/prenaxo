@@ -114,6 +114,8 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
 
   const [adding, setAdding] =
     useState(false);
+  const [savingWishlist, setSavingWishlist] =
+    useState(false);
 
 
   /*
@@ -264,30 +266,25 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
     event.stopPropagation();
 
 
-    if (wishlistLoading) {
+    if (wishlistLoading || savingWishlist) {
       return;
     }
 
-
     setMessage('');
-
+    setSavingWishlist(true);
 
     try {
-
       await wishlistStore.toggle(product.id);
-
     } catch (error) {
-
       console.error(
         'Wishlist error:',
         error
       );
-
-
       setMessage(
-        'Something went wrong'
+        error.message || 'Unable to update wishlist.'
       );
-
+    } finally {
+      setSavingWishlist(false);
     }
 
   }
@@ -357,7 +354,7 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
             saved ? 'saved' : ''
           }`}
           onClick={wishlist}
-          disabled={wishlistLoading}
+          disabled={wishlistLoading || savingWishlist}
           aria-label={
             saved
               ? 'Remove from wishlist'
@@ -607,4 +604,3 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
     </article>
   );
 }
-

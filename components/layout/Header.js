@@ -674,6 +674,9 @@ export default function Header() {
             <OptimizedImage
               src="/uploads/prenaxo-logo.png"
               alt="Prenaxo"
+              width={320}
+              height={79}
+              sizes="150px"
             />
           </Link>
 
@@ -1063,6 +1066,9 @@ export default function Header() {
             <OptimizedImage
               src="/uploads/prenaxo-logo.png"
               alt="Prenaxo"
+              width={320}
+              height={79}
+              sizes="150px"
             />
           </Link>
 

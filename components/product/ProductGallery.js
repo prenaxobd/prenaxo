@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { useState } from 'react';
+import { useWishlist } from '@/components/wishlist/WishlistProvider';
 import { useProductOptionSelection } from '@/components/product/ProductOptionContext';
 import { getColorOptionImage } from '@/components/product/product-option-images';
 
@@ -26,6 +27,10 @@ export default function ProductGallery({
 }) {
   const productImages = product.images || [];
   const optionSelection = useProductOptionSelection();
+  const wishlist = useWishlist();
+  const saved = wishlist?.isSaved(product.id) || false;
+  const [wishlistBusy, setWishlistBusy] = useState(false);
+  const [wishlistMessage, setWishlistMessage] = useState('');
   const selectedAttributeValueIds = optionSelection?.selectedAttributeValueIds || [];
   const attributeValues = product.attributeValues || [];
   const colorValues = attributeValues
@@ -95,6 +100,20 @@ export default function ProductGallery({
         ? 0
         : value + 1
     );
+  }
+
+  async function toggleWishlist() {
+    if (!wishlist?.ready || wishlistBusy) return;
+    setWishlistBusy(true);
+    setWishlistMessage('');
+    try {
+      const data = await wishlist.toggle(product.id);
+      setWishlistMessage(data.saved ? 'Saved to wishlist' : 'Removed from wishlist');
+    } catch (error) {
+      setWishlistMessage(error.message || 'Unable to update wishlist.');
+    } finally {
+      setWishlistBusy(false);
+    }
   }
 
   function productUrl() {
@@ -170,10 +189,14 @@ export default function ProductGallery({
 
           <button
             type="button"
-            className="gallery-wishlist"
-            aria-label="Add to wishlist"
+            className={`gallery-wishlist ${saved ? 'is-saved' : ''}`}
+            aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+            aria-pressed={saved}
+            title={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+            disabled={!wishlist?.ready || wishlistBusy}
+            onClick={() => void toggleWishlist()}
           >
-            <Heart size={20} />
+            <Heart size={20} fill={saved ? 'currentColor' : 'none'} />
           </button>
 
           <button
@@ -219,6 +242,10 @@ export default function ProductGallery({
           )}
 
         </div>
+
+        {wishlistMessage && (
+          <p className="product-action-message" role="status">{wishlistMessage}</p>
+        )}
 
         {shareOpen && (
           <div className="product-share-popup" role="dialog" aria-label="Share product">

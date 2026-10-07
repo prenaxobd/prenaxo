@@ -10,7 +10,7 @@ export function WishlistProvider({ children }) {
 
   async function refresh() {
     try {
-      const response = await fetch('/api/wishlist');
+      const response = await fetch('/api/wishlist', { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       setProductIds(
@@ -36,30 +36,50 @@ export function WishlistProvider({ children }) {
   }, []);
 
   async function toggle(productId) {
-    const response = await fetch('/api/wishlist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId }),
-    });
-    const data = await response.json();
+    const id = String(productId);
+    const wasSaved = productIds.includes(id);
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Please sign in');
+    setProductIds((current) => (
+      wasSaved
+        ? current.filter((savedId) => savedId !== id)
+        : [...current, id]
+    ));
+
+    try {
+      const response = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: id }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to update your wishlist.');
+      }
+
+      setProductIds((current) => {
+        const next = new Set(current);
+        if (data.saved) next.add(id);
+        else next.delete(id);
+        return [...next];
+      });
+      window.dispatchEvent(new Event('wishlist-updated'));
+
+      return data;
+    } catch (error) {
+      setProductIds((current) => {
+        const next = new Set(current);
+        if (wasSaved) next.add(id);
+        else next.delete(id);
+        return [...next];
+      });
+      throw error;
     }
-
-    setProductIds((current) => {
-      const next = new Set(current);
-      if (data.saved) next.add(String(productId));
-      else next.delete(String(productId));
-      return [...next];
-    });
-    window.dispatchEvent(new Event('wishlist-updated'));
-
-    return data;
   }
 
   const value = {
     ready,
+    productIds,
     count: productIds.length,
     isSaved: (productId) => productIds.includes(String(productId)),
     toggle,

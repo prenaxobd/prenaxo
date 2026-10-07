@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OptimizedImage from '@/components/OptimizedImage';
 import { useCart } from '@/components/cart/CartProvider';
+import { useWishlist } from '@/components/wishlist/WishlistProvider';
 import { useProductOptionSelection } from '@/components/product/ProductOptionContext';
 import { getColorOptionImage } from '@/components/product/product-option-images';
 
@@ -78,6 +79,7 @@ export default function ProductActions({
 }) {
   const router = useRouter();
   const cart = useCart();
+  const wishlistStore = useWishlist();
   const optionSelection = useProductOptionSelection();
   const selectedAttributeValueIds = optionSelection
     ? optionSelection.selectedAttributeValueIds
@@ -92,6 +94,8 @@ export default function ProductActions({
   const [removedCombinationKeys, setRemovedCombinationKeys] = useState(() => new Set());
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState('');
+  const [wishlistBusy, setWishlistBusy] = useState(false);
+  const saved = wishlistStore?.isSaved(cartProduct.id) || false;
 
   const attributeGroups = useMemo(() => (
     (cartProduct.category?.attributes || [])
@@ -247,20 +251,17 @@ export default function ProductActions({
           stock: Number(cartProduct.stock || 0),
         }];
 
-    let addedQuantity = 0;
+    const addedQuantity = entries.reduce((total, entry) => total + entry.quantity, 0);
+    const result = await cart.addMany(
+      entries.map((entry) => ({
+        product: createCartProduct(entry),
+        quantity: entry.quantity,
+      }))
+    );
 
-    for (const entry of entries) {
-      const result = await cart.add(createCartProduct(entry), entry.quantity);
-      if (!result.ok) {
-        setMessage(
-          addedQuantity
-            ? `${addedQuantity} item${addedQuantity === 1 ? '' : 's'} added. ${result.error || 'Unable to add the remaining options.'}`
-            : result.error || 'Unable to add item.'
-        );
-        return false;
-      }
-
-      addedQuantity += entry.quantity;
+    if (!result.ok) {
+      setMessage(result.error || 'Unable to add item.');
+      return false;
     }
 
     setMessage(`${addedQuantity} item${addedQuantity === 1 ? '' : 's'} added to cart.`);
@@ -272,20 +273,15 @@ export default function ProductActions({
   }
 
   async function wishlist() {
+    if (!wishlistStore?.ready || wishlistBusy) return;
+    setWishlistBusy(true);
     try {
-      const response = await fetch('/api/wishlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: cartProduct.id }),
-      });
-      const data = await response.json();
-      setMessage(
-        response.ok
-          ? data.saved ? 'Saved to wishlist' : 'Removed from wishlist'
-          : data.error || 'Please sign in'
-      );
-    } catch {
-      setMessage('Unable to update wishlist.');
+      const data = await wishlistStore.toggle(cartProduct.id);
+      setMessage(data.saved ? 'Saved to wishlist' : 'Removed from wishlist');
+    } catch (error) {
+      setMessage(error.message || 'Unable to update wishlist.');
+    } finally {
+      setWishlistBusy(false);
     }
   }
 
@@ -434,8 +430,11 @@ export default function ProductActions({
             type="button"
             className="btn product-icon-btn"
             onClick={() => void wishlist()}
-            aria-label="Add to wishlist"
-          ><Heart size={18}/></button>
+            disabled={!wishlistStore?.ready || wishlistBusy}
+            aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+            aria-pressed={saved}
+            title={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+          ><Heart size={18} fill={saved ? 'currentColor' : 'none'}/></button>
         </div>
       </div>
 

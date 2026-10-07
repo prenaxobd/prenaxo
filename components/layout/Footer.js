@@ -43,8 +43,9 @@ export default async function Footer() {
               <OptimizedImage 
                 src={logoUrl} 
                 alt={siteName}
-                width="160"
-                height="60"
+                width={320}
+                height={79}
+                sizes="160px"
               />
             </div>
             <p className="footer-tagline">

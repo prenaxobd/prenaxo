@@ -37,6 +37,55 @@ function mergeCartItems(localItems = [], serverItems = []) {
   return merged;
 }
 
+function addCartItems(items, additions) {
+  const nextItems = [...items];
+
+  for (const { product, quantity } of additions) {
+    const payload = {
+      productId: String(product.id),
+      variantId: product.variantId || null,
+      attributeValueIds: product.attributeValueIds || [],
+    };
+    const index = nextItems.findIndex((item) => matchesCartItem(item, payload));
+
+    if (index >= 0) {
+      nextItems[index] = { ...nextItems[index], quantity: nextItems[index].quantity + quantity };
+    } else {
+      nextItems.push({
+        id: `guest-${payload.productId}-${payload.variantId || 'base'}-${attributeSelectionKey(payload.attributeValueIds)}`,
+        ...payload,
+        quantity,
+        product,
+      });
+    }
+  }
+
+  return nextItems;
+}
+
+function removeCartItems(items, additions) {
+  let nextItems = [...items];
+
+  for (const { product, quantity } of additions) {
+    const payload = {
+      productId: String(product.id),
+      variantId: product.variantId || null,
+      attributeValueIds: product.attributeValueIds || [],
+    };
+    const index = nextItems.findIndex((item) => matchesCartItem(item, payload));
+    if (index < 0) continue;
+
+    const remainingQuantity = nextItems[index].quantity - quantity;
+    nextItems = remainingQuantity > 0
+      ? nextItems.map((item, itemIndex) => (
+        itemIndex === index ? { ...item, quantity: remainingQuantity } : item
+      ))
+      : nextItems.filter((_, itemIndex) => itemIndex !== index);
+  }
+
+  return nextItems;
+}
+
 export function CartProvider({ children }) {
   const [cart, setCart] = useState({ items: [] });
   const [open, setOpen] = useState(false);
@@ -44,33 +93,42 @@ export function CartProvider({ children }) {
   const updateQueues = useRef(new Map());
   const updateVersions = useRef(new Map());
   const confirmedItems = useRef(new Map());
-  useEffect(() => { const stored = localCart(); startTransition(() => { setCart(stored); }); fetch('/api/cart').then(async response => { if (!response.ok) return; const serverCart = await response.json(); const serverItems = serverCart?.items || [];
-      if (stored.items.length) {
-        try {
-          await mergeGuestCart(stored.items);
-        } catch {
-          startTransition(() => setCart(stored));
-          return;
+  useEffect(() => {
+    const stored = localCart();
+    startTransition(() => setCart(stored));
+
+    fetch('/api/cart')
+      .then(async (response) => {
+        if (!response.ok) return;
+
+        let serverCart = await response.json();
+        const latestLocal = localCart();
+
+        if (latestLocal.items.length) {
+          try {
+            await mergeGuestCart(latestLocal.items);
+            const refreshed = await fetch('/api/cart');
+            if (!refreshed.ok) throw new Error('Unable to refresh the merged cart.');
+            serverCart = await refreshed.json();
+            localStorage.removeItem('khatibazar-cart');
+          } catch {
+            startTransition(() => setCart((current) => ({
+              ...current,
+              items: mergeCartItems(localCart().items, current.items),
+            })));
+            return;
+          }
         }
 
-        const refreshed = await fetch('/api/cart');
-
-        if (!refreshed.ok) {
-          startTransition(() => setCart(stored));
-          return;
-        }
-
-        const mergedCart = await refreshed.json();
-        startTransition(() => setCart({ ...mergedCart, items: mergeCartItems(stored.items, mergedCart.items || []) }));
-        localStorage.removeItem('khatibazar-cart');
-        return;
-      }
-
-      startTransition(() => setCart({ ...(serverCart || { items: [] }), items: mergeCartItems(stored.items, serverItems) }));
-      if ((serverCart?.items || []).length > 0 || stored.items.length) {
-        localStorage.removeItem('khatibazar-cart');
-      }
-    }).catch(() => {}).finally(() => setReady(true)); }, []);
+        startTransition(() => setCart((current) => ({
+          ...serverCart,
+          items: mergeCartItems(current.items, serverCart.items || []),
+        })));
+        if ((serverCart?.items || []).length) localStorage.removeItem('khatibazar-cart');
+      })
+      .catch(() => {})
+      .finally(() => setReady(true));
+  }, []);
   useEffect(() => { if (ready && !cart.id) saveLocal(cart); }, [cart, ready]);
   useEffect(() => { const close = event => event.key === 'Escape' && setOpen(false); window.addEventListener('keydown', close); return () => window.removeEventListener('keydown', close); }, []);
   async function sync(action, payload) {
@@ -128,7 +186,53 @@ export function CartProvider({ children }) {
       throw new Error(result.error || 'কার্ট আপডেট করা যায়নি।');
     }
   }
-  async function add(product, quantity = 1) { try { await sync('add', { productId: product.id, variantId: product.variantId || null, attributeValueIds: product.attributeValueIds || [], quantity, product }); setOpen(true); return { ok: true }; } catch (error) { return { ok: false, error: error.message }; } }
+  async function addMany(items) {
+    const additions = items
+      .filter(({ product, quantity }) => product?.id && Number.isFinite(Number(quantity)) && Number(quantity) > 0)
+      .map(({ product, quantity }) => ({ product, quantity: Number(quantity) }));
+
+    if (!additions.length) return { ok: false, error: 'Please select an available product.' };
+
+    setOpen(true);
+    setCart((currentCart) => {
+      const nextCart = { ...currentCart, items: addCartItems(currentCart.items, additions) };
+      if (!currentCart.id) saveLocal(nextCart);
+      return nextCart;
+    });
+
+    if (!cart.id) return { ok: true };
+
+    try {
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: additions.map(({ product, quantity }) => ({
+            productId: product.id,
+            variantId: product.variantId || null,
+            attributeValueIds: product.attributeValueIds || [],
+            quantity,
+          })),
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || 'কার্ট আপডেট করা যায়নি।');
+
+      setCart((currentCart) => ({ ...currentCart, id: data.id || currentCart.id }));
+      return { ok: true };
+    } catch (error) {
+      setCart((currentCart) => ({
+        ...currentCart,
+        items: removeCartItems(currentCart.items, additions),
+      }));
+      return { ok: false, error: error.message || 'কার্ট আপডেট করা যায়নি।' };
+    }
+  }
+
+  async function add(product, quantity = 1) {
+    return addMany([{ product, quantity }]);
+  }
   async function update(productId, quantity, variantId = null, attributeValueIds = []) {
     const payload = { productId, variantId, attributeValueIds, quantity };
 
@@ -185,7 +289,7 @@ export function CartProvider({ children }) {
   const items = cart.items || [];
   const count = items.reduce((total, item) => total + item.quantity, 0);
   const subtotal = items.reduce((total, item) => total + Number(item.variant?.price ?? item.product?.salePrice ?? item.product?.regularPrice ?? 0) * item.quantity, 0);
-  return <CartContext.Provider value={{ items, count, subtotal, add, update, remove, clearCart, ready, isOpen: open, open: () => setOpen(true) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
+  return <CartContext.Provider value={{ items, count, subtotal, add, addMany, update, remove, clearCart, ready, isOpen: open, open: () => setOpen(true) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
 }
 
 export function useCart() { return useContext(CartContext); }

@@ -6,98 +6,42 @@ import { ArrowLeft, Heart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import ProductCard from '@/components/ProductCard';
+import { useWishlist } from '@/components/wishlist/WishlistProvider';
 
 export default function Wishlist() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  async function loadWishlist() {
-    try {
-      const response = await fetch('/api/wishlist', {
-        cache: 'no-store',
-      });
-
-      const data = await response.json();
-
-      const wishlistItems = Array.isArray(data?.items)
-        ? data.items
-        : [];
-
-      const productIds = wishlistItems
-        .map((item) => item.productId)
-        .filter(Boolean);
-
-      if (productIds.length === 0) {
-        setProducts([]);
-        return;
-      }
-
-      /*
-       * Load all products.
-       *
-       * This uses your products API and then keeps
-       * only the products that exist in wishlist.
-       */
-
-      const productResponse = await fetch(
-        '/api/products',
-        {
-          cache: 'no-store',
-        }
-      );
-
-      if (!productResponse.ok) {
-        setProducts([]);
-        return;
-      }
-
-      const productData = await productResponse.json();
-
-      const allProducts = Array.isArray(productData)
-        ? productData
-        : productData.products || productData.items || [];
-
-      /*
-       * Match wishlist product IDs with full product objects.
-       */
-
-      const wishlistProducts = productIds
-        .map((id) =>
-          allProducts.find(
-            (product) =>
-              String(product.id) === String(id)
-          )
-        )
-        .filter(Boolean);
-
-      setProducts(wishlistProducts);
-
-    } catch (error) {
-      console.error(
-        'Wishlist loading error:',
-        error
-      );
-
-      setProducts([]);
-
-    } finally {
-      setLoading(false);
-    }
-  }
+  const wishlist = useWishlist();
+  const [allProducts, setAllProducts] = useState([]);
+  const [productsLoaded, setProductsLoaded] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    queueMicrotask(loadWishlist);
+    if (!wishlist?.ready || !wishlist.productIds.length || productsLoaded) return undefined;
 
-    function handleWishlistUpdated() {
-      loadWishlist();
-    }
-
-    window.addEventListener('wishlist-updated', handleWishlistUpdated);
+    let active = true;
+    fetch('/api/products', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Unable to load saved products.');
+        const data = await response.json();
+        const products = Array.isArray(data) ? data : data.products || data.items || [];
+        if (active) setAllProducts(products);
+      })
+      .catch((loadError) => {
+        console.error('Wishlist products loading error:', loadError);
+        if (active) setError(loadError.message || 'Unable to load saved products.');
+      })
+      .finally(() => {
+        if (active) setProductsLoaded(true);
+      });
 
     return () => {
-      window.removeEventListener('wishlist-updated', handleWishlistUpdated);
+      active = false;
     };
-  }, []);
+  }, [wishlist?.ready, wishlist?.productIds.length, productsLoaded]);
+
+  const products = wishlist?.productIds
+    .map((id) => allProducts.find((product) => String(product.id) === id))
+    .filter(Boolean) || [];
+  const loading = !wishlist?.ready || (wishlist.productIds.length > 0 && !productsLoaded);
 
 
   if (loading) {
@@ -177,13 +121,12 @@ export default function Wishlist() {
 
           <Heart size={42} />
 
-          <h2>
-            Nothing saved yet
-          </h2>
+          <h2>{error || 'Nothing saved yet'}</h2>
 
           <p className="muted">
-            Keep the things you love close by
-            tapping the heart.
+            {error
+              ? 'Please refresh the page and try again.'
+              : 'Keep the things you love close by tapping the heart.'}
           </p>
 
           <Link
@@ -236,4 +179,3 @@ export default function Wishlist() {
     </main>
   );
 }
-

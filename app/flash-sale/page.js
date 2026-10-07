@@ -1,3 +1,4 @@
+import '@/components/flash-sale/FlashSalePage.css';
 import { getProducts } from '@/lib/products';
 import FlashSalePage from '@/components/flash-sale/FlashSalePage';
 

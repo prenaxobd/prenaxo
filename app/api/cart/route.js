@@ -74,11 +74,25 @@ export async function POST(request) {
       return NextResponse.json({ items: [] }, { status: 200 });
     }
 
-    const cart = await prisma.cart.upsert({
-      where: { userId: user.id },
-      create: { userId: user.id },
-      update: {},
-    });
+    const productIds = [...new Set(
+      incomingItems
+        .filter((item) => item?.productId)
+        .map((item) => String(item.productId))
+    )];
+    const [cart, products] = await Promise.all([
+      prisma.cart.upsert({
+        where: { userId: user.id },
+        create: { userId: user.id },
+        update: {},
+      }),
+      productIds.length
+        ? prisma.product.findMany({
+            where: { id: { in: productIds } },
+            select: { id: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    const existingProductIds = new Set(products.map((product) => product.id));
 
     await prisma.$transaction(async (tx) => {
       for (const item of incomingItems) {
@@ -89,31 +103,25 @@ export async function POST(request) {
         const quantity = Number(item.quantity || 1);
 
         if (!Number.isFinite(quantity) || quantity <= 0) continue;
-
-        const product = await tx.product.findUnique({ where: { id: productId } });
-        if (!product) continue;
+        if (!existingProductIds.has(productId)) continue;
 
         const attributeValueIds = Array.isArray(item.attributeValueIds) ? item.attributeValueIds : [];
         const attributeSelectionKey = normalizeAttributeSelectionKey(attributeValueIds);
 
-        const existingItem = await tx.cartItem.findFirst({
+        const existingItem = await tx.cartItem.updateMany({
           where: {
             cartId: cart.id,
             productId,
             variantId,
             attributeSelectionKey,
           },
+          data: {
+            quantity: { increment: quantity },
+            attributeValueIds,
+          },
         });
 
-        if (existingItem) {
-          await tx.cartItem.update({
-            where: { id: existingItem.id },
-            data: {
-              quantity: { increment: quantity },
-              attributeValueIds,
-            },
-          });
-        } else {
+        if (existingItem.count === 0) {
           await tx.cartItem.create({
             data: {
               cartId: cart.id,
@@ -128,15 +136,7 @@ export async function POST(request) {
       }
     });
 
-    const refreshedCart = await prisma.cart.findUnique({
-      where: { userId: user.id },
-      include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' } }, attributeValues: { include: { attributeValue: { include: { attribute: true } } } } } }, variant: true } } },
-    });
-
-    return NextResponse.json({
-      id: refreshedCart?.id || cart.id,
-      items: serializeCart(refreshedCart?.items || []),
-    }, { status: 200 });
+    return NextResponse.json({ id: cart.id }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: error.message || 'Unable to update cart.' }, { status: 400 });
   }
