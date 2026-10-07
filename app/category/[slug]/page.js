@@ -442,7 +442,13 @@ export default async function CategoryPage({
               </aside>
             )}
 
-            <div className={styles.products}>
+            <div
+              className={
+                category.slug === 'lamp-light'
+                  ? `${styles.products} ${styles.lampLightProducts}`
+                  : styles.products
+              }
+            >
               {serializedProducts.length > 0 ? (
                 <div className="shop-grid">
                   {serializedProducts.map((product) => <ProductCard key={product.id} product={product} />)}
