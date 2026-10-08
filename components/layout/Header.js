@@ -671,13 +671,19 @@ export default function Header() {
             href="/"
             aria-label="Prenaxo home"
           >
-            <OptimizedImage
-              src="/uploads/prenaxo-logo.png"
-              alt="Prenaxo"
-              width={320}
-              height={79}
-              sizes="150px"
-            />
+            <picture>
+              <source
+                media="(max-width: 767px)"
+                srcSet="https://res.cloudinary.com/ethp0qrs/image/upload/v1791426133/prenaxo-logo-mobile-logo.png"
+              />
+              <OptimizedImage
+                src="/uploads/prenaxo-logo.png"
+                alt="Prenaxo"
+                width={320}
+                height={79}
+                sizes="150px"
+              />
+            </picture>
           </Link>
 
           {/* DESKTOP SEARCH */}
