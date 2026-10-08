@@ -291,7 +291,7 @@ export default function HeroSlider({
                 }}
                 aria-label="Previous banner"
               >
-                <ChevronLeft size={21} strokeWidth={2.2} />
+                <ChevronLeft size={28} strokeWidth={2.8} />
               </button>
 
               <button
@@ -307,7 +307,7 @@ export default function HeroSlider({
                 }}
                 aria-label="Next banner"
               >
-                <ChevronRight size={21} strokeWidth={2.2} />
+                <ChevronRight size={28} strokeWidth={2.8} />
               </button>
 
               {/* Dots */}

@@ -116,7 +116,10 @@ export default function ProductRail({
 
           </div>
 
-          <Link href={href}>
+          <Link
+            href={href}
+            aria-label={href === '/shop' ? undefined : `View all ${title}`}
+          >
             View all
             <ArrowRight size={16} />
           </Link>

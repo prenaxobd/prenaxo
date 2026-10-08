@@ -679,7 +679,7 @@ export default function Header() {
               />
               <OptimizedImage
                 src="/uploads/prenaxo-logo.png"
-                alt="Prenaxo"
+                alt=""
                 width={320}
                 height={79}
                 sizes="(max-width: 767px) 150px, 180px"
@@ -956,7 +956,9 @@ export default function Header() {
         }`}
         role="dialog"
         aria-label="Mobile search"
+        aria-modal={searchOpen || undefined}
         aria-hidden={!searchOpen}
+        inert={!searchOpen}
       >
         <div className="mobile-search-inner">
 
@@ -1060,6 +1062,7 @@ export default function Header() {
         className={`mobile-store-menu ${
           menuOpen ? 'is-open' : ''
         }`}
+        inert={!menuOpen}
         aria-hidden={!menuOpen}
         aria-label="Store menu"
       >

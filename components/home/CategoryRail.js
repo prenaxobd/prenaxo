@@ -128,7 +128,7 @@ export default function CategoryRail({ categories }) {
 
                     <OptimizedImage
                       src={category.image}
-                      alt={category.name}
+                      alt=""
                       sizes="72px"
                       loading="lazy"
                     />

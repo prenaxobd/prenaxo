@@ -115,7 +115,11 @@ export default function BrandRail({ brands = [] }) {
             <h2>Our Brands</h2>
           </div>
 
-          <Link href="/shop" className="home-brand-see-all">
+          <Link
+            href="/shop"
+            className="home-brand-see-all"
+            aria-label="View all"
+          >
             SEE ALL
           </Link>
         </div>
@@ -189,7 +193,7 @@ export default function BrandRail({ brands = [] }) {
         </div>
 
         {items.length > perView && (
-          <div className="home-carousel-dots home-brand-dots" aria-hidden="true">
+          <div className="home-carousel-dots home-brand-dots">
             {Array.from({ length: maxIndex + 1 }).map((_, index) => (
               <button
                 key={index}
