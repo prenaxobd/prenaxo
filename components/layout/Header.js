@@ -23,6 +23,10 @@ const placeholderMessages = [
   'Rice',
 ];
 
+const MOBILE_LOGO_SRC =
+  'https://res.cloudinary.com/ethp0qrs/image/upload/f_auto,q_auto:eco,w_160/v1791426133/prenaxo-logo-mobile-logo.png';
+const MOBILE_LOGO_SRC_2X = MOBILE_LOGO_SRC.replace('w_160', 'w_256');
+
 /* =========================================================
    CUSTOM HEADER SVG ICONS
    ========================================================= */
@@ -675,7 +679,7 @@ export default function Header() {
               <source
                 media="(max-width: 767px)"
                 sizes="150px"
-                srcSet="https://res.cloudinary.com/ethp0qrs/image/upload/f_auto,q_auto:eco,w_160/v1791426133/prenaxo-logo-mobile-logo.png 160w, https://res.cloudinary.com/ethp0qrs/image/upload/f_auto,q_auto:eco,w_256/v1791426133/prenaxo-logo-mobile-logo.png 256w"
+                srcSet={`${MOBILE_LOGO_SRC} 160w, ${MOBILE_LOGO_SRC_2X} 256w`}
               />
               <OptimizedImage
                 src="/uploads/prenaxo-logo.png"
@@ -1074,11 +1078,12 @@ export default function Header() {
             onClick={closePanels}
           >
             <OptimizedImage
-              src="/uploads/prenaxo-logo.png"
+              src={MOBILE_LOGO_SRC}
               alt="Prenaxo"
-              width={320}
-              height={79}
+              width={160}
+              height={40}
               sizes="150px"
+              unoptimized
             />
           </Link>
 

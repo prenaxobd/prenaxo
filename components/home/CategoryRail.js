@@ -33,7 +33,7 @@ export default function CategoryRail({ categories }) {
     };
   }, []);
 
-  const visibleCount = Math.min(perView, Math.max(1, items.length - 1));
+  const visibleCount = Math.min(perView, items.length);
   const maxIndex = Math.max(0, items.length - visibleCount);
 
   function previous() {

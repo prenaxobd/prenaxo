@@ -86,7 +86,7 @@ export async function generateMetadata() {
 
 function productsFor(type, data, section) {
   const configuredLimit = Number(section?.productLimit);
-  const limit = Math.min(configuredLimit > 0 ? configuredLimit : 8, 3);
+  const limit = Math.min(configuredLimit > 0 ? configuredLimit : 8, 8);
 
   if (type === 'TOP_SELLING') {
     return data.topSelling.slice(0, limit);
