@@ -9070,7 +9070,7 @@ body.header-menu-open {
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  border: 0;
   border-radius: 50% 50% 8px 50%;
   background: linear-gradient(145deg, #f45b5b 0%, var(--brand-primary) 58%, #ae1c28 100%);
   color: #ffffff;
