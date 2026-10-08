@@ -136,8 +136,7 @@ export default function RootLayout({ children }) {
 fbq('init','1485362603491782');
 fbq('track','PageView');
 var loadPrenaxoPixel=function(){if(window.__prenaxoPixelLoaded)return;window.__prenaxoPixelLoaded=true;var s=document.createElement('script');s.async=true;s.src='https://connect.facebook.net/en_US/fbevents.js';document.head.appendChild(s)};
-var schedulePrenaxoPixel=function(){if('requestIdleCallback' in window){window.requestIdleCallback(loadPrenaxoPixel,{timeout:10000})}else{window.setTimeout(loadPrenaxoPixel,5000)}};
-if(document.readyState==='complete'){schedulePrenaxoPixel()}else{window.addEventListener('load',schedulePrenaxoPixel,{once:true})}`}
+window.setTimeout(loadPrenaxoPixel,15000)`}
         </Script>
         <noscript>
           <img

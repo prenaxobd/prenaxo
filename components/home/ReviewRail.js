@@ -15,7 +15,6 @@ export default function ReviewRail({
   const items = reviews || [];
 
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [perView, setPerView] = useState(1);
 
   const touchStart = useRef(0);
@@ -51,25 +50,6 @@ export default function ReviewRail({
     0,
     items.length - perView
   );
-
-  useEffect(() => {
-    if (items.length <= perView || paused) return;
-
-    const timer = setInterval(() => {
-      setActive((current) =>
-        current >= maxIndex
-          ? 0
-          : current + 1
-      );
-    }, 4000);
-
-    return () => clearInterval(timer);
-  }, [
-    items.length,
-    perView,
-    maxIndex,
-    paused,
-  ]);
 
   function previous() {
     setActive((current) =>
@@ -145,8 +125,6 @@ export default function ReviewRail({
 
         <div
           className="home-carousel home-review-carousel"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >

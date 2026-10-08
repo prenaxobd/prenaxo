@@ -125,7 +125,12 @@ export default function HeroSlider({
      ========================= */
 
   useEffect(() => {
-    if (validBanners.length < 2 || isPaused) {
+    if (
+      validBanners.length < 2 ||
+      isPaused ||
+      window.matchMedia('(max-width: 767px)').matches ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
       return;
     }
 

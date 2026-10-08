@@ -674,15 +674,15 @@ export default function Header() {
             <picture>
               <source
                 media="(max-width: 767px)"
-                sizes="236px"
-                srcSet="https://res.cloudinary.com/ethp0qrs/image/upload/f_auto,q_auto:eco,w_256/v1791426133/prenaxo-logo-mobile-logo.png 256w, https://res.cloudinary.com/ethp0qrs/image/upload/f_auto,q_auto:eco,w_320/v1791426133/prenaxo-logo-mobile-logo.png 320w"
+                sizes="150px"
+                srcSet="https://res.cloudinary.com/ethp0qrs/image/upload/f_auto,q_auto:eco,w_160/v1791426133/prenaxo-logo-mobile-logo.png 160w, https://res.cloudinary.com/ethp0qrs/image/upload/f_auto,q_auto:eco,w_256/v1791426133/prenaxo-logo-mobile-logo.png 256w"
               />
               <OptimizedImage
                 src="/uploads/prenaxo-logo.png"
                 alt="Prenaxo"
                 width={320}
                 height={79}
-                sizes="150px"
+                sizes="(max-width: 767px) 150px, 180px"
               />
             </picture>
           </Link>

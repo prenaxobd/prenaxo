@@ -94,7 +94,13 @@ function RatingStars({ rating }) {
 |--------------------------------------------------------------------------
 */
 
-export default function ProductCard({ product, flashSale = false, maxStock = 0, viewMode = 'grid' }) {
+export default function ProductCard({
+  product,
+  flashSale = false,
+  maxStock = 0,
+  viewMode = 'grid',
+  imageSizes = '(max-width: 620px) 45vw, (max-width: 1000px) 30vw, 22vw',
+}) {
 
   const cart = useCart();
   const wishlistStore = useWishlist();
@@ -320,6 +326,7 @@ export default function ProductCard({ product, flashSale = false, maxStock = 0, 
                   image.alt ||
                   product.name
                 }
+                sizes={imageSizes}
               />
 
             ) : (

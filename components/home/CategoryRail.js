@@ -9,7 +9,6 @@ export default function CategoryRail({ categories }) {
   const items = categories || [];
 
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [perView, setPerView] = useState(3);
 
   const touchStart = useRef(0);
@@ -36,18 +35,6 @@ export default function CategoryRail({ categories }) {
 
   const visibleCount = Math.min(perView, Math.max(1, items.length - 1));
   const maxIndex = Math.max(0, items.length - visibleCount);
-
-  useEffect(() => {
-    if (items.length <= 1 || paused) return;
-
-    const timer = setInterval(() => {
-      setActive((current) =>
-        current >= maxIndex ? 0 : current + 1
-      );
-    }, 3000);
-
-    return () => clearInterval(timer);
-  }, [items.length, perView, maxIndex, paused]);
 
   function previous() {
     setActive((current) =>
@@ -111,8 +98,6 @@ export default function CategoryRail({ categories }) {
 
         <div
           className="home-carousel home-category-carousel"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -144,6 +129,7 @@ export default function CategoryRail({ categories }) {
                     <OptimizedImage
                       src={category.image}
                       alt={category.name}
+                      sizes="72px"
                       loading="lazy"
                     />
 

@@ -42,7 +42,6 @@ export default function BrandRail({ brands = [] }) {
     : [];
 
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [perView, setPerView] = useState(2);
 
   const touchStart = useRef(0);
@@ -68,18 +67,6 @@ export default function BrandRail({ brands = [] }) {
   }, []);
 
   const maxIndex = Math.max(0, items.length - Math.ceil(perView));
-
-  useEffect(() => {
-    if (items.length <= perView || paused) return;
-
-    const timer = setInterval(() => {
-      setActive((current) =>
-        current >= maxIndex ? 0 : current + 1
-      );
-    }, 3500);
-
-    return () => clearInterval(timer);
-  }, [items.length, perView, maxIndex, paused]);
 
   function previous() {
     setActive((current) =>
@@ -128,15 +115,13 @@ export default function BrandRail({ brands = [] }) {
             <h2>Our Brands</h2>
           </div>
 
-          <Link href="/brands" className="home-brand-see-all">
+          <Link href="/shop" className="home-brand-see-all">
             SEE ALL
           </Link>
         </div>
 
         <div
           className="home-carousel home-brand-carousel"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           aria-label="Featured brands"

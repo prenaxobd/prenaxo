@@ -8876,18 +8876,12 @@ body.header-menu-open {
   box-shadow: 0 14px 30px rgba(214, 40, 40, 0.22);
   z-index: 80;
   transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.2s ease;
-  animation: helpCenterFabPulse 2.8s ease-in-out infinite;
 }
 
 .help-center-fab:hover {
   transform: translateY(-2px) scale(1.04);
   box-shadow: 0 16px 32px rgba(214, 40, 40, 0.24);
   filter: brightness(1.04);
-  animation-play-state: paused;
-}
-
-.help-center-fab[aria-expanded="true"] {
-  animation: none;
 }
 
 .help-center-fab:focus-visible,
@@ -8902,16 +8896,6 @@ body.header-menu-open {
   height: 26px;
 }
 
-@keyframes helpCenterFabPulse {
-  0%, 100% {
-    box-shadow: 0 14px 30px rgba(214, 40, 40, 0.22), 0 0 0 0 rgba(214, 40, 40, 0.18);
-    filter: brightness(1);
-  }
-  50% {
-    box-shadow: 0 15px 31px rgba(214, 40, 40, 0.25), 0 0 0 7px rgba(214, 40, 40, 0.055);
-    filter: brightness(1.06);
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .help-center-fab {

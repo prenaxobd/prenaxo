@@ -19,7 +19,6 @@ export default function ProductRail({
   const items = products || [];
 
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [perView, setPerView] = useState(2);
 
   const touchStart = useRef(0);
@@ -55,25 +54,6 @@ export default function ProductRail({
     0,
     items.length - perView
   );
-
-  useEffect(() => {
-    if (items.length <= perView || paused) return;
-
-    const timer = setInterval(() => {
-      setActive((current) =>
-        current >= maxIndex
-          ? 0
-          : current + 1
-      );
-    }, 3200);
-
-    return () => clearInterval(timer);
-  }, [
-    items.length,
-    perView,
-    maxIndex,
-    paused,
-  ]);
 
   function previous() {
     setActive((current) =>
@@ -146,8 +126,6 @@ export default function ProductRail({
 
         <div
           className="home-carousel home-product-carousel"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -171,6 +149,7 @@ export default function ProductRail({
 
                 <ProductCard
                   product={product}
+                  imageSizes="(max-width: 620px) 30vw, (max-width: 900px) 25vw, 18vw"
                 />
 
               </div>
