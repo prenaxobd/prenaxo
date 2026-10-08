@@ -1,10 +1,12 @@
 'use client';
 import { Heart } from 'lucide-react';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
+import { useAccountRequired } from '@/components/auth/AccountRequiredProvider';
 import { useState } from 'react';
 
 export default function WishlistButton({ productId }) {
   const wishlist = useWishlist();
+  const { requireAccount, showAccountRequired } = useAccountRequired();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const saved = wishlist?.isSaved(productId) || false;
@@ -15,8 +17,14 @@ export default function WishlistButton({ productId }) {
     setBusy(true);
     setError('');
     try {
+      if (!(await requireAccount())) return;
       await wishlist.toggle(productId);
     } catch (toggleError) {
+      if (toggleError.status === 401) {
+        showAccountRequired();
+        return;
+      }
+
       setError(toggleError.message || 'Unable to update your wishlist.');
     } finally {
       setBusy(false);

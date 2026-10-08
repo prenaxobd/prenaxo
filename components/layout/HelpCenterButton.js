@@ -22,11 +22,12 @@ function WhatsAppIcon() {
 
 function MessengerIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
       <path
-        fill="currentColor"
-        d="M12 2.5c-5.25 0-9.5 3.76-9.5 8.39 0 2.61 1.29 4.96 3.38 6.49v3.12c0 .6.7.96 1.17.63l3.39-2.4c.67.12 1.37.18 2.06.18 5.25 0 9.5-3.75 9.5-8.42S17.25 2.5 12 2.5Zm5.1 8.96-2.23 3.53c-.42.66-1.34.82-2.02.42l-1.76-1.04-1.86 1.74c-.32.3-.8.07-.8-.37v-4.45c0-.44.46-.7.85-.46l4.28 2.53 2.1-3.33c.41-.66 1.34-.82 2.02-.42l1.26.78c.68.4.92 1.28.56 2.03Z"
+        fill="#ffffff"
+        d="M16 2.5C8.54 2.5 2.5 7.95 2.5 14.68c0 3.48 1.7 6.6 4.42 8.7v4.1c0 .7.8 1.1 1.37.7l4.43-3.12c1.04.27 2.14.4 3.28.4 7.46 0 13.5-5.45 13.5-12.18S23.46 2.5 16 2.5Z"
       />
+      <path fill="#1877f2" d="m10.13 17.2 4.04-6.42a1.25 1.25 0 0 1 1.78-.36l2.08 1.4 3.84-2.7c.43-.3.95.2.67.64l-4.03 6.42a1.25 1.25 0 0 1-1.78.36l-2.08-1.4-3.84 2.7c-.43.3-.96-.2-.68-.64Z" />
     </svg>
   );
 }
@@ -75,7 +76,9 @@ export default function HelpCenterButton() {
         title="Help Center"
         onClick={() => setIsOpen(true)}
       >
-        <Headset size={26} strokeWidth={2.2} />
+        <span className="help-center-fab-icon" aria-hidden="true">
+          <Headset size={23} strokeWidth={2.2} />
+        </span>
       </button>
 
       {isOpen && (

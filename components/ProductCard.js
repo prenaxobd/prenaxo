@@ -15,6 +15,7 @@ import { useState } from 'react';
 
 import { useCart } from '@/components/cart/CartProvider';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
+import { useAccountRequired } from '@/components/auth/AccountRequiredProvider';
 
 
 /*
@@ -104,6 +105,7 @@ export default function ProductCard({
 
   const cart = useCart();
   const wishlistStore = useWishlist();
+  const { requireAccount, showAccountRequired } = useAccountRequired();
 
 
   /*
@@ -204,12 +206,11 @@ export default function ProductCard({
       return;
     }
 
-
     setAdding(true);
     setMessage('');
 
-
     try {
+      if (!(await requireAccount())) return;
 
       const result =
         await cart.add(
@@ -240,15 +241,8 @@ export default function ProductCard({
       }
 
     } catch (error) {
-
-      console.error(
-        'Cart error:',
-        error
-      );
-
-
       setMessage(
-        'Unable to add item'
+        error.message || 'Unable to add item'
       );
 
     } finally {
@@ -280,8 +274,14 @@ export default function ProductCard({
     setSavingWishlist(true);
 
     try {
+      if (!(await requireAccount())) return;
       await wishlistStore.toggle(product.id);
     } catch (error) {
+      if (error.status === 401) {
+        showAccountRequired();
+        return;
+      }
+
       console.error(
         'Wishlist error:',
         error

@@ -3,7 +3,8 @@ function normalizeImageLabel(value) {
 }
 
 function isColorAttribute(attribute) {
-  return /colou?r/i.test(`${attribute?.slug || ''} ${attribute?.name || ''}`);
+  return String(attribute?.kind || '').toUpperCase() === 'COLOR' ||
+    /colou?r/i.test(`${attribute?.slug || ''} ${attribute?.name || ''}`);
 }
 
 export function getColorOptionImage(product, colorValue) {

@@ -6,10 +6,16 @@ import { useRouter } from 'next/navigation';
 import OptimizedImage from '@/components/OptimizedImage';
 import { useCart } from '@/components/cart/CartProvider';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
+import { useAccountRequired } from '@/components/auth/AccountRequiredProvider';
 import { useProductOptionSelection } from '@/components/product/ProductOptionContext';
 import { getColorOptionImage } from '@/components/product/product-option-images';
 
 const NO_OPTION_IDS = [];
+
+function isColorAttribute(attribute) {
+  return String(attribute?.kind || '').toUpperCase() === 'COLOR' ||
+    /colou?r/i.test(`${attribute?.slug || ''} ${attribute?.name || ''}`);
+}
 
 function normalize(value) {
   return String(value || '').trim().toLowerCase();
@@ -53,6 +59,13 @@ function getVariantForSelection(variants, selectedIds, groups) {
     || null;
 }
 
+function getVariantForSizeSelection(variants, selectedIds, sizeValueId, groups) {
+  const variant = getVariantForSelection(variants, selectedIds, groups);
+  return getVariantAttributeValueIds(variant, groups).includes(sizeValueId)
+    ? variant
+    : null;
+}
+
 function getCombinationKey(ids) {
   return [...ids].sort().join(',');
 }
@@ -80,6 +93,7 @@ export default function ProductActions({
   const router = useRouter();
   const cart = useCart();
   const wishlistStore = useWishlist();
+  const { requireAccount, showAccountRequired } = useAccountRequired();
   const optionSelection = useProductOptionSelection();
   const selectedAttributeValueIds = optionSelection
     ? optionSelection.selectedAttributeValueIds
@@ -111,6 +125,14 @@ export default function ProductActions({
   ), [cartProduct]);
 
   const hasAttributeOptions = attributeGroups.length > 0;
+  const colorGroup = attributeGroups.find(isColorAttribute);
+  const sizeGroup = attributeGroups.find((attribute) =>
+    /size/i.test(`${attribute.slug || ''} ${attribute.name || ''}`)
+  );
+  const supportsSizeMatrix = Boolean(sizeGroup) &&
+    attributeGroups.every((attribute) =>
+      attribute.id === sizeGroup.id || attribute.id === colorGroup?.id
+    );
   const variantsHaveOptionValues = variants.some((variant) =>
     getVariantAttributeValueIds(variant, attributeGroups).length > 0
   );
@@ -168,11 +190,12 @@ export default function ProductActions({
   function toggleAttributeValue(attribute, valueId) {
     if (!attribute.values.some((value) => value.id === valueId)) return;
 
-    setSelectedAttributeValueIds((current) => (
-      current.includes(valueId)
-        ? current.filter((id) => id !== valueId)
-        : [...current, valueId]
-    ));
+    setSelectedAttributeValueIds((current) => {
+      const groupValueIds = new Set(attribute.values.map((value) => value.id));
+      return current.includes(valueId)
+        ? current
+        : [...current.filter((id) => !groupValueIds.has(id)), valueId];
+    });
     setRemovedCombinationKeys(new Set());
     setMessage('');
   }
@@ -228,6 +251,70 @@ export default function ProductActions({
     };
   }
 
+  function getSizeRow(sizeValue) {
+    const selectedColorIds = colorGroup
+      ? selectedAttributeValueIds.filter((id) =>
+          colorGroup.values.some((value) => value.id === id)
+        )
+      : [];
+    const attributeValueIds = [...selectedColorIds, sizeValue.id];
+    const variant = variantsHaveOptionValues
+      ? getVariantForSizeSelection(variants, attributeValueIds, sizeValue.id, attributeGroups)
+      : null;
+    const stock = Number(variant?.stock ?? cartProduct.stock ?? 0);
+    const stockKey = variant?.id || cartProduct.id;
+    const requestedQuantity = (cart.items || [])
+      .filter((item) =>
+        item.productId === cartProduct.id &&
+        (item.variantId || cartProduct.id) === stockKey
+      )
+      .reduce((total, item) => total + Number(item.quantity || 0), 0);
+    const key = getCombinationKey(attributeValueIds);
+
+    return {
+      attributeValueIds,
+      key,
+      variant,
+      stock,
+      availableQuantity: Math.max(0, stock - requestedQuantity),
+      price: Number(variant?.price ?? cartProduct.salePrice ?? cartProduct.regularPrice ?? 0),
+      quantity: quantities[key] || 1,
+      unavailable: stock <= requestedQuantity || (variantsHaveOptionValues && !variant),
+    };
+  }
+
+  async function addSizeRow(sizeValue, buyNowAfterAdd = false) {
+    const entry = getSizeRow(sizeValue);
+    if (entry.unavailable || entry.quantity > entry.availableQuantity) {
+      setMessage('This size and color combination is unavailable.');
+      return;
+    }
+
+    try {
+      if (!(await requireAccount())) return;
+    } catch (error) {
+      setMessage(error.message || 'Could not verify your account. Please try again.');
+      return;
+    }
+
+    const result = await cart.add({
+      ...cartProduct,
+      variantId: entry.variant?.id || null,
+      attributeValueIds: entry.attributeValueIds,
+      stock: entry.stock,
+      salePrice: entry.variant?.price ?? cartProduct.salePrice,
+      regularPrice: entry.variant?.price ?? cartProduct.regularPrice,
+    }, entry.quantity);
+
+    if (!result.ok) {
+      setMessage(result.error || 'Unable to add item.');
+      return;
+    }
+
+    setMessage(`${sizeValue.name} added to cart.`);
+    if (buyNowAfterAdd) router.push('/checkout');
+  }
+
   async function addSelectedItems() {
     setMessage('');
 
@@ -237,6 +324,13 @@ export default function ProductActions({
           ? `Please select ${attributeGroups.map((group) => group.name).join(' and ')}.`
           : 'One or more selected options are unavailable.'
       );
+      return false;
+    }
+
+    try {
+      if (!(await requireAccount())) return false;
+    } catch (error) {
+      setMessage(error.message || 'Could not verify your account. Please try again.');
       return false;
     }
 
@@ -276,9 +370,14 @@ export default function ProductActions({
     if (!wishlistStore?.ready || wishlistBusy) return;
     setWishlistBusy(true);
     try {
+      if (!(await requireAccount())) return;
       const data = await wishlistStore.toggle(cartProduct.id);
       setMessage(data.saved ? 'Saved to wishlist' : 'Removed from wishlist');
     } catch (error) {
+      if (error.status === 401) {
+        showAccountRequired();
+        return;
+      }
       setMessage(error.message || 'Unable to update wishlist.');
     } finally {
       setWishlistBusy(false);
@@ -287,54 +386,124 @@ export default function ProductActions({
 
   return (
     <>
-      {attributeGroups.map((attribute) => (
-        <fieldset className="product-variation" key={attribute.id}>
-          <legend className="variation-title">
-            {attribute.name}
-            <span className="variation-selection-hint">
-              {attribute.values
-                .filter((value) => selectedAttributeValueIds.includes(value.id))
-                .map((value) => value.name)
-                .join(', ') || 'Select one or more'}
-            </span>
-          </legend>
-          <div className="variation-options">
-            {attribute.values.map((value) => {
-              const selected = selectedAttributeValueIds.includes(value.id);
-              const available = getOptionAvailability(attribute, value);
-              const optionImage = attribute.kind === 'COLOR' ? getOptionImage(value) : null;
+      {attributeGroups
+        .filter((attribute) => !(supportsSizeMatrix && attribute.id === sizeGroup.id))
+        .map((attribute) => {
+          const isColor = isColorAttribute(attribute);
+          const selectedValues = attribute.values
+            .filter((value) => selectedAttributeValueIds.includes(value.id))
+            .map((value) => value.name);
 
-              return (
-                <button
-                  type="button"
-                  key={value.id}
-                  className={`variation-option ${optionImage ? 'variation-image-option' : ''} ${selected ? 'selected' : ''} ${!available ? 'option-unavailable' : ''}`}
-                  disabled={!available}
-                  onClick={() => toggleAttributeValue(attribute, value.id)}
-                  aria-pressed={selected}
-                  aria-label={`${value.name}${available ? '' : ', out of stock'}`}
-                >
-                  {optionImage?.url
-                    ? <OptimizedImage src={optionImage.url} alt="" className="variation-option-image"/>
-                    : attribute.kind === 'COLOR' && value.hexValue && (
-                    <span className="variation-color-swatch" style={{ backgroundColor: value.hexValue }} aria-hidden="true"/>
-                  )}
-                  <span>{value.name}</span>
-                  {selected && <span className="variation-check" aria-hidden="true">✓</span>}
-                </button>
-              );
-            })}
+          return (
+            <fieldset className="product-variation" key={attribute.id}>
+              <legend className="variation-title">
+                {attribute.name}
+                <span className="variation-selection-hint">
+                  {selectedValues.join(', ') || (isColor ? 'Select a color' : 'Select one or more')}
+                </span>
+              </legend>
+              <div className="variation-options">
+                {attribute.values.map((value) => {
+                  const selected = selectedAttributeValueIds.includes(value.id);
+                  const available = getOptionAvailability(attribute, value);
+                  const optionImage = isColor ? getOptionImage(value) : null;
+
+                  return (
+                    <button
+                      type="button"
+                      key={value.id}
+                      className={`variation-option ${optionImage ? 'variation-image-option' : ''} ${selected ? 'selected' : ''} ${!available ? 'option-unavailable' : ''}`}
+                      disabled={!available}
+                      onClick={() => toggleAttributeValue(attribute, value.id)}
+                      aria-pressed={selected}
+                      aria-label={`${value.name}${available ? '' : ', out of stock'}`}
+                    >
+                      {optionImage?.url
+                        ? <OptimizedImage src={optionImage.url} alt="" className="variation-option-image"/>
+                        : isColor && value.hexValue && (
+                          <span className="variation-color-swatch" style={{ backgroundColor: value.hexValue }} aria-hidden="true"/>
+                        )}
+                      <span>{value.name}</span>
+                      {selected && <span className="variation-check" aria-hidden="true">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          );
+        })}
+
+      {supportsSizeMatrix && (
+        <section className="product-size-matrix" aria-label="Choose size and add to cart">
+          <div className="product-size-matrix-heading">
+            <strong>Size</strong>
+            <strong>Price</strong>
+            <strong>Stock / Add</strong>
           </div>
-        </fieldset>
-      ))}
+          {colorGroup && !selectedAttributeValueIds.some((id) =>
+            colorGroup.values.some((value) => value.id === id)
+          ) ? (
+            <p className="product-size-matrix-hint">Select a color to see available sizes.</p>
+          ) : sizeGroup.values.map((sizeValue) => {
+            const entry = getSizeRow(sizeValue);
+            const quantityText = entry.variant
+              ? `${entry.availableQuantity} in stock`
+              : `${entry.availableQuantity} total`;
+
+            return (
+              <div className="product-size-matrix-row" key={sizeValue.id}>
+                <strong>{sizeValue.name}</strong>
+                <strong className="product-size-matrix-price">
+                  ৳{entry.price.toLocaleString()}
+                </strong>
+                <div className="product-size-matrix-actions">
+                  <span className={entry.unavailable ? 'is-out-of-stock' : ''}>
+                    {entry.unavailable ? 'Unavailable' : quantityText}
+                  </span>
+                  <div className="product-qty product-size-matrix-qty" aria-label={`${sizeValue.name} quantity`}>
+                    <button
+                      type="button"
+                      disabled={entry.unavailable || entry.quantity <= 1}
+                      onClick={() => setEntryQuantity(entry.key, entry.quantity - 1, entry.availableQuantity)}
+                      aria-label={`Decrease ${sizeValue.name} quantity`}
+                    ><Minus size={12}/></button>
+                    <span>{entry.quantity}</span>
+                    <button
+                      type="button"
+                      disabled={entry.unavailable || entry.quantity >= entry.availableQuantity}
+                      onClick={() => setEntryQuantity(entry.key, entry.quantity + 1, entry.availableQuantity)}
+                      aria-label={`Increase ${sizeValue.name} quantity`}
+                    ><Plus size={12}/></button>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={entry.unavailable || entry.quantity > entry.availableQuantity}
+                    onClick={() => void addSizeRow(sizeValue)}
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    className="product-size-buy-now"
+                    disabled={entry.unavailable || entry.quantity > entry.availableQuantity}
+                    onClick={() => void addSizeRow(sizeValue, true)}
+                  >
+                    Buy now
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       {hasAttributeOptions && selectedCombinations.length === 0 && (
-        <p className="product-option-hint">
+        !supportsSizeMatrix && <p className="product-option-hint">
           Choose at least one {attributeGroups.map((group) => group.name.toLowerCase()).join(' and ')} option to set quantities.
         </p>
       )}
 
-      {hasAttributeOptions && allSelectedCombinations.length > 0 && (
+      {!supportsSizeMatrix && hasAttributeOptions && allSelectedCombinations.length > 0 && (
         <section className="selected-variant-list" aria-label="Selected option quantities">
           <div className="selected-variant-heading">
             <strong>Your selections</strong>
@@ -390,7 +559,8 @@ export default function ProductActions({
         </section>
       )}
 
-      <div className={`product-action-controls ${hasAttributeOptions ? 'has-variant-options' : ''}`}>
+      {!supportsSizeMatrix && (
+        <div className={`product-action-controls ${hasAttributeOptions ? 'has-variant-options' : ''}`}>
         {!hasAttributeOptions && (
           <div className="product-qty" aria-label="Quantity selector">
             <button
@@ -436,7 +606,8 @@ export default function ProductActions({
             title={saved ? 'Remove from wishlist' : 'Add to wishlist'}
           ><Heart size={18} fill={saved ? 'currentColor' : 'none'}/></button>
         </div>
-      </div>
+        </div>
+      )}
 
       {message && <p role="status" className="product-action-message">{message}</p>}
     </>

@@ -54,7 +54,9 @@ export function WishlistProvider({ children }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Unable to update your wishlist.');
+        const error = new Error(data.error || 'Unable to update your wishlist.');
+        error.status = response.status;
+        throw error;
       }
 
       setProductIds((current) => {

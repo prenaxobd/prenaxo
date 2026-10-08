@@ -353,6 +353,28 @@ export default function ProductForm({
         ? attribute.values.filter((value) => value.active)
         : [],
     }));
+  const configuredColorAttribute = configuredAttributes.find((attribute) =>
+    String(attribute.kind || '').toUpperCase() === 'COLOR' ||
+    /colou?r/i.test(`${attribute.slug || ''} ${attribute.name || ''}`)
+  );
+  const galleryColorLabels = [...new Set(
+    form.images
+      .map((image) => String(image.alt || '').trim())
+      .filter(Boolean)
+  )];
+  const normalizeOptionLabel = (value) =>
+    String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const galleryColorsMissingFromCategory = galleryColorLabels.filter((label) =>
+    !configuredColorAttribute?.values.some((value) =>
+      normalizeOptionLabel(value.name) === normalizeOptionLabel(label)
+    )
+  );
+  const galleryColorsNotSelected = galleryColorLabels.filter((label) => {
+    const value = configuredColorAttribute?.values.find((option) =>
+      normalizeOptionLabel(option.name) === normalizeOptionLabel(label)
+    );
+    return value && !form.attributeValueIds.includes(value.id);
+  });
 
   function handleCategoryChange(categoryId) {
     const category = categories.find((item) => item.id === categoryId);
@@ -1259,6 +1281,17 @@ export default function ProductForm({
             <section className={styles.card}>
               <SectionTitle>Product Options</SectionTitle>
               <p className={styles.cardDescription}>Select available values for this product from the attributes configured for its category.</p>
+
+              {galleryColorLabels.length > 0 && (!configuredColorAttribute || galleryColorsMissingFromCategory.length > 0 || galleryColorsNotSelected.length > 0) && (
+                <p className={styles.cardDescription} role="status">
+                  Color-tagged gallery images found: {galleryColorLabels.join(', ')}.
+                  {!configuredColorAttribute
+                    ? ' Add a Color attribute to this category and configure its values.'
+                    : galleryColorsMissingFromCategory.length > 0
+                      ? <> Add missing color values ({galleryColorsMissingFromCategory.join(', ')}) in <Link href="/admin/attributes">Manage Attributes</Link>, then select all gallery colors here{galleryColorsNotSelected.length > 0 ? `, including ${galleryColorsNotSelected.join(', ')}` : ''}.</>
+                      : ` Select these matching color values here: ${galleryColorsNotSelected.join(', ')}.`}
+                </p>
+              )}
 
               {configuredAttributes.length > 0 && configuredAttributes.map((attribute) => <Field key={attribute.id} label={`${attribute.name} (optional)`} className={styles.fullWidth}>
                 <div className={styles.attributeOptions}>

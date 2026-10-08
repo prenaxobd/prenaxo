@@ -14,11 +14,17 @@ import {
 
 import { useState } from 'react';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
+import { useAccountRequired } from '@/components/auth/AccountRequiredProvider';
 import { useProductOptionSelection } from '@/components/product/ProductOptionContext';
 import { getColorOptionImage } from '@/components/product/product-option-images';
 
 function normalizeAlt(value) {
   return ` ${String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+}
+
+function isColorAttribute(attribute) {
+  return String(attribute?.kind || '').toUpperCase() === 'COLOR' ||
+    /colou?r/i.test(`${attribute?.slug || ''} ${attribute?.name || ''}`);
 }
 
 export default function ProductGallery({
@@ -28,43 +34,47 @@ export default function ProductGallery({
   const productImages = product.images || [];
   const optionSelection = useProductOptionSelection();
   const wishlist = useWishlist();
+  const { requireAccount, showAccountRequired } = useAccountRequired();
   const saved = wishlist?.isSaved(product.id) || false;
   const [wishlistBusy, setWishlistBusy] = useState(false);
   const [wishlistMessage, setWishlistMessage] = useState('');
   const selectedAttributeValueIds = optionSelection?.selectedAttributeValueIds || [];
   const attributeValues = product.attributeValues || [];
   const colorValues = attributeValues
-    .filter((item) => {
-      const attribute = item.attributeValue?.attribute;
-      return normalizeAlt(attribute?.slug || attribute?.name).includes(' color ');
-    })
+    .filter((item) => isColorAttribute(item.attributeValue?.attribute))
     .map((item) => item.attributeValue)
     .filter(Boolean);
   const selectedColors = colorValues.filter((value) =>
     selectedAttributeValueIds.includes(value.id)
   );
-  const hasColorImageLabels = productImages.some((image) =>
+  const selectedColorImages = selectedColors.flatMap((value) => {
+    const taggedImages = productImages.filter((image) =>
+      normalizeAlt(image.alt).startsWith(normalizeAlt(value.name))
+    );
+    return taggedImages.length
+      ? taggedImages
+      : [getColorOptionImage(product, value)].filter(Boolean);
+  });
+  const taggedImages = productImages.filter((image) =>
     colorValues.some((value) =>
       normalizeAlt(image.alt).startsWith(normalizeAlt(value.name))
     )
   );
-  const selectedColorImages = selectedColors
-    .map((value) => getColorOptionImage(product, value))
-    .filter(Boolean);
-  const hasMappedImagesForEveryColor = selectedColors.length > 0 &&
-    selectedColorImages.length === selectedColors.length;
-  const images = selectedColors.length && hasColorImageLabels
-    ? productImages.filter((image) => {
-        const alt = normalizeAlt(image.alt);
-        const imageHasColorLabel = colorValues.some((value) =>
-          alt.startsWith(normalizeAlt(value.name))
-        );
-        return !imageHasColorLabel || selectedColors.some((value) =>
-          alt.startsWith(normalizeAlt(value.name))
-        );
-      })
-    : hasMappedImagesForEveryColor
-      ? [...new Map(selectedColorImages.map((image) => [image.url, image])).values()]
+  const sharedImages = productImages.filter((image) => !taggedImages.includes(image));
+  const uniqueSelectedImages = [
+    ...new Map(selectedColorImages.map((image) => [image.url, image])).values(),
+  ];
+  const images = selectedColors.length
+    ? uniqueSelectedImages.length
+      ? [
+          ...uniqueSelectedImages,
+          ...sharedImages.filter((image) =>
+            !uniqueSelectedImages.some((selectedImage) => selectedImage.url === image.url)
+          ),
+        ]
+      : sharedImages.length
+        ? sharedImages
+        : productImages
     : productImages;
 
   const [galleryState, setGalleryState] = useState({ colorKey: '', active: 0 });
@@ -107,9 +117,14 @@ export default function ProductGallery({
     setWishlistBusy(true);
     setWishlistMessage('');
     try {
+      if (!(await requireAccount())) return;
       const data = await wishlist.toggle(product.id);
       setWishlistMessage(data.saved ? 'Saved to wishlist' : 'Removed from wishlist');
     } catch (error) {
+      if (error.status === 401) {
+        showAccountRequired();
+        return;
+      }
       setWishlistMessage(error.message || 'Unable to update wishlist.');
     } finally {
       setWishlistBusy(false);
