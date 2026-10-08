@@ -113,7 +113,13 @@ export async function generateMetadata({
 
 export default async function Shop({ searchParams }) {
   const params = await searchParams;
-  const categories = await getPublicCategories();
+  const categories = (await getPublicCategories()).map((category) => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    parentId: category.parentId,
+    active: category.active,
+  }));
   const requestedCategory = params?.category || 'all';
   const requestedSubcategory = params?.subcategory || 'all';
   const matchedCategory = requestedCategory === 'all'
@@ -169,7 +175,7 @@ export default async function Shop({ searchParams }) {
       totalPages={productData.totalPages}
       currentPage={productData.page}
       initialFilters={filters}
-      brands={brands}
+      brands={brands.map(({ id, name }) => ({ id, name }))}
       categories={categories}
       priceBounds={priceBounds}
       pageTitle="Buy Best Quality Products & Trends"

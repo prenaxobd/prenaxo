@@ -95,7 +95,10 @@ export function CartProvider({ children }) {
   const confirmedItems = useRef(new Map());
   useEffect(() => {
     const stored = localCart();
-    startTransition(() => setCart(stored));
+    startTransition(() => {
+      setCart(stored);
+      setReady(true);
+    });
 
     fetch('/api/cart')
       .then(async (response) => {

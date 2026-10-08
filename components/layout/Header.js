@@ -674,7 +674,8 @@ export default function Header() {
             <picture>
               <source
                 media="(max-width: 767px)"
-                srcSet="https://res.cloudinary.com/ethp0qrs/image/upload/v1791426133/prenaxo-logo-mobile-logo.png"
+                sizes="236px"
+                srcSet="https://res.cloudinary.com/ethp0qrs/image/upload/f_auto,q_auto:eco,w_256/v1791426133/prenaxo-logo-mobile-logo.png 256w, https://res.cloudinary.com/ethp0qrs/image/upload/f_auto,q_auto:eco,w_320/v1791426133/prenaxo-logo-mobile-logo.png 320w"
               />
               <OptimizedImage
                 src="/uploads/prenaxo-logo.png"

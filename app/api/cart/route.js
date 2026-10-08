@@ -34,20 +34,35 @@ export async function GET() {
       items: {
         include: {
           product: {
-            include: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              regularPrice: true,
+              salePrice: true,
               images: {
                 orderBy: { sortOrder: 'asc' },
+                select: { id: true, url: true, alt: true, sortOrder: true },
               },
               attributeValues: {
-                include: {
+                select: {
+                  attributeValueId: true,
                   attributeValue: {
-                    include: { attribute: true },
+                    select: {
+                      id: true,
+                      name: true,
+                      attribute: {
+                        select: { name: true, slug: true },
+                      },
+                    },
                   },
                 },
               },
             },
           },
-          variant: true,
+          variant: {
+            select: { id: true, price: true, color: true, size: true },
+          },
         },
       },
     },

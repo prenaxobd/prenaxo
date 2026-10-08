@@ -96,10 +96,16 @@ export default function CheckoutView() {
         setError('');
         setPaymentError('');
 
-        const authResponse = await fetch('/api/auth/me', {
-          cache: 'no-store',
-        });
-        const authData = await authResponse.json().catch(() => ({}));
+        const [authResponse, cartResponse, deliveryResponse] = await Promise.all([
+          fetch('/api/auth/me', { cache: 'no-store' }),
+          fetch('/api/cart'),
+          fetch('/api/delivery'),
+        ]);
+        const [authData, cartData, deliveryData] = await Promise.all([
+          authResponse.json().catch(() => ({})),
+          cartResponse.json().catch(() => ({ items: [] })),
+          deliveryResponse.json().catch(() => ({})),
+        ]);
 
         if (!authResponse.ok) {
           throw new Error('Unable to verify your session.');
@@ -112,6 +118,7 @@ export default function CheckoutView() {
         }
 
         setAuthState('authenticated');
+        void loadPaymentOptions();
 
         let localCart = { items: [] };
 
@@ -127,17 +134,6 @@ export default function CheckoutView() {
         } catch {
           localCart = { items: [] };
         }
-
-        const [cartResponse, deliveryResponse] = await Promise.all([
-          fetch('/api/cart'),
-          fetch('/api/delivery'),
-        ]);
-
-        const cartData =
-          await cartResponse.json().catch(() => ({ items: [] }));
-
-        const deliveryData =
-          await deliveryResponse.json();
 
         let cartFromServer =
           cartResponse.ok && cartData
@@ -202,7 +198,6 @@ export default function CheckoutView() {
           }));
         }
 
-        void loadPaymentOptions();
       } catch (err) {
         setPaymentLoading(false);
         setAuthState((current) =>

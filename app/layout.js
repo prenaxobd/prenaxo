@@ -134,13 +134,11 @@ export default function RootLayout({ children }) {
         <Script id="facebook-pixel-queue" strategy="afterInteractive">
           {`!function(f){if(f.fbq)return;var n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window);
 fbq('init','1485362603491782');
-fbq('track','PageView');`}
+fbq('track','PageView');
+var loadPrenaxoPixel=function(){if(window.__prenaxoPixelLoaded)return;window.__prenaxoPixelLoaded=true;var s=document.createElement('script');s.async=true;s.src='https://connect.facebook.net/en_US/fbevents.js';document.head.appendChild(s)};
+var schedulePrenaxoPixel=function(){if('requestIdleCallback' in window){window.requestIdleCallback(loadPrenaxoPixel,{timeout:10000})}else{window.setTimeout(loadPrenaxoPixel,5000)}};
+if(document.readyState==='complete'){schedulePrenaxoPixel()}else{window.addEventListener('load',schedulePrenaxoPixel,{once:true})}`}
         </Script>
-        <Script
-          id="facebook-pixel"
-          src="https://connect.facebook.net/en_US/fbevents.js"
-          strategy="lazyOnload"
-        />
         <noscript>
           <img
             height="1"
