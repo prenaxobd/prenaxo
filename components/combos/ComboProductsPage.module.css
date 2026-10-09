@@ -299,6 +299,22 @@
   font-size: 20px;
 }
 
+.listCardActions {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.listCardActions .viewButton,
+.listCardActions .cartButton {
+  flex: 0 1 190px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 @media (max-width: 780px) {
   .productToolbar {
     min-height: 68px;
@@ -370,6 +386,21 @@
   }
 
   .listCard .cartButton {
+    min-height: 34px;
+    padding: 6px 4px;
+    font-size: 11px;
+  }
+
+  .listCardActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding-top: 8px;
+  }
+
+  .listCardActions .viewButton,
+  .listCardActions .cartButton {
+    width: 100%;
     min-height: 34px;
     padding: 6px 4px;
     font-size: 11px;

@@ -2,7 +2,7 @@
 import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
-import { ArrowRight, Baby, Check, ChevronDown, ChevronRight, Heart, Home, LayoutGrid, Leaf, MoonStar, PackageCheck, RotateCcw, Search, ShieldCheck, ShoppingBag, ShoppingBasket, ShoppingCart, SlidersHorizontal, Truck, UsersRound, X } from 'lucide-react';
+import { ArrowRight, Baby, Check, ChevronDown, ChevronRight, Eye, Heart, Home, LayoutGrid, Leaf, MoonStar, PackageCheck, RotateCcw, Search, ShieldCheck, ShoppingBag, ShoppingBasket, ShoppingCart, SlidersHorizontal, Truck, UsersRound, X } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
@@ -76,12 +76,13 @@ export default function ComboProductsPage({ products }) {
     }, { rootMargin: '0px 0px -6% 0px', threshold: 0.08 });
 
     cards.forEach((card) => {
-      card.classList.remove(styles.cardVisible);
-      observer.observe(card);
+      if (!card.classList.contains(styles.cardVisible)) {
+        observer.observe(card);
+      }
     });
 
     return () => observer.disconnect();
-  }, [availability, brand, category, currentPage, priceLimit, ratingFilter, sort]);
+  }, [availability, brand, category, currentPage, priceLimit, ratingFilter, sort, viewMode]);
   const totalPages = Math.max(1, Math.ceil(visibleCombos.length / PRODUCTS_PER_PAGE));
   const pageCombos = visibleCombos.slice((currentPage - 1) * PRODUCTS_PER_PAGE, currentPage * PRODUCTS_PER_PAGE);
   function resetFilters() { setCategory('All'); setBrand('All'); setPriceLimit(maxComboPrice); setRatingFilter(0); setAvailability('All'); }
@@ -228,7 +229,7 @@ function ComboProductCard({ combo, cart, viewMode }) {
     }
   }
 
-  return <article className={`${styles.productCard} ${styles.cardReveal} ${viewMode === 'list' ? styles.listCard : ''}`}><div className={styles.imageWrap}><span className={styles.discountBadge}>{combo.discount ? `-${combo.discount}%` : 'COMBO'}</span><button className={`${styles.wishlistButton} ${saved ? styles.saved : ''}`} type="button" onClick={toggleWishlist} disabled={wishlistLoading} aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={saved}><Heart size={17} fill={saved ? 'currentColor' : 'none'} /></button><Link className={styles.productLink} href={`/product/${combo.slug}`} aria-label={`View ${combo.name}`}>{combo.image ? <OptimizedImage src={combo.image} alt={combo.name} /> : <span className={styles.imagePlaceholder}>Combo</span>}</Link></div><div className={styles.cardBody}><span className={styles.cardCategory}>{combo.comboCategory} Combo</span><Link className={styles.productName} href={`/product/${combo.slug}`}>{combo.name}</Link><span className={styles.itemCount}>{combo.itemCount} Items</span><span className={styles.rating}>★ {Number(combo.rating || 0).toFixed(1)} ({combo.reviewCount || 0})</span><div className={styles.priceRow}><strong>৳{combo.price.toLocaleString('en-IN')}</strong>{combo.oldPrice > combo.price && <del>৳{combo.oldPrice.toLocaleString('en-IN')}</del>}</div>{combo.savings > 0 && <span className={styles.savings}>You Save ৳{combo.savings.toLocaleString('en-IN')}</span>}<div className={styles.cardActions}><button type="button" className={styles.cartButton} onClick={addToCart} disabled={adding || Number(combo.stock || 0) <= 0}><ShoppingCart size={15} />{Number(combo.stock || 0) <= 0 ? 'Out of Stock' : added ? 'Added' : adding ? 'Adding...' : 'Add to Cart'}</button></div>{message && <p className="combo-card-action-message" role="status">{message}</p>}</div></article>;
+  return <article className={`${styles.productCard} ${styles.cardReveal} ${viewMode === 'list' ? styles.listCard : ''}`}><div className={styles.imageWrap}><span className={styles.discountBadge}>{combo.discount ? `-${combo.discount}%` : 'COMBO'}</span><button className={`${styles.wishlistButton} ${saved ? styles.saved : ''}`} type="button" onClick={toggleWishlist} disabled={wishlistLoading} aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={saved}><Heart size={17} fill={saved ? 'currentColor' : 'none'} /></button><Link className={styles.productLink} href={`/product/${combo.slug}`} aria-label={`View ${combo.name}`}>{combo.image ? <OptimizedImage src={combo.image} alt={combo.name} /> : <span className={styles.imagePlaceholder}>Combo</span>}</Link></div><div className={styles.cardBody}><span className={styles.cardCategory}>{combo.comboCategory} Combo</span><Link className={styles.productName} href={`/product/${combo.slug}`}>{combo.name}</Link><span className={styles.itemCount}>{combo.itemCount} Items</span><span className={styles.rating}>★ {Number(combo.rating || 0).toFixed(1)} ({combo.reviewCount || 0})</span><div className={styles.priceRow}><strong>৳{combo.price.toLocaleString('en-IN')}</strong>{combo.oldPrice > combo.price && <del>৳{combo.oldPrice.toLocaleString('en-IN')}</del>}</div>{combo.savings > 0 && <span className={styles.savings}>You Save ৳{combo.savings.toLocaleString('en-IN')}</span>}<div className={`${styles.cardActions} ${viewMode === 'list' ? styles.listCardActions : ''}`}>{viewMode === 'list' && <Link className={styles.viewButton} href={`/product/${combo.slug}`}><Eye size={16} />Details</Link>}<button type="button" className={styles.cartButton} onClick={addToCart} disabled={adding || Number(combo.stock || 0) <= 0}><ShoppingCart size={15} />{Number(combo.stock || 0) <= 0 ? 'Out of Stock' : added ? 'Added' : adding ? 'Adding...' : 'Add to Cart'}</button></div>{message && <p className="combo-card-action-message" role="status">{message}</p>}</div></article>;
 }
 function EmptyState({ resetFilters }) { return <div className={styles.emptyState}><PackageCheck size={34} /><h2>কোনো কম্বো পণ্য পাওয়া যায়নি</h2><p>অন্য কোনো category বা price range দিয়ে আবার চেষ্টা করুন।</p><button type="button" onClick={resetFilters}><RotateCcw size={15} /> ফিল্টার রিসেট করুন</button></div>; }
 function PromoBanners() { return <section className={styles.promoGrid}><div className={`${styles.promoBanner} ${styles.promoPrimary}`}><div><span className={styles.eyebrow}>SMART SHOPPING</span><h2>কষ্টা কিনুন, বেশি সাশ্রয় করুন!</h2><p>আমাদের বিশেষ কম্বো প্যাকেজে পাচ্ছেন সেরা পণ্য সেরা দামে।</p><Link href="#combo-categories">সব কম্বো দেখুন <ArrowRight size={15} /></Link></div><ShoppingBasket className={styles.basketArt} size={92} /></div><div className={`${styles.promoBanner} ${styles.promoOffer}`}><span className={styles.eyebrow}>COMBO OFFER!</span><h2>৳3,000+</h2><p>টাকার বেশি কম্বো কিনলে ফ্রি ডেলিভারি</p><strong>FREE<br />DELIVERY</strong></div><div className={`${styles.promoBanner} ${styles.promoWhy}`}><h2>Why Combo?</h2><p><Check size={14} /> একই প্যাকেজে বেশি পণ্য</p><p><Check size={14} /> বাজারের সেরা দাম</p><p><Check size={14} /> সময় ও টাকা দুটোই সাশ্রয়</p></div></section>; }

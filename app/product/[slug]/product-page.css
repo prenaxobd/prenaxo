@@ -1887,13 +1887,6 @@
 
 .single-product-page .related-carousel {
   position: relative;
-
-  padding: 18px;
-
-  border: 1px solid var(--product-line);
-  border-radius: 14px;
-
-  background: #fff;
 }
 
 .single-product-page .related-track {
@@ -1916,6 +1909,23 @@
 .single-product-page .related-slide {
   flex: 0 0 calc(20% - 12px);
   min-width: 190px;
+}
+
+.single-product-page .related-slide .product-add-cart.product-add-cart-grid {
+  min-height: 42px !important;
+  height: auto !important;
+  margin-top: 14px !important;
+  padding: 9px 10px !important;
+  gap: 6px !important;
+  font-size: 12px !important;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.single-product-page .related-slide .product-add-cart.product-add-cart-grid svg {
+  width: 16px;
+  height: 16px;
+  flex-basis: 16px;
 }
 
 .single-product-page .related-arrow {
@@ -1944,11 +1954,11 @@
 }
 
 .single-product-page .related-prev {
-  left: 3px;
+  left: -18px;
 }
 
 .single-product-page .related-next {
-  right: 3px;
+  right: -18px;
 }
 
 .single-product-page .related-arrow:hover {
@@ -2524,11 +2534,6 @@
   .single-product-page .related-products {
     margin-top: 15px;
     margin-bottom: 0px;
-  }
-
-  .single-product-page .related-carousel {
-    padding: 11px;
-    border-radius: 10px;
   }
 
   .single-product-page .related-slide {

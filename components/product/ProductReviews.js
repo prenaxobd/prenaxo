@@ -165,6 +165,8 @@ export default function ProductReviews({
           HEADER
       ========================================= */}
 
+      <div className="review-overview">
+
       <div className="review-header">
 
         <div className="review-summary">
@@ -364,6 +366,7 @@ export default function ProductReviews({
 
       </div>
 
+      </div>
 
       {/* =========================================
           REVIEWS LIST
@@ -485,4 +488,3 @@ export default function ProductReviews({
     </section>
   );
 }
-
