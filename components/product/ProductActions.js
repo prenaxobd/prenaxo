@@ -1,6 +1,6 @@
 'use client';
 
-import { Heart, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OptimizedImage from '@/components/OptimizedImage';
@@ -8,7 +8,11 @@ import { useCart } from '@/components/cart/CartProvider';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
 import { useAccountRequired } from '@/components/auth/AccountRequiredProvider';
 import { useProductOptionSelection } from '@/components/product/ProductOptionContext';
-import { getColorOptionImage } from '@/components/product/product-option-images';
+import { helpCenterConfig } from '@/lib/help-center';
+import {
+  getColorOptionImage,
+  getProductOptionGroups,
+} from '@/components/product/product-option-images';
 
 const NO_OPTION_IDS = [];
 
@@ -30,6 +34,16 @@ function getVariantAttributeValueIds(variant, groups) {
     .map((item) => item.attributeValueId || item.attributeValue?.id)
     .filter(Boolean);
 
+  const linkedColorNames = (variant?.attributeValues || [])
+    .map((item) => item.attributeValue)
+    .filter((value) => value && isColorAttribute(value.attribute))
+    .map((value) => normalize(value.name));
+  const galleryColorIds = groups
+    .filter(isColorAttribute)
+    .flatMap((group) => group.values
+      .filter((value) => linkedColorNames.includes(normalize(value.name)))
+      .map((value) => value.id));
+
   const legacyIds = groups.flatMap((group) => {
     const key = normalizeKey(group.slug || group.name);
     const variantValue = variant?.[key] ?? variant?.[group.slug] ?? variant?.[group.name];
@@ -37,7 +51,7 @@ function getVariantAttributeValueIds(variant, groups) {
     return match ? [match.id] : [];
   });
 
-  return [...new Set([...linkedIds, ...legacyIds])];
+  return [...new Set([...linkedIds, ...galleryColorIds, ...legacyIds])];
 }
 
 function getVariantForSelection(variants, selectedIds, groups) {
@@ -109,26 +123,22 @@ export default function ProductActions({
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState('');
   const [wishlistBusy, setWishlistBusy] = useState(false);
+  const [bulkOptionsBusy, setBulkOptionsBusy] = useState(false);
   const saved = wishlistStore?.isSaved(cartProduct.id) || false;
 
-  const attributeGroups = useMemo(() => (
-    (cartProduct.category?.attributes || [])
-      .map(({ attribute }) => ({
-        ...attribute,
-        values: (attribute.values || []).filter((value) =>
-          cartProduct.attributeValues?.some((item) =>
-            (item.attributeValueId || item.attributeValue?.id) === value.id
-          )
-        ),
-      }))
-      .filter((attribute) => attribute.values.length > 0)
-  ), [cartProduct]);
+  const attributeGroups = useMemo(
+    () => getProductOptionGroups(cartProduct),
+    [cartProduct]
+  );
 
   const hasAttributeOptions = attributeGroups.length > 0;
   const colorGroup = attributeGroups.find(isColorAttribute);
   const sizeGroup = attributeGroups.find((attribute) =>
     /size/i.test(`${attribute.slug || ''} ${attribute.name || ''}`)
   );
+  const supportsColorMatrix = Boolean(colorGroup) &&
+    !sizeGroup &&
+    attributeGroups.length === 1;
   const supportsSizeMatrix = Boolean(sizeGroup) &&
     attributeGroups.every((attribute) =>
       attribute.id === sizeGroup.id || attribute.id === colorGroup?.id
@@ -192,6 +202,11 @@ export default function ProductActions({
 
     setSelectedAttributeValueIds((current) => {
       const groupValueIds = new Set(attribute.values.map((value) => value.id));
+      if (supportsColorMatrix && isColorAttribute(attribute)) {
+        return current.includes(valueId)
+          ? current.filter((id) => id !== valueId)
+          : [...current, valueId];
+      }
       return current.includes(valueId)
         ? current
         : [...current.filter((id) => !groupValueIds.has(id)), valueId];
@@ -290,6 +305,144 @@ export default function ProductActions({
       return;
     }
 
+    await addOptionRow(entry, sizeValue.name, buyNowAfterAdd);
+  }
+
+  function getColorRow(entry) {
+    const requestedInCart = (cart.items || [])
+      .filter((item) =>
+        item.productId === cartProduct.id &&
+        (item.variantId || cartProduct.id) === entry.stockKey
+      )
+      .reduce((total, item) => total + Number(item.quantity || 0), 0);
+    const requestedByOtherColors = selectedEntries
+      .filter((other) => other.stockKey === entry.stockKey && other.key !== entry.key)
+      .reduce((total, other) => total + other.quantity, 0);
+    const availableQuantity = Math.max(
+      0,
+      entry.stock - requestedInCart - requestedByOtherColors
+    );
+
+    return {
+      ...entry,
+      availableQuantity,
+      unavailable: availableQuantity < 1 ||
+        (variantsHaveOptionValues && !entry.variant),
+    };
+  }
+
+  const colorEntries = selectedEntries.map(getColorRow);
+  const sizeMatrixReady = !colorGroup || selectedAttributeValueIds.some((id) =>
+    colorGroup.values.some((value) => value.id === id)
+  );
+  const sizeEntries = supportsSizeMatrix && sizeMatrixReady
+    ? sizeGroup.values.map(getSizeRow)
+    : [];
+  const availableSizeEntries = sizeEntries.filter((entry) =>
+    !entry.unavailable && entry.quantity <= entry.availableQuantity
+  );
+  const bulkEntries = supportsColorMatrix ? colorEntries : availableSizeEntries;
+  const bulkOptionsUnavailable =
+    bulkEntries.length === 0 ||
+    (supportsColorMatrix && colorEntries.some((entry) =>
+      entry.unavailable || entry.quantity > entry.availableQuantity
+    ));
+  const whatsappEntries = supportsColorMatrix || supportsSizeMatrix
+    ? bulkEntries
+    : hasAttributeOptions
+      ? entriesWithAvailableStock
+      : [{
+          attributeValueIds: [],
+          quantity,
+          price: Number(cartProduct.salePrice ?? cartProduct.regularPrice ?? 0),
+          availableQuantity: Number(cartProduct.stock || 0),
+          unavailable: Number(cartProduct.stock || 0) < 1,
+        }];
+  const whatsappUnavailable = disabled ||
+    whatsappEntries.length === 0 ||
+    whatsappEntries.some((entry) =>
+      entry.unavailable || entry.quantity > entry.availableQuantity
+    );
+
+  async function addAllOptions(buyNowAfterAdd = false) {
+    setMessage('');
+
+    if (bulkOptionsUnavailable) {
+      setMessage(
+        bulkEntries.length === 0
+          ? supportsSizeMatrix && colorGroup
+            ? 'Please select a color first.'
+            : supportsSizeMatrix
+              ? 'There are no available size options to order.'
+              : 'Please select one or more colors.'
+          : 'One or more selected options are unavailable or exceed available stock.'
+      );
+      return;
+    }
+
+    setBulkOptionsBusy(true);
+    try {
+      if (!(await requireAccount())) return;
+      const addedQuantity = bulkEntries.reduce((total, entry) => total + entry.quantity, 0);
+      const result = await cart.addMany(
+        bulkEntries.map((entry) => ({
+          product: createCartProduct(entry),
+          quantity: entry.quantity,
+        }))
+      );
+
+      if (!result.ok) {
+        setMessage(result.error || 'Unable to add selected options.');
+        return;
+      }
+
+      setMessage(`${addedQuantity} item${addedQuantity === 1 ? '' : 's'} added to cart.`);
+      if (buyNowAfterAdd) router.push('/checkout');
+    } catch (error) {
+      setMessage(error.message || 'Unable to add selected options.');
+    } finally {
+      setBulkOptionsBusy(false);
+    }
+  }
+
+  function getOptionLabel(entry) {
+    return attributeGroups.flatMap((group) =>
+      group.values.filter((value) => entry.attributeValueIds.includes(value.id))
+    ).map((value) => value.name).join(' / ');
+  }
+
+  function orderOptionsOnWhatsApp() {
+    if (whatsappUnavailable) {
+      setMessage(
+        whatsappEntries.length === 0
+          ? hasAttributeOptions
+            ? `Please select ${attributeGroups.map((group) => group.name.toLowerCase()).join(' and ')} first.`
+            : 'This product is currently unavailable.'
+          : 'One or more selected options are unavailable or exceed available stock.'
+      );
+      return;
+    }
+
+    const orderTotal = whatsappEntries.reduce(
+      (total, entry) => total + entry.price * entry.quantity,
+      0
+    );
+    const orderMessage = [
+      'Assalamu Alaikum, I would like to order from Prenaxo:',
+      `Product: ${cartProduct.name || 'Product'}`,
+      ...whatsappEntries.map((entry) =>
+        `- ${getOptionLabel(entry) || 'Option'} x ${entry.quantity} — ৳${(entry.price * entry.quantity).toLocaleString()}`
+      ),
+      `Total items: ${whatsappEntries.reduce((total, entry) => total + entry.quantity, 0)}`,
+      `Total: ৳${orderTotal.toLocaleString()}`,
+      `Product link: ${window.location.href}`,
+    ].join('\n');
+    const whatsappUrl = `https://wa.me/${helpCenterConfig.whatsapp.phone}?text=${encodeURIComponent(orderMessage)}`;
+
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  async function addOptionRow(entry, optionLabel, buyNowAfterAdd = false) {
     try {
       if (!(await requireAccount())) return;
     } catch (error) {
@@ -311,7 +464,7 @@ export default function ProductActions({
       return;
     }
 
-    setMessage(`${sizeValue.name} added to cart.`);
+    setMessage(`${optionLabel} added to cart.`);
     if (buyNowAfterAdd) router.push('/checkout');
   }
 
@@ -497,13 +650,118 @@ export default function ProductActions({
         </section>
       )}
 
+      {supportsColorMatrix && (
+        <section className="product-size-matrix product-color-matrix" aria-label="Choose colors and add to cart">
+          <div className="product-size-matrix-heading">
+            <strong>Color</strong>
+            <strong>Price</strong>
+            <strong>Stock / Add</strong>
+          </div>
+          {selectedEntries.length ? selectedEntries.map((entry) => {
+            const row = getColorRow(entry);
+            const colorName = entry.selectedValues[0]?.name || 'Color';
+
+            return (
+              <div className="product-size-matrix-row" key={entry.key}>
+                <strong>{colorName}</strong>
+                <strong className="product-size-matrix-price">
+                  ৳{entry.price.toLocaleString()}
+                </strong>
+                <div className="product-size-matrix-actions">
+                  <span className={row.unavailable ? 'is-out-of-stock' : ''}>
+                    {row.unavailable ? 'Unavailable' : `${row.availableQuantity} in stock`}
+                  </span>
+                  <div className="product-qty product-size-matrix-qty" aria-label={`${colorName} quantity`}>
+                    <button
+                      type="button"
+                      disabled={row.unavailable || entry.quantity <= 1}
+                      onClick={() => setEntryQuantity(entry.key, entry.quantity - 1, row.availableQuantity)}
+                      aria-label={`Decrease ${colorName} quantity`}
+                    ><Minus size={12}/></button>
+                    <span>{entry.quantity}</span>
+                    <button
+                      type="button"
+                      disabled={row.unavailable || entry.quantity >= row.availableQuantity}
+                      onClick={() => setEntryQuantity(entry.key, entry.quantity + 1, row.availableQuantity)}
+                      aria-label={`Increase ${colorName} quantity`}
+                    ><Plus size={12}/></button>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={row.unavailable || entry.quantity > row.availableQuantity}
+                    onClick={() => void addOptionRow(entry, colorName)}
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    className="product-size-buy-now"
+                    disabled={row.unavailable || entry.quantity > row.availableQuantity}
+                    onClick={() => void addOptionRow(entry, colorName, true)}
+                  >
+                    Buy now
+                  </button>
+                </div>
+              </div>
+            );
+          }) : (
+            <p className="product-size-matrix-hint">Select one or more colors to add them to your cart.</p>
+          )}
+        </section>
+      )}
+
+      {(supportsColorMatrix || supportsSizeMatrix) && (
+        <div className="product-color-matrix-bulk-actions">
+          <button
+            type="button"
+            className="btn product-primary-btn"
+            disabled={disabled || bulkOptionsBusy}
+            onClick={() => void addAllOptions()}
+          >
+            <ShoppingBag size={16}/>
+            <span>Add all to cart</span>
+          </button>
+          <button
+            type="button"
+            className="btn product-secondary-btn"
+            disabled={disabled || bulkOptionsBusy}
+            onClick={() => void addAllOptions(true)}
+          >
+            Buy all now
+          </button>
+        </div>
+      )}
+
+      {(supportsColorMatrix || supportsSizeMatrix) && (
+        <div className="product-color-matrix-contact-row">
+          <button
+            type="button"
+            className="product-color-matrix-whatsapp"
+            disabled={disabled}
+            onClick={orderOptionsOnWhatsApp}
+          >
+            <MessageCircle size={18}/>
+            <span>Order on WhatsApp</span>
+          </button>
+          <button
+            type="button"
+            className="btn product-icon-btn"
+            onClick={() => void wishlist()}
+            disabled={!wishlistStore?.ready || wishlistBusy}
+            aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+            aria-pressed={saved}
+            title={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+          ><Heart size={18} fill={saved ? 'currentColor' : 'none'}/></button>
+        </div>
+      )}
+
       {hasAttributeOptions && selectedCombinations.length === 0 && (
-        !supportsSizeMatrix && <p className="product-option-hint">
+        !supportsSizeMatrix && !supportsColorMatrix && <p className="product-option-hint">
           Choose at least one {attributeGroups.map((group) => group.name.toLowerCase()).join(' and ')} option to set quantities.
         </p>
       )}
 
-      {!supportsSizeMatrix && hasAttributeOptions && allSelectedCombinations.length > 0 && (
+      {!supportsSizeMatrix && !supportsColorMatrix && hasAttributeOptions && allSelectedCombinations.length > 0 && (
         <section className="selected-variant-list" aria-label="Selected option quantities">
           <div className="selected-variant-heading">
             <strong>Your selections</strong>
@@ -559,7 +817,7 @@ export default function ProductActions({
         </section>
       )}
 
-      {!supportsSizeMatrix && (
+      {!supportsSizeMatrix && !supportsColorMatrix && (
         <div className={`product-action-controls ${hasAttributeOptions ? 'has-variant-options' : ''}`}>
         {!hasAttributeOptions && (
           <div className="product-qty" aria-label="Quantity selector">
@@ -606,6 +864,20 @@ export default function ProductActions({
             title={saved ? 'Remove from wishlist' : 'Add to wishlist'}
           ><Heart size={18} fill={saved ? 'currentColor' : 'none'}/></button>
         </div>
+        </div>
+      )}
+
+      {!supportsColorMatrix && !supportsSizeMatrix && (
+        <div className="product-color-matrix-contact-row product-generic-contact-row">
+          <button
+            type="button"
+            className="product-color-matrix-whatsapp"
+            disabled={disabled}
+            onClick={orderOptionsOnWhatsApp}
+          >
+            <MessageCircle size={18}/>
+            <span>Order on WhatsApp</span>
+          </button>
         </div>
       )}
 

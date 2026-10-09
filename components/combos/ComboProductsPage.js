@@ -2,7 +2,7 @@
 import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
-import { ArrowRight, Baby, Check, ChevronDown, ChevronRight, Heart, Home, Leaf, MoonStar, PackageCheck, RotateCcw, Search, ShieldCheck, ShoppingBag, ShoppingBasket, ShoppingCart, SlidersHorizontal, Truck, UsersRound, X } from 'lucide-react';
+import { ArrowRight, Baby, Check, ChevronDown, ChevronRight, Heart, Home, LayoutGrid, Leaf, MoonStar, PackageCheck, RotateCcw, Search, ShieldCheck, ShoppingBag, ShoppingBasket, ShoppingCart, SlidersHorizontal, Truck, UsersRound, X } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
@@ -10,6 +10,7 @@ import { useAccountRequired } from '@/components/auth/AccountRequiredProvider';
 import styles from './ComboProductsPage.module.css';
 
 const priceRanges = [{ label: '৳500 - ৳1,000', min: 500, max: 1000 }, { label: '৳1,000 - ৳2,000', min: 1000, max: 2000 }, { label: '৳2,000 - ৳3,000', min: 2000, max: 3000 }, { label: '৳3,000+', min: 3000, max: Infinity }];
+const PRODUCTS_PER_PAGE = 12;
 function makeCombo(product) {
   const price = Number(product.salePrice || product.regularPrice || 0);
   const oldPrice = Number(product.regularPrice || 0);
@@ -25,8 +26,9 @@ export default function ComboProductsPage({ products }) {
   const [category, setCategory] = useState('All');
   const maxComboPrice = useMemo(() => Math.max(10000, ...combos.map((combo) => combo.price)), [combos]);
   const [priceLimit, setPriceLimit] = useState(maxComboPrice);
-  const [sort, setSort] = useState('popular');
+  const [sort, setSort] = useState('newest');
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('grid');
   const [filterOpen, setFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [ratingFilter, setRatingFilter] = useState(0);
@@ -80,8 +82,8 @@ export default function ComboProductsPage({ products }) {
 
     return () => observer.disconnect();
   }, [availability, brand, category, currentPage, priceLimit, ratingFilter, sort]);
-  const totalPages = Math.max(1, Math.ceil(visibleCombos.length / 12));
-  const pageCombos = visibleCombos.slice((currentPage - 1) * 12, currentPage * 12);
+  const totalPages = Math.max(1, Math.ceil(visibleCombos.length / PRODUCTS_PER_PAGE));
+  const pageCombos = visibleCombos.slice((currentPage - 1) * PRODUCTS_PER_PAGE, currentPage * PRODUCTS_PER_PAGE);
   function resetFilters() { setCategory('All'); setBrand('All'); setPriceLimit(maxComboPrice); setRatingFilter(0); setAvailability('All'); }
   const filterProps = { category, setCategory, categories, brand, setBrand, brands, priceLimit, maxComboPrice, setPriceLimit, ratingFilter, setRatingFilter, availability, setAvailability, resetFilters, close: () => setFilterOpen(false) };
   return (
@@ -97,27 +99,19 @@ export default function ComboProductsPage({ products }) {
                 <SlidersHorizontal size={16} /> Filter
               </button>
               <span className={styles.mobileCount}>{visibleCombos.length} combos</span>
-              <ProductToolbar
-                mobile
-                count={visibleCombos.length}
-                sort={sort}
-                setSort={setSort}
-                sortMenuOpen={sortMenuOpen}
-                setSortMenuOpen={setSortMenuOpen}
-              />
             </div>
             <ProductToolbar
-              className={styles.desktopToolbar}
-              count={visibleCombos.length}
               sort={sort}
               setSort={setSort}
               sortMenuOpen={sortMenuOpen}
               setSortMenuOpen={setSortMenuOpen}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
             />
             {pageCombos.length ? (
-              <div className={styles.productGrid} ref={productGridRef}>
+              <div className={`${styles.productGrid} ${viewMode === 'list' ? styles.listView : ''}`} ref={productGridRef}>
                 {pageCombos.map((combo) => (
-                  <ComboProductCard key={combo.id} combo={combo} cart={cart} />
+                  <ComboProductCard key={combo.id} combo={combo} cart={cart} viewMode={viewMode} />
                 ))}
               </div>
             ) : <EmptyState resetFilters={resetFilters} />}
@@ -144,8 +138,53 @@ function ShopStyleFilterOptions({ category, setCategory, categories, brand, setB
 function FilterSection({ title, children }) { return <section className="shop-filter-section"><h3>{title}</h3><div>{children}</div></section>; }
 function FilterRadio({ label, checked, onChange }) { return <label className="shop-filter-radio"><input type="radio" checked={checked} onChange={onChange} /><span>{label}</span></label>; }
 function FilterOptions({ category, setCategory, categories, brand, setBrand, brands, selectedRanges, toggleRange, ratingFilter, setRatingFilter, availability, setAvailability }) { return <div className={styles.filterOptions}><div className={styles.filterGroup}><h3>Categories <ChevronDown size={14} /></h3><button type="button" className={category === 'All' ? styles.activeFilter : ''} onClick={() => setCategory('All')}><span>All Combos</span><small>{categories.reduce((total, item) => total + item.count, 0)}</small></button>{categories.map((item) => <button type="button" className={category === item.value ? styles.activeFilter : ''} key={item.value} onClick={() => setCategory(item.value)}><span>{item.name}</span><small>{item.count}</small></button>)}</div>{brands.length > 0 && <div className={styles.filterGroup}><h3>Brands <ChevronDown size={14} /></h3><select className={styles.filterSelect} value={brand} onChange={(event) => setBrand(event.target.value)}><option value="All">All Brands</option>{brands.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>}<div className={styles.filterGroup}><h3>Price Range <ChevronDown size={14} /></h3>{priceRanges.map((range) => <label key={range.label}><input type="checkbox" checked={selectedRanges.some((item) => item.min === range.min)} onChange={() => toggleRange(range)} /><span>{range.label}</span></label>)}</div><div className={styles.filterGroup}><h3>Rating <ChevronDown size={14} /></h3>{[4, 3, 2].map((rating) => <button type="button" className={ratingFilter === rating ? styles.activeFilter : ''} key={rating} onClick={() => setRatingFilter(rating)}><span>★ {rating}+ rating</span></button>)}</div><div className={styles.filterGroup}><h3>Availability <ChevronDown size={14} /></h3>{['All', 'In stock', 'Out of stock'].map((value) => <button type="button" className={availability === value ? styles.activeFilter : ''} key={value} onClick={() => setAvailability(value)}><span>{value}</span></button>)}</div></div>; }
-function ProductToolbar({ count, sort, setSort, sortMenuOpen, setSortMenuOpen, mobile = false, className = '' }) { const sortOptions = [{ value: 'popular', label: 'Popularity' }, { value: 'newest', label: 'Newest' }, { value: 'low', label: 'Price: Low to High' }, { value: 'high', label: 'Price: High to Low' }, { value: 'discount', label: 'Discount' }]; const selectedSort = sortOptions.find((option) => option.value === sort)?.label || 'Popularity'; return <div className={`${styles.productToolbar} ${mobile ? styles.mobileSort : ''} ${className}`}><span>Showing {count} combo products</span><div className={`shop-toolbar-sort combo-sort-control ${sortMenuOpen ? 'is-open' : ''}`}><button type="button" className="shop-sort-trigger" onClick={() => setSortMenuOpen((open) => !open)} aria-haspopup="listbox" aria-expanded={sortMenuOpen} aria-label="Sort combo products"><span className="shop-sort-label">Sort by</span><span className="shop-sort-value">{selectedSort}</span><span className="shop-sort-icon"><ChevronDown size={16} /></span></button>{sortMenuOpen && <div className="shop-sort-menu" role="listbox" aria-label="Combo sort options">{sortOptions.map((option) => <button key={option.value} type="button" role="option" className={`shop-sort-option ${sort === option.value ? 'is-selected' : ''}`} onClick={() => { setSort(option.value); setSortMenuOpen(false); }} aria-selected={sort === option.value}><span>{option.label}</span>{sort === option.value && <span className="shop-sort-dot" aria-hidden="true" />}</button>)}</div>}</div></div>; }
-function ComboProductCard({ combo, cart }) {
+function ProductToolbar({ sort, setSort, sortMenuOpen, setSortMenuOpen, viewMode, setViewMode }) {
+  const sortOptions = [
+    { value: 'popular', label: 'Best Sellers' },
+    { value: 'newest', label: 'Newest Arrivals' },
+    { value: 'low', label: 'Price: Low to High' },
+    { value: 'high', label: 'Price: High to Low' },
+    { value: 'discount', label: 'Biggest Discount' },
+  ];
+  const selectedSort = sortOptions.find((option) => option.value === sort)?.label || sortOptions[0].label;
+  return (
+    <div className={`shop-toolbar ${styles.productToolbar}`}>
+      <div className={`shop-toolbar-sort combo-sort-control ${sortMenuOpen ? 'is-open' : ''}`}>
+        <button type="button" className="shop-sort-trigger" onClick={() => setSortMenuOpen((open) => !open)} aria-haspopup="listbox" aria-expanded={sortMenuOpen} aria-label="Sort combo products">
+          <span className="shop-sort-label">Sort by</span>
+          <span className="shop-sort-value">{selectedSort}</span>
+          <span className="shop-sort-icon"><ChevronDown size={16} /></span>
+        </button>
+        {sortMenuOpen && (
+          <div className="shop-sort-menu" role="listbox" aria-label="Combo sort options">
+            {sortOptions.map((option) => (
+              <button key={option.value} type="button" role="option" className={`shop-sort-option ${sort === option.value ? 'is-selected' : ''}`} onClick={() => { setSort(option.value); setSortMenuOpen(false); }} aria-selected={sort === option.value}>
+                <span>{option.label}</span>
+                {sort === option.value && <span className="shop-sort-dot" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="shop-view-toggle" aria-label="Choose product view">
+        <button type="button" className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'}>
+          <LayoutGrid size={18} />
+        </button>
+        <button type="button" className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="10" y1="6" x2="21" y2="6" />
+            <line x1="10" y1="12" x2="21" y2="12" />
+            <line x1="10" y1="18" x2="21" y2="18" />
+            <circle cx="4" cy="6" r="1" fill="currentColor" />
+            <circle cx="4" cy="12" r="1" fill="currentColor" />
+            <circle cx="4" cy="18" r="1" fill="currentColor" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+function ComboProductCard({ combo, cart, viewMode }) {
   const wishlist = useWishlist();
   const { requireAccount, showAccountRequired } = useAccountRequired();
   const saved = wishlist?.isSaved(combo.id) || false;
@@ -189,7 +228,7 @@ function ComboProductCard({ combo, cart }) {
     }
   }
 
-  return <article className={`${styles.productCard} ${styles.cardReveal}`}><div className={styles.imageWrap}><span className={styles.discountBadge}>{combo.discount ? `-${combo.discount}%` : 'COMBO'}</span><button className={`${styles.wishlistButton} ${saved ? styles.saved : ''}`} type="button" onClick={toggleWishlist} disabled={wishlistLoading} aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={saved}><Heart size={17} fill={saved ? 'currentColor' : 'none'} /></button><Link className={styles.productLink} href={`/product/${combo.slug}`} aria-label={`View ${combo.name}`}>{combo.image ? <OptimizedImage src={combo.image} alt={combo.name} /> : <span className={styles.imagePlaceholder}>Combo</span>}</Link></div><div className={styles.cardBody}><span className={styles.cardCategory}>{combo.comboCategory} Combo</span><Link className={styles.productName} href={`/product/${combo.slug}`}>{combo.name}</Link><span className={styles.itemCount}>{combo.itemCount} Items</span><span className={styles.rating}>★ {Number(combo.rating || 0).toFixed(1)} ({combo.reviewCount || 0})</span><div className={styles.priceRow}><strong>৳{combo.price.toLocaleString('en-IN')}</strong>{combo.oldPrice > combo.price && <del>৳{combo.oldPrice.toLocaleString('en-IN')}</del>}</div>{combo.savings > 0 && <span className={styles.savings}>You Save ৳{combo.savings.toLocaleString('en-IN')}</span>}<div className={styles.cardActions}><button type="button" className={styles.cartButton} onClick={addToCart} disabled={adding || Number(combo.stock || 0) <= 0}><ShoppingCart size={15} />{Number(combo.stock || 0) <= 0 ? 'Out of Stock' : added ? 'Added' : adding ? 'Adding...' : 'Add to Cart'}</button></div>{message && <p className="combo-card-action-message" role="status">{message}</p>}</div></article>;
+  return <article className={`${styles.productCard} ${styles.cardReveal} ${viewMode === 'list' ? styles.listCard : ''}`}><div className={styles.imageWrap}><span className={styles.discountBadge}>{combo.discount ? `-${combo.discount}%` : 'COMBO'}</span><button className={`${styles.wishlistButton} ${saved ? styles.saved : ''}`} type="button" onClick={toggleWishlist} disabled={wishlistLoading} aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'} aria-pressed={saved}><Heart size={17} fill={saved ? 'currentColor' : 'none'} /></button><Link className={styles.productLink} href={`/product/${combo.slug}`} aria-label={`View ${combo.name}`}>{combo.image ? <OptimizedImage src={combo.image} alt={combo.name} /> : <span className={styles.imagePlaceholder}>Combo</span>}</Link></div><div className={styles.cardBody}><span className={styles.cardCategory}>{combo.comboCategory} Combo</span><Link className={styles.productName} href={`/product/${combo.slug}`}>{combo.name}</Link><span className={styles.itemCount}>{combo.itemCount} Items</span><span className={styles.rating}>★ {Number(combo.rating || 0).toFixed(1)} ({combo.reviewCount || 0})</span><div className={styles.priceRow}><strong>৳{combo.price.toLocaleString('en-IN')}</strong>{combo.oldPrice > combo.price && <del>৳{combo.oldPrice.toLocaleString('en-IN')}</del>}</div>{combo.savings > 0 && <span className={styles.savings}>You Save ৳{combo.savings.toLocaleString('en-IN')}</span>}<div className={styles.cardActions}><button type="button" className={styles.cartButton} onClick={addToCart} disabled={adding || Number(combo.stock || 0) <= 0}><ShoppingCart size={15} />{Number(combo.stock || 0) <= 0 ? 'Out of Stock' : added ? 'Added' : adding ? 'Adding...' : 'Add to Cart'}</button></div>{message && <p className="combo-card-action-message" role="status">{message}</p>}</div></article>;
 }
 function EmptyState({ resetFilters }) { return <div className={styles.emptyState}><PackageCheck size={34} /><h2>কোনো কম্বো পণ্য পাওয়া যায়নি</h2><p>অন্য কোনো category বা price range দিয়ে আবার চেষ্টা করুন।</p><button type="button" onClick={resetFilters}><RotateCcw size={15} /> ফিল্টার রিসেট করুন</button></div>; }
 function PromoBanners() { return <section className={styles.promoGrid}><div className={`${styles.promoBanner} ${styles.promoPrimary}`}><div><span className={styles.eyebrow}>SMART SHOPPING</span><h2>কষ্টা কিনুন, বেশি সাশ্রয় করুন!</h2><p>আমাদের বিশেষ কম্বো প্যাকেজে পাচ্ছেন সেরা পণ্য সেরা দামে।</p><Link href="#combo-categories">সব কম্বো দেখুন <ArrowRight size={15} /></Link></div><ShoppingBasket className={styles.basketArt} size={92} /></div><div className={`${styles.promoBanner} ${styles.promoOffer}`}><span className={styles.eyebrow}>COMBO OFFER!</span><h2>৳3,000+</h2><p>টাকার বেশি কম্বো কিনলে ফ্রি ডেলিভারি</p><strong>FREE<br />DELIVERY</strong></div><div className={`${styles.promoBanner} ${styles.promoWhy}`}><h2>Why Combo?</h2><p><Check size={14} /> একই প্যাকেজে বেশি পণ্য</p><p><Check size={14} /> বাজারের সেরা দাম</p><p><Check size={14} /> সময় ও টাকা দুটোই সাশ্রয়</p></div></section>; }

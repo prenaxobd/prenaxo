@@ -738,6 +738,7 @@ export default function ShopBrowser({
                         key={product.id}
                         product={product}
                         viewMode={viewMode}
+                        scrollReveal
                       />
 
                     )

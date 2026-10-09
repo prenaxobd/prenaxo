@@ -1,4 +1,7 @@
-import { getColorOptionImage } from '@/components/product/product-option-images';
+import {
+  getColorOptionImage,
+  getGalleryColorNameFromId,
+} from '../product/product-option-images';
 
 export function getCartItemOptionLabels(item) {
   const variantLabels = [item.variant?.color, item.variant?.size];
@@ -10,7 +13,11 @@ export function getCartItemOptionLabels(item) {
     .map((attributeValue) => attributeValue.attributeValue?.name);
   const uniqueLabels = new Map();
 
-  for (const label of [...variantLabels, ...attributeLabels]) {
+  const galleryColorLabels = (item.attributeValueIds || [])
+    .map(getGalleryColorNameFromId)
+    .filter(Boolean);
+
+  for (const label of [...variantLabels, ...attributeLabels, ...galleryColorLabels]) {
     const normalized = String(label || '').trim();
     if (normalized && !uniqueLabels.has(normalized.toLowerCase())) {
       uniqueLabels.set(normalized.toLowerCase(), normalized);
@@ -32,6 +39,14 @@ export function getCartItemImage(item) {
     })
     .map((attributeValue) => attributeValue.attributeValue)
     .filter(Boolean);
+  const selectedGalleryColor = (item.attributeValueIds || [])
+    .map(getGalleryColorNameFromId)
+    .find(Boolean);
+
+  if (selectedGalleryColor) {
+    const image = getColorOptionImage(item.product, { name: selectedGalleryColor });
+    if (image) return image;
+  }
 
   for (const color of selectedColors) {
     const image = getColorOptionImage(item.product, color);

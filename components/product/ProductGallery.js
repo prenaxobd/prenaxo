@@ -8,7 +8,10 @@ import {
   ChevronRight,
   Maximize2,
   Copy,
+  Download,
   MessageCircle,
+  Music2,
+  Send,
   X,
 } from 'lucide-react';
 
@@ -16,10 +19,13 @@ import { useState } from 'react';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
 import { useAccountRequired } from '@/components/auth/AccountRequiredProvider';
 import { useProductOptionSelection } from '@/components/product/ProductOptionContext';
-import { getColorOptionImage } from '@/components/product/product-option-images';
+import {
+  getColorOptionImage,
+  getGalleryColorOptions,
+} from '@/components/product/product-option-images';
 
-function normalizeAlt(value) {
-  return ` ${String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+function normalizeColor(value) {
+  return String(value || '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
 }
 
 function isColorAttribute(attribute) {
@@ -40,6 +46,7 @@ export default function ProductGallery({
   const [wishlistMessage, setWishlistMessage] = useState('');
   const selectedAttributeValueIds = optionSelection?.selectedAttributeValueIds || [];
   const attributeValues = product.attributeValues || [];
+  const galleryColorOptions = getGalleryColorOptions(product);
   const colorValues = attributeValues
     .filter((item) => isColorAttribute(item.attributeValue?.attribute))
     .map((item) => item.attributeValue)
@@ -47,24 +54,25 @@ export default function ProductGallery({
   const selectedColors = colorValues.filter((value) =>
     selectedAttributeValueIds.includes(value.id)
   );
-  const selectedColorImages = selectedColors.flatMap((value) => {
-    const taggedImages = productImages.filter((image) =>
-      normalizeAlt(image.alt).startsWith(normalizeAlt(value.name))
-    );
-    return taggedImages.length
-      ? taggedImages
-      : [getColorOptionImage(product, value)].filter(Boolean);
-  });
-  const taggedImages = productImages.filter((image) =>
-    colorValues.some((value) =>
-      normalizeAlt(image.alt).startsWith(normalizeAlt(value.name))
-    )
+  const selectedGalleryColors = galleryColorOptions.filter((option) =>
+    selectedAttributeValueIds.includes(option.id)
   );
+  const selectedColorImages = [
+    ...selectedColors.flatMap((value) => [
+      ...galleryColorOptions
+        .filter((option) => normalizeColor(value.name) === normalizeColor(option.name))
+        .flatMap((option) => option.images),
+      getColorOptionImage(product, value),
+    ].filter(Boolean)),
+    ...selectedGalleryColors.flatMap((option) => option.images),
+  ];
+  const taggedImages = galleryColorOptions.flatMap((option) => option.images);
   const sharedImages = productImages.filter((image) => !taggedImages.includes(image));
   const uniqueSelectedImages = [
     ...new Map(selectedColorImages.map((image) => [image.url, image])).values(),
   ];
-  const images = selectedColors.length
+  const hasSelectedColor = selectedColors.length > 0 || selectedGalleryColors.length > 0;
+  const images = hasSelectedColor
     ? uniqueSelectedImages.length
       ? [
           ...uniqueSelectedImages,
@@ -81,7 +89,11 @@ export default function ProductGallery({
   const [lightbox, setLightbox] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const selectedColorKey = selectedColors.map((value) => value.id).sort().join(',');
+  const [shareMessage, setShareMessage] = useState('');
+  const selectedColorKey = [
+    ...selectedColors.map((value) => value.id),
+    ...selectedGalleryColors.map((value) => value.id),
+  ].sort().join(',');
   const active = galleryState.colorKey === selectedColorKey ? galleryState.active : 0;
   const activeIndex = Math.min(active, Math.max(0, images.length - 1));
   const current =
@@ -135,15 +147,8 @@ export default function ProductGallery({
     return `${window.location.origin}/product/${product.slug}`;
   }
 
-  function openFacebook() {
-    const url = encodeURIComponent(productUrl());
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'noopener,noreferrer');
-    setShareOpen(false);
-  }
-
-  function openWhatsApp() {
-    const message = `${product.name}\n\n${productUrl()}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  function openShareUrl(url) {
+    window.open(url, '_blank', 'noopener,noreferrer');
     setShareOpen(false);
   }
 
@@ -151,26 +156,74 @@ export default function ProductGallery({
     try {
       await navigator.clipboard.writeText(productUrl());
       setCopied(true);
+      setShareMessage('Product link copied.');
       window.setTimeout(() => setCopied(false), 1800);
-    } catch {
+    } catch (error) {
       setCopied(false);
+      setShareMessage(error.message || 'Could not copy the product link. Please copy it from the address bar.');
     }
   }
 
   async function nativeShare() {
     try {
       if (typeof navigator.share !== 'function') {
-        await copyProductUrl();
+        setShareMessage('Use one of the social networks below to share this product.');
         return;
       }
 
       await navigator.share({
         title: product.name,
+        text: product.name,
         url: productUrl(),
       });
       setShareOpen(false);
-    } catch {
-      // User cancelled sharing.
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        setShareMessage(error.message || 'Could not open the share menu.');
+      }
+    }
+  }
+
+  function shareImage() {
+    const imageUrl = product.images?.[0]?.url;
+    if (!imageUrl) {
+      setShareMessage('No product image is available to share.');
+      return;
+    }
+
+    openShareUrl(imageUrl);
+  }
+
+  function socialShareUrl(platform) {
+    const url = productUrl();
+    const encodedUrl = encodeURIComponent(url);
+    const title = encodeURIComponent(product.name || 'Prenaxo product');
+    const imageUrl = product.images?.[0]?.url
+      ? new URL(product.images[0].url, window.location.origin).href
+      : '';
+    const image = encodeURIComponent(imageUrl);
+
+    switch (platform) {
+      case 'facebook':
+        return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+      case 'whatsapp':
+        return `https://wa.me/?text=${encodeURIComponent(`${product.name}\n\n${url}`)}`;
+      case 'x':
+        return `https://twitter.com/intent/tweet?text=${title}&url=${encodedUrl}`;
+      case 'linkedin':
+        return `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+      case 'telegram':
+        return `https://t.me/share/url?url=${encodedUrl}&text=${title}`;
+      case 'pinterest':
+        return `https://www.pinterest.com/pin/create/button/?url=${encodedUrl}&media=${image}&description=${title}`;
+      case 'threads':
+        return `https://www.threads.net/intent/post?text=${encodeURIComponent(`${product.name} ${url}`)}`;
+      case 'tiktok':
+        return `https://www.tiktok.com/share?url=${encodedUrl}`;
+      case 'email':
+        return `mailto:?subject=${title}&body=${encodeURIComponent(`${product.name}\n\n${url}`)}`;
+      default:
+        return '';
     }
   }
 
@@ -276,19 +329,44 @@ export default function ProductGallery({
             </button>
 
             <div className="product-share-options">
-              <button type="button" onClick={openFacebook}>
+              <button type="button" onClick={() => openShareUrl(socialShareUrl('facebook'))}>
                 <Share2 size={17} /> Facebook
               </button>
-              <button type="button" onClick={openWhatsApp}>
+              <button type="button" onClick={() => openShareUrl(socialShareUrl('whatsapp'))}>
                 <MessageCircle size={17} /> WhatsApp
+              </button>
+              <button type="button" onClick={() => openShareUrl(socialShareUrl('x'))}>
+                <X size={17} /> X / Twitter
+              </button>
+              <button type="button" onClick={() => openShareUrl(socialShareUrl('linkedin'))}>
+                <Share2 size={17} /> LinkedIn
+              </button>
+              <button type="button" onClick={() => openShareUrl(socialShareUrl('telegram'))}>
+                <Send size={17} /> Telegram
+              </button>
+              <button type="button" onClick={() => openShareUrl(socialShareUrl('pinterest'))}>
+                <Share2 size={17} /> Pinterest (with image)
+              </button>
+              <button type="button" onClick={() => openShareUrl(socialShareUrl('threads'))}>
+                <MessageCircle size={17} /> Threads
+              </button>
+              <button type="button" onClick={() => openShareUrl(socialShareUrl('tiktok'))}>
+                <Music2 size={17} /> TikTok
+              </button>
+              <button type="button" onClick={() => openShareUrl(socialShareUrl('email'))}>
+                <Send size={17} /> Email
+              </button>
+              <button type="button" onClick={shareImage}>
+                <Download size={17} /> Open product image
               </button>
               <button type="button" onClick={copyProductUrl}>
                 <Copy size={17} /> {copied ? 'Copied' : 'Copy Link'}
               </button>
               <button type="button" onClick={nativeShare}>
-                <Share2 size={17} /> More
+                <Share2 size={17} /> More apps
               </button>
             </div>
+            {shareMessage && <p className="product-share-message" role="status">{shareMessage}</p>}
           </div>
         )}
 

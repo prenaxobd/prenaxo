@@ -6,6 +6,7 @@ import { getDeliveryConfig, calculateDelivery } from '@/lib/delivery';
 import { ensureDefaultPaymentMethods } from '@/lib/payment-methods';
 import { assertSslCommerzReady } from '@/lib/sslcommerz';
 import { createSslCommerzAttempt, reconcileSslCommerzAttempt, startSslCommerzAttempt } from '@/lib/payment-attempts';
+import { getGalleryColorNameFromId } from '@/components/product/product-option-images';
 
 const schema = z.object({
   customerName: z.string().trim().min(2),
@@ -176,7 +177,12 @@ export async function POST(request) {
           orderId: created.id,
           productId: item.productId,
           variantId: item.variantId,
-          variantLabel: item.variant ? [item.variant.color, item.variant.size].filter(Boolean).join(' / ') || null : null,
+          variantLabel: [
+            item.variant?.color || (item.attributeValueIds || [])
+              .map(getGalleryColorNameFromId)
+              .find(Boolean),
+            item.variant?.size,
+          ].filter(Boolean).join(' / ') || null,
           attributeValueIds: item.attributeValueIds,
         })),
       });

@@ -1,11 +1,11 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Filter, Gift, Heart, Percent, ShieldCheck, Truck, Zap } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Filter, Gift, Heart, LayoutGrid, Percent, ShieldCheck, Truck, Zap } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
 import FlashSaleCountdown from './FlashSaleCountdown';
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 12;
 function RadioOption({ checked, label, count, onChange }) {
   return <button type="button" className={`flash-radio-option ${checked ? 'active' : ''}`} onClick={onChange}><span className="flash-radio" aria-hidden="true" />{label}{count !== undefined && <small>{count}</small>}</button>;
 }
@@ -17,14 +17,15 @@ export default function FlashSalePage({ products = [] }) {
   const maxPrice = useMemo(() => Math.max(1000, ...products.map((product) => Number(product.salePrice || product.regularPrice || 0))), [products]);
   const [priceLimit, setPriceLimit] = useState(maxPrice);
   const [availability, setAvailability] = useState('all');
-  const [sort, setSort] = useState('popular');
+  const [sort, setSort] = useState('newest');
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('grid');
   const [page, setPage] = useState(1);
   const [mobileFilters, setMobileFilters] = useState(false);
   useEffect(() => {
     if (!sortMenuOpen) return undefined;
     const closeOnOutsideClick = (event) => {
-      if (!event.target.closest('.flash-sort-control')) setSortMenuOpen(false);
+      if (!event.target.closest('.shop-toolbar-sort')) setSortMenuOpen(false);
     };
     document.addEventListener('mousedown', closeOnOutsideClick);
     return () => document.removeEventListener('mousedown', closeOnOutsideClick);
@@ -53,11 +54,12 @@ export default function FlashSalePage({ products = [] }) {
   const resetFilters = () => { setCategory('all'); setBrand('all'); setRating(0); setPriceLimit(maxPrice); setAvailability('all'); setPage(1); };
   const maxStock = Math.max(1, ...products.map((product) => Number(product.stock || 0)));
     const sortOptions = [
-      ['popular', 'Most popular'],
-      ['newest', 'Newest arrivals'],
-      ['price-low', 'Price: low to high'],
-      ['price-high', 'Price: high to low'],
-      ['discount', 'Biggest discount'],
+      ['popular', 'Most Popular'],
+      ['newest', 'Newest Arrivals'],
+      ['price-low', 'Price: Low to High'],
+      ['price-high', 'Price: High to Low'],
+      ['top-rated', 'Top Rated'],
+      ['discount', 'Biggest Discount'],
     ];
     const selectedSort = sortOptions.find(([value]) => value === sort)?.[1] || sortOptions[0][1];
     return <main className="flash-sale-page"><div className="container">
@@ -74,7 +76,62 @@ export default function FlashSalePage({ products = [] }) {
           <h3>Rating</h3><div className="flash-radio-list"><RadioOption checked={rating === 0} label="All ratings" onChange={() => { setRating(0); setPage(1); }} />{ratings.map(value => <RadioOption key={value} checked={rating === value} label={`${'★'.repeat(value)} & up`} count={products.filter(product => Number(product.rating || 0) >= value).length} onChange={() => { setRating(value); setPage(1); }} />)}</div>
           <h3>Availability</h3><div className="flash-radio-list"><RadioOption checked={availability === 'all'} label="All products" onChange={() => { setAvailability('all'); setPage(1); }} /><RadioOption checked={availability === 'in'} label="In stock" count={products.filter(product => Number(product.stock || 0) > 0).length} onChange={() => { setAvailability('in'); setPage(1); }} /><RadioOption checked={availability === 'out'} label="Out of stock" count={products.filter(product => Number(product.stock || 0) < 1).length} onChange={() => { setAvailability('out'); setPage(1); }} /></div>
         </aside>
-        <div className="flash-product-area"><div className="flash-products-heading"><div><button className="flash-mobile-filter" type="button" onClick={() => setMobileFilters(true)}><Filter size={16} /> Filters</button><span className="flash-eyebrow">Special offers</span><h2>Flash Sale Products</h2><p>{filteredProducts.length} products found</p></div><div className={`flash-sort-control ${sortMenuOpen ? 'is-open' : ''}`}><button type="button" className="flash-sort-trigger" onClick={() => setSortMenuOpen(open => !open)} aria-haspopup="listbox" aria-expanded={sortMenuOpen}><span>Sort by</span><strong>{selectedSort}</strong><ChevronDown size={15} /></button>{sortMenuOpen && <div className="flash-sort-menu" role="listbox" aria-label="Sort flash sale products">{sortOptions.map(([value, label]) => <button key={value} type="button" role="option" className={sort === value ? 'is-selected' : ''} onClick={() => { setSort(value); setSortMenuOpen(false); setPage(1); }} aria-selected={sort === value}><span>{label}</span>{sort === value && <i aria-hidden="true" />}</button>)}</div>}</div></div>{visibleProducts.length ? <div className="flash-product-grid">{visibleProducts.map(product => <ProductCard key={product.id} product={product} flashSale maxStock={maxStock} />)}</div> : <div className="flash-empty">No sale products match these filters.</div>}<div className="flash-pagination"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}><ChevronLeft size={16} /> Prev</button>{Array.from({ length: pageCount }, (_, index) => index + 1).map(number => <button type="button" className={page === number ? 'active' : ''} key={number} onClick={() => setPage(number)}>{number}</button>)}<button type="button" disabled={page === pageCount} onClick={() => setPage(page + 1)}>Next <ChevronRight size={16} /></button></div></div>
+        <div className="flash-product-area">
+          <div className="flash-products-heading">
+            <div>
+              <button className="flash-mobile-filter" type="button" onClick={() => setMobileFilters(true)}><Filter size={16} /> Filters</button>
+              <span className="flash-eyebrow">Special offers</span>
+              <h2>Flash Sale Products</h2>
+              <p>{filteredProducts.length} products found</p>
+            </div>
+          </div>
+          <div className="shop-toolbar flash-shop-toolbar">
+            <div className={`shop-toolbar-sort ${sortMenuOpen ? 'is-open' : ''}`}>
+              <button type="button" className="shop-sort-trigger" onClick={() => setSortMenuOpen(open => !open)} aria-haspopup="listbox" aria-expanded={sortMenuOpen} aria-label="Sort flash sale products">
+                <span className="shop-sort-label">Sort by</span>
+                <span className="shop-sort-value">{selectedSort}</span>
+                <span className="shop-sort-icon"><ChevronDown size={16} /></span>
+              </button>
+              {sortMenuOpen && (
+                <div className="shop-sort-menu" role="listbox" aria-label="Sort options">
+                  {sortOptions.map(([value, label]) => (
+                    <button key={value} type="button" role="option" className={`shop-sort-option ${sort === value ? 'is-selected' : ''}`} onClick={() => { setSort(value); setSortMenuOpen(false); setPage(1); }} aria-selected={sort === value}>
+                      <span>{label}</span>
+                      {sort === value && <span className="shop-sort-dot" aria-hidden="true" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="shop-view-toggle" aria-label="Choose product view">
+              <button type="button" className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')} aria-label="Grid view" aria-pressed={viewMode === 'grid'}>
+                <LayoutGrid size={18} />
+              </button>
+              <button type="button" className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')} aria-label="List view" aria-pressed={viewMode === 'list'}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="10" y1="6" x2="21" y2="6" />
+                  <line x1="10" y1="12" x2="21" y2="12" />
+                  <line x1="10" y1="18" x2="21" y2="18" />
+                  <circle cx="4" cy="6" r="1" fill="currentColor" />
+                  <circle cx="4" cy="12" r="1" fill="currentColor" />
+                  <circle cx="4" cy="18" r="1" fill="currentColor" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          {visibleProducts.length ? (
+            <div className={`flash-product-grid ${viewMode === 'list' ? 'list-view' : ''}`}>
+              {visibleProducts.map(product => <ProductCard key={product.id} product={product} flashSale maxStock={maxStock} viewMode={viewMode} scrollReveal />)}
+            </div>
+          ) : <div className="flash-empty">No sale products match these filters.</div>}
+          {pageCount > 1 && (
+            <div className="flash-pagination">
+              <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}><ChevronLeft size={16} /> Prev</button>
+              {Array.from({ length: pageCount }, (_, index) => index + 1).map(number => <button type="button" className={page === number ? 'active' : ''} key={number} onClick={() => setPage(number)}>{number}</button>)}
+              <button type="button" disabled={page === pageCount} onClick={() => setPage(page + 1)}>Next <ChevronRight size={16} /></button>
+            </div>
+          )}
+        </div>
       </section>
       <section className="flash-services">{[[Truck, 'Free delivery', 'On ৳3000+ orders'], [Truck, 'Fast delivery', 'Nationwide'], [ShieldCheck, 'Secure payment', '100% protected'], [Heart, 'Easy returns', 'Within 7 days'], [Gift, 'Customer support', 'Always available']].map(([Icon, title, text]) => <div key={title}><Icon size={25} /><span><b>{title}</b><small>{text}</small></span></div>)}</section>
     </div></main>;

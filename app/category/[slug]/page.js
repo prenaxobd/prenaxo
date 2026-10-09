@@ -494,7 +494,9 @@ export default async function CategoryPage({
             >
               {serializedProducts.length > 0 ? (
                 <div className="shop-grid">
-                  {serializedProducts.map((product) => <ProductCard key={product.id} product={product} />)}
+                  {serializedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} scrollReveal />
+                  ))}
                 </div>
               ) : (
                 <p className={styles.empty}>No products are currently available in this collection.</p>

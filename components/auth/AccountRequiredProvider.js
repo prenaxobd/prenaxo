@@ -94,12 +94,14 @@ export function AccountRequiredProvider({ children }) {
               <Link
                 className="account-required-register"
                 href={`/register?next=${encodeURIComponent(nextPath)}`}
+                onClick={() => setIsOpen(false)}
               >
                 Create an Account
               </Link>
               <Link
                 className="account-required-login"
                 href={`/login?next=${encodeURIComponent(nextPath)}`}
+                onClick={() => setIsOpen(false)}
               >
                 Already have an account? <strong>Log In</strong>
               </Link>

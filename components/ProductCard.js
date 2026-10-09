@@ -11,7 +11,7 @@ import {
   Eye,
 } from 'lucide-react';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useCart } from '@/components/cart/CartProvider';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
@@ -101,8 +101,10 @@ export default function ProductCard({
   maxStock = 0,
   viewMode = 'grid',
   imageSizes = '(max-width: 620px) 45vw, (max-width: 1000px) 30vw, 22vw',
+  scrollReveal = false,
 }) {
 
+  const cardRef = useRef(null);
   const cart = useCart();
   const wishlistStore = useWishlist();
   const { requireAccount, showAccountRequired } = useAccountRequired();
@@ -124,6 +126,28 @@ export default function ProductCard({
     useState(false);
   const [savingWishlist, setSavingWishlist] =
     useState(false);
+
+  useEffect(() => {
+    if (!scrollReveal || !cardRef.current) return undefined;
+
+    const card = cardRef.current;
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (motionPreference.matches || !('IntersectionObserver' in window)) {
+      card.classList.add('is-scroll-visible');
+      return undefined;
+    }
+
+    card.classList.add('is-scroll-pending');
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      card.classList.remove('is-scroll-pending');
+      card.classList.add('is-scroll-visible');
+      observer.disconnect();
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.08 });
+
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [scrollReveal]);
 
 
   /*
@@ -304,7 +328,10 @@ export default function ProductCard({
 
   return (
 
-    <article className="product-card">
+    <article
+      ref={cardRef}
+      className={`product-card ${scrollReveal ? 'product-card-scroll-reveal' : ''}`}
+    >
 
 
       {/* IMAGE */}
@@ -495,7 +522,7 @@ export default function ProductCard({
               className="product-card-view-btn"
             >
               <Eye size={16} />
-              {flashSale ? 'বিস্তারিত' : 'Details'}
+              Details
             </Link>
 
             <button
@@ -514,7 +541,7 @@ export default function ProductCard({
 
                   <span className="cart-spinner" />
 
-                  {flashSale ? 'যোগ হচ্ছে...' : 'Adding...'}
+                  Adding...
 
                 </>
 
@@ -524,7 +551,7 @@ export default function ProductCard({
 
                   <ShoppingCart size={17} />
 
-                  {flashSale ? 'স্টক শেষ' : 'Out of Stock'}
+                  Out of Stock
 
                 </>
 
@@ -534,7 +561,7 @@ export default function ProductCard({
 
                   <ShoppingCart size={17} />
 
-                  {flashSale ? 'কার্টে যোগ করুন' : 'Add to Cart'}
+                  Add to Cart
 
                 </>
 
@@ -559,7 +586,7 @@ export default function ProductCard({
 
                 <span className="cart-spinner" />
 
-                {flashSale ? 'যোগ হচ্ছে...' : 'Adding...'}
+                Adding...
 
               </>
 
@@ -569,7 +596,7 @@ export default function ProductCard({
 
                 <ShoppingCart size={17} />
 
-                {flashSale ? 'স্টক শেষ' : 'Out of Stock'}
+                Out of Stock
 
               </>
 
@@ -579,7 +606,7 @@ export default function ProductCard({
 
                 <ShoppingCart size={17} />
 
-                {flashSale ? 'কার্টে যোগ করুন' : 'Add to Cart'}
+                Add to Cart
 
               </>
 

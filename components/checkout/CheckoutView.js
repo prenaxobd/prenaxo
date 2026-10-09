@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { LoaderCircle } from 'lucide-react';
 import { useCart } from '@/components/cart/CartProvider';
 import { mergeGuestCart } from '@/components/cart/guest-cart';
+import { getCartItemImage, getCartItemOptionLabels } from '@/components/cart/cart-options';
 
 export default function CheckoutView() {
   const router = useRouter();
@@ -1174,6 +1175,8 @@ function OrderSummary({
 
           const itemTotal =
             price * item.quantity;
+          const itemImage = getCartItemImage(item);
+          const optionLabels = getCartItemOptionLabels(item);
 
           return (
             <div
@@ -1181,15 +1184,11 @@ function OrderSummary({
               key={item.id}
             >
               <div className="checkout-thumb">
-                {item.product.images?.[0]
-                  ?.url ? (
+                {itemImage?.url ? (
                   <OptimizedImage
-                    src={
-                      item.product
-                        .images[0].url
-                    }
+                    src={itemImage.url}
                     alt={
-                      item.product.name
+                      itemImage.alt || item.product.name
                     }
                   />
                 ) : (
@@ -1207,6 +1206,8 @@ function OrderSummary({
                 <strong>
                   {item.product.name}
                 </strong>
+
+                {optionLabels && <small>{optionLabels}</small>}
 
                 <span>
                   ৳

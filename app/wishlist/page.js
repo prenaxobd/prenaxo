@@ -3,45 +3,19 @@
 
 import Link from 'next/link';
 import { ArrowLeft, Heart } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 import ProductCard from '@/components/ProductCard';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
 
 export default function Wishlist() {
   const wishlist = useWishlist();
-  const [allProducts, setAllProducts] = useState([]);
-  const [productsLoaded, setProductsLoaded] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!wishlist?.ready || !wishlist.productIds.length || productsLoaded) return undefined;
-
-    let active = true;
-    fetch('/api/products', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Unable to load saved products.');
-        const data = await response.json();
-        const products = Array.isArray(data) ? data : data.products || data.items || [];
-        if (active) setAllProducts(products);
-      })
-      .catch((loadError) => {
-        console.error('Wishlist products loading error:', loadError);
-        if (active) setError(loadError.message || 'Unable to load saved products.');
-      })
-      .finally(() => {
-        if (active) setProductsLoaded(true);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [wishlist?.ready, wishlist?.productIds.length, productsLoaded]);
-
+  const productsById = new Map(
+    (wishlist?.products || []).map((product) => [String(product.id), product])
+  );
   const products = wishlist?.productIds
-    .map((id) => allProducts.find((product) => String(product.id) === id))
+    .map((id) => productsById.get(id))
     .filter(Boolean) || [];
-  const loading = !wishlist?.ready || (wishlist.productIds.length > 0 && !productsLoaded);
+  const loading = !wishlist?.ready;
 
 
   if (loading) {
@@ -121,12 +95,10 @@ export default function Wishlist() {
 
           <Heart size={42} />
 
-          <h2>{error || 'Nothing saved yet'}</h2>
+          <h2>Nothing saved yet</h2>
 
           <p className="muted">
-            {error
-              ? 'Please refresh the page and try again.'
-              : 'Keep the things you love close by tapping the heart.'}
+            Keep the things you love close by tapping the heart.
           </p>
 
           <Link

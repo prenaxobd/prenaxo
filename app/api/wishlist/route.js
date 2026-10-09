@@ -19,12 +19,53 @@ export async function GET() {
     where: { userId: user.id },
     select: {
       items: {
-        select: { id: true, productId: true },
+        where: { product: { active: true } },
+        select: {
+          id: true,
+          productId: true,
+          product: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              regularPrice: true,
+              salePrice: true,
+              stock: true,
+              category: { select: { name: true } },
+              images: {
+                orderBy: { sortOrder: 'asc' },
+                take: 1,
+                select: { url: true, alt: true },
+              },
+              reviews: {
+                where: { approved: true },
+                select: { rating: true },
+              },
+            },
+          },
+        },
       },
     },
   });
 
-  return NextResponse.json({ items: wishlist?.items || [] });
+  const items = (wishlist?.items || []).map((item) => {
+    const reviews = item.product.reviews || [];
+    const ratingTotal = reviews.reduce((total, review) => total + Number(review.rating || 0), 0);
+
+    return {
+      id: item.id,
+      productId: item.productId,
+      product: {
+        ...item.product,
+        regularPrice: Number(item.product.regularPrice || 0),
+        salePrice: item.product.salePrice === null ? null : Number(item.product.salePrice),
+        rating: reviews.length ? Number((ratingTotal / reviews.length).toFixed(1)) : 0,
+        reviewCount: reviews.length,
+      },
+    };
+  });
+
+  return NextResponse.json({ items });
 }
 
 export async function POST(request) {

@@ -6,6 +6,7 @@ const WishlistContext = createContext(null);
 
 export function WishlistProvider({ children }) {
   const [productIds, setProductIds] = useState([]);
+  const [products, setProducts] = useState([]);
   const [ready, setReady] = useState(false);
 
   async function refresh() {
@@ -13,11 +14,9 @@ export function WishlistProvider({ children }) {
       const response = await fetch('/api/wishlist', { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
-      setProductIds(
-        Array.isArray(data?.items)
-          ? data.items.map((item) => String(item.productId))
-          : []
-      );
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setProductIds(items.map((item) => String(item.productId)));
+      setProducts(items.map((item) => item.product).filter(Boolean));
     } finally {
       setReady(true);
     }
@@ -82,6 +81,7 @@ export function WishlistProvider({ children }) {
   const value = {
     ready,
     productIds,
+    products,
     count: productIds.length,
     isSaved: (productId) => productIds.includes(String(productId)),
     toggle,

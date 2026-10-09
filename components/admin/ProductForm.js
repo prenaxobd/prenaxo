@@ -43,6 +43,7 @@ import {
   TextStyle,
   Color,
 } from '@tiptap/extension-text-style';
+import { getGalleryColorOptions } from '@/components/product/product-option-images';
 
 import TextAlign from '@tiptap/extension-text-align';
 
@@ -357,24 +358,15 @@ export default function ProductForm({
     String(attribute.kind || '').toUpperCase() === 'COLOR' ||
     /colou?r/i.test(`${attribute.slug || ''} ${attribute.name || ''}`)
   );
-  const galleryColorLabels = [...new Set(
-    form.images
-      .map((image) => String(image.alt || '').trim())
-      .filter(Boolean)
-  )];
-  const normalizeOptionLabel = (value) =>
-    String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-  const galleryColorsMissingFromCategory = galleryColorLabels.filter((label) =>
-    !configuredColorAttribute?.values.some((value) =>
-      normalizeOptionLabel(value.name) === normalizeOptionLabel(label)
-    )
-  );
-  const galleryColorsNotSelected = galleryColorLabels.filter((label) => {
-    const value = configuredColorAttribute?.values.find((option) =>
-      normalizeOptionLabel(option.name) === normalizeOptionLabel(label)
-    );
-    return value && !form.attributeValueIds.includes(value.id);
-  });
+  const galleryColorLabels = getGalleryColorOptions({
+    name: form.name,
+    images: form.images,
+  }).map((option) => option.name);
+  const productOptionAttributes = galleryColorLabels.length
+    ? configuredAttributes.filter((attribute) =>
+        attribute.id !== configuredColorAttribute?.id
+      )
+    : configuredAttributes;
 
   function handleCategoryChange(categoryId) {
     const category = categories.find((item) => item.id === categoryId);
@@ -1282,18 +1274,13 @@ export default function ProductForm({
               <SectionTitle>Product Options</SectionTitle>
               <p className={styles.cardDescription}>Select available values for this product from the attributes configured for its category.</p>
 
-              {galleryColorLabels.length > 0 && (!configuredColorAttribute || galleryColorsMissingFromCategory.length > 0 || galleryColorsNotSelected.length > 0) && (
+              {galleryColorLabels.length > 0 && (
                 <p className={styles.cardDescription} role="status">
-                  Color-tagged gallery images found: {galleryColorLabels.join(', ')}.
-                  {!configuredColorAttribute
-                    ? ' Add a Color attribute to this category and configure its values.'
-                    : galleryColorsMissingFromCategory.length > 0
-                      ? <> Add missing color values ({galleryColorsMissingFromCategory.join(', ')}) in <Link href="/admin/attributes">Manage Attributes</Link>, then select all gallery colors here{galleryColorsNotSelected.length > 0 ? `, including ${galleryColorsNotSelected.join(', ')}` : ''}.</>
-                      : ` Select these matching color values here: ${galleryColorsNotSelected.join(', ')}.`}
+                  Gallery colors ({galleryColorLabels.join(', ')}) are automatically available as product-page choices. You do not need to select them again here.
                 </p>
               )}
 
-              {configuredAttributes.length > 0 && configuredAttributes.map((attribute) => <Field key={attribute.id} label={`${attribute.name} (optional)`} className={styles.fullWidth}>
+              {productOptionAttributes.length > 0 && productOptionAttributes.map((attribute) => <Field key={attribute.id} label={`${attribute.name} (optional)`} className={styles.fullWidth}>
                 <div className={styles.attributeOptions}>
                   {attribute.values.map((value) => <label className={styles.attributeOption} key={value.id}>
                     <input className={styles.attributeOptionInput} type="checkbox" checked={form.attributeValueIds.includes(value.id)} onChange={(event) => toggleAttributeValue(value.id, event.target.checked)} />
@@ -1303,7 +1290,7 @@ export default function ProductForm({
                 </div>
               </Field>)}
 
-              {configuredAttributes.length === 0 && <p className={styles.cardDescription}>This category has no configured product attributes.</p>}
+              {productOptionAttributes.length === 0 && <p className={styles.cardDescription}>{galleryColorLabels.length ? 'No additional product options are configured for this category.' : 'This category has no configured product attributes.'}</p>}
 
             </section>
 
@@ -1550,7 +1537,7 @@ export default function ProductForm({
                 </small>
               </div>
 
-              <p className={styles.galleryHint}>Start an image&apos;s alt text with its color (for example, White front view) to show matching photos when shoppers select that color.</p>
+              <p className={styles.galleryHint}>Enter the color name in each image&apos;s alt text (for example, White or White front view). These names become the color choices on the product page automatically; no separate Color option is needed.</p>
 
               <div
                 className={
