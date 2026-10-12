@@ -19,6 +19,29 @@ const variantSchema = z.object({
   attributeValueIds: z.array(z.string()).default([]),
 });
 
+const weightVariantSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1, 'Enter a weight or unit name.'),
+  regularPrice: z.preprocess(
+    (value) => value === '' || value === null || value === undefined ? Number.NaN : value,
+    z.coerce.number().nonnegative('Regular price must be zero or greater.')
+  ),
+  salePrice: z.preprocess(
+    (value) => value === '' || value === null || value === undefined ? null : value,
+    z.coerce.number().nonnegative().nullable()
+  ).optional(),
+  stock: z.coerce.number().int().nonnegative(),
+  sku: z.preprocess((value) => typeof value === 'string' && value.trim() === '' ? undefined : value, z.string().min(1).optional()),
+}).superRefine((variant, context) => {
+  if (variant.salePrice !== null && variant.salePrice !== undefined && variant.salePrice > variant.regularPrice) {
+    context.addIssue({
+      code: 'custom',
+      path: ['salePrice'],
+      message: 'Sale price cannot be greater than regular price.',
+    });
+  }
+});
+
 const productSchema = z.object({
   name: z.string().min(2, 'Product name must be at least 2 characters'),
 
@@ -88,6 +111,8 @@ const productSchema = z.object({
   comboItems: z.array(comboItemSchema).default([]),
 
   variants: z.array(variantSchema).default([]),
+
+  weightVariants: z.array(weightVariantSchema).default([]),
 
   attributeValueIds: z.array(z.string()).default([]),
 
@@ -252,6 +277,24 @@ async function validateAttributeSelections(tx, categoryId, attributeValueIds, va
     throw new Error('One or more selected product options are not configured for this category.');
   }
 
+  async function validateWeightVariants(tx, categoryId, weightVariants) {
+    if (!weightVariants.length) return;
+    if (!categoryId) throw new Error('Assign a category before adding product weight variants.');
+
+    const category = await tx.category.findUnique({
+      where: { id: categoryId },
+      select: { enableWeightVariants: true },
+    });
+    if (!category?.enableWeightVariants) {
+      throw new Error('Enable Weight Variants for this category before adding product weights.');
+    }
+
+    const names = weightVariants.map((variant) => variant.name.trim().toLocaleLowerCase());
+    if (new Set(names).size !== names.length) {
+      throw new Error('Weight variant names must be unique for this product.');
+    }
+  }
+
   for (const variant of variants) {
     if ((variant.attributeValueIds || []).some((valueId) => !selectedIds.includes(valueId))) {
       throw new Error('Each combination must use selected product options.');
@@ -340,6 +383,7 @@ export async function POST(request) {
       images,
       comboItems,
       variants,
+      weightVariants,
       attributeValueIds,
       categoryId,
       brandId,
@@ -364,6 +408,7 @@ export async function POST(request) {
       );
 
       await validateAttributeSelections(tx, data.categoryId, attributeValueIds, variants);
+      await validateWeightVariants(tx, data.categoryId, weightVariants);
 
       /**
        * IMPORTANT:
@@ -391,6 +436,16 @@ export async function POST(request) {
       for (const { id, attributeValueIds: variantValueIds = [], ...variant } of variants) {
         const createdVariant = await tx.productVariant.create({ data: { ...variant, sku: variant.sku || await generateUniqueVariantSku(tx, sku), productId: created.id } });
         if (variantValueIds.length) await tx.productVariantAttributeValue.createMany({ data: variantValueIds.map((attributeValueId) => ({ variantId: createdVariant.id, attributeValueId })) });
+      }
+
+      for (const { id, ...variant } of weightVariants) {
+        await tx.productVariant.create({
+          data: {
+            ...variant,
+            sku: variant.sku || await generateUniqueVariantSku(tx, sku),
+            productId: created.id,
+          },
+        });
       }
 
       /**
@@ -443,6 +498,7 @@ export async function PATCH(request) {
       images,
       comboItems: submittedComboItems,
       variants: submittedVariants,
+      weightVariants: submittedWeightVariants,
       attributeValueIds: submittedAttributeValueIds,
       ...input
     } = body;
@@ -462,6 +518,7 @@ export async function PATCH(request) {
         comboItems: true,
         images: true,
         variants: true,
+        weightVariants: true,
         attributeValueIds: true,
       })
       .partial()
@@ -501,9 +558,25 @@ export async function PATCH(request) {
             );
 
       const variants = submittedVariants === undefined ? null : z.array(variantSchema).parse(submittedVariants);
+      const weightVariants = submittedWeightVariants === undefined ? null : z.array(weightVariantSchema).parse(submittedWeightVariants);
       const attributeValueIds = submittedAttributeValueIds === undefined ? null : z.array(z.string()).parse(submittedAttributeValueIds);
 
       const categoryId = data.categoryId || existing.categoryId;
+      if (data.categoryId && data.categoryId !== existing.categoryId && weightVariants === null) {
+        const existingWeightVariant = await tx.productVariant.findFirst({
+          where: { productId: id, name: { not: null } },
+          select: { id: true },
+        });
+        if (existingWeightVariant) {
+          const category = await tx.category.findUnique({
+            where: { id: categoryId },
+            select: { enableWeightVariants: true },
+          });
+          if (!category?.enableWeightVariants) {
+            throw new Error('Remove the product weight variants before moving it to a category without weight variants enabled.');
+          }
+        }
+      }
 
       /**
        * Validate only when comboItems were submitted.
@@ -520,6 +593,7 @@ export async function PATCH(request) {
       if (attributeValueIds !== null || variants !== null || data.categoryId) {
         await validateAttributeSelections(tx, categoryId, attributeValueIds || [], variants || []);
       }
+      if (weightVariants !== null) await validateWeightVariants(tx, categoryId, weightVariants);
 
       /**
        * If changing to SINGLE, comboItems must not remain.
@@ -629,7 +703,17 @@ export async function PATCH(request) {
         }
       }
 
-      if (variants !== null) {
+      if (variants !== null || weightVariants !== null) {
+        const submittedVariantRows = [
+          ...(variants || []),
+          ...(weightVariants || []).map((variant) => ({
+            ...variant,
+            size: null,
+            color: null,
+            price: null,
+            attributeValueIds: [],
+          })),
+        ];
         const existingVariants = await tx.productVariant.findMany({
           where: { productId: id },
           include: { attributeValues: { select: { attributeValueId: true } } },
@@ -639,7 +723,7 @@ export async function PATCH(request) {
         const identityChangedVariantIds = new Set();
         const attributeValuesChangedVariantIds = new Set();
 
-        for (const { id: variantId, attributeValueIds: variantValueIds = [], sku: submittedSku, ...variantData } of variants) {
+        for (const { id: variantId, attributeValueIds: variantValueIds = [], sku: submittedSku, ...variantData } of submittedVariantRows) {
           if (!variantId) continue;
           if (submittedVariantIds.has(variantId)) throw new Error('A product option was submitted more than once.');
           submittedVariantIds.add(variantId);
@@ -656,13 +740,35 @@ export async function PATCH(request) {
             || (variantData.size || null) !== existingVariant.size
             || (variantData.color || null) !== existingVariant.color
             || (variantData.price == null ? null : Number(variantData.price)) !== (existingVariant.price == null ? null : Number(existingVariant.price))
+            || (variantData.name || null) !== existingVariant.name
+            || (variantData.regularPrice == null ? null : Number(variantData.regularPrice)) !== (existingVariant.regularPrice == null ? null : Number(existingVariant.regularPrice))
+            || (variantData.salePrice == null ? null : Number(variantData.salePrice)) !== (existingVariant.salePrice == null ? null : Number(existingVariant.salePrice))
             || attributeValuesChanged
           ) {
             identityChangedVariantIds.add(variantId);
           }
         }
 
-        const removedVariants = existingVariants.filter((variant) => !submittedVariantIds.has(variant.id));
+        const preserveUnsubmittedGroup = (variant) => (
+          (variants === null && !variant.name) ||
+          (weightVariants === null && variant.name)
+        );
+        const removedVariants = existingVariants.filter((variant) => !submittedVariantIds.has(variant.id) && !preserveUnsubmittedGroup(variant));
+        for (const existingVariant of existingVariants.filter(preserveUnsubmittedGroup)) {
+          submittedVariantRows.push({
+            id: existingVariant.id,
+            name: existingVariant.name,
+            size: existingVariant.size,
+            color: existingVariant.color,
+            price: existingVariant.price,
+            regularPrice: existingVariant.regularPrice,
+            salePrice: existingVariant.salePrice,
+            stock: existingVariant.stock,
+            sku: existingVariant.sku,
+            attributeValueIds: existingVariant.attributeValues.map((item) => item.attributeValueId),
+          });
+          submittedVariantIds.add(existingVariant.id);
+        }
         const protectedVariantIds = [
           ...identityChangedVariantIds,
           ...removedVariants.map((variant) => variant.id),
@@ -684,7 +790,7 @@ export async function PATCH(request) {
           ...cartItems.map((item) => item.variantId),
         ]);
 
-        for (const { id: variantId, attributeValueIds: variantValueIds = [], sku: submittedSku, ...variantData } of variants) {
+        for (const { id: variantId, attributeValueIds: variantValueIds = [], sku: submittedSku, ...variantData } of submittedVariantRows) {
           if (variantId) {
             const existingVariant = existingVariantsById.get(variantId);
             const nextSku = submittedSku || existingVariant.sku;

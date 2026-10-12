@@ -10,6 +10,10 @@ A full-stack Next.js App Router storefront for a modern Bangladeshi marketplace.
 4. Seed sample data: `npx prisma db seed`.
 5. Start development: `npm run dev`.
 
+## Product weight variants
+
+Apply the additive weight-variant migration with `npx prisma migrate deploy` before deploying the updated app (or use `npx prisma migrate dev` in a disposable development database). In Admin → Categories, enable **Enable Weight Variants** for categories that sell by pack size. Products in those categories can then have any number of weight/unit options, each with its own regular price, optional sale price, and stock. The storefront updates the displayed price when a weight is selected, and the selected variant's price and inventory are used through cart and checkout.
+
 ## Payments
 
 Payment methods are typed as cash on delivery, bank transfer, manual mobile wallet, or hosted gateway. bKash, Nagad, and Rocket manual transfers stay pending review until staff records a decision and note. Gateway payments remain pending until an SSLCommerz server-side validation succeeds; browser redirects alone never mark orders paid.

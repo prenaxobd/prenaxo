@@ -7,6 +7,7 @@ import { ensureDefaultPaymentMethods } from '@/lib/payment-methods';
 import { assertSslCommerzReady } from '@/lib/sslcommerz';
 import { createSslCommerzAttempt, reconcileSslCommerzAttempt, startSslCommerzAttempt } from '@/lib/payment-attempts';
 import { getGalleryColorNameFromId } from '@/components/product/product-option-images';
+import { getProductVariantPrice } from '@/lib/product-pricing';
 
 const schema = z.object({
   customerName: z.string().trim().min(2),
@@ -72,12 +73,15 @@ export async function POST(request) {
     let subtotal = 0;
 
     for (const item of cart.items) {
+      if (item.variant && item.variant.productId !== item.productId) {
+        throw new Error('A selected product variant no longer matches its product.');
+      }
       const stock = item.variant?.stock ?? item.product.stock;
       if (stock < item.quantity) {
         throw new Error(`${item.product.name} is out of stock.`);
       }
 
-      subtotal += Number(item.variant?.price ?? item.product.salePrice ?? item.product.regularPrice) * item.quantity;
+      subtotal += getProductVariantPrice(item.variant, item.product) * item.quantity;
     }
 
     let discount = 0;
@@ -172,12 +176,13 @@ export async function POST(request) {
       await tx.orderItem.createMany({
         data: cart.items.map((item) => ({
           quantity: item.quantity,
-          unitPrice: item.variant?.price ?? item.product.salePrice ?? item.product.regularPrice,
+          unitPrice: getProductVariantPrice(item.variant, item.product),
           productName: item.product.name,
           orderId: created.id,
           productId: item.productId,
           variantId: item.variantId,
           variantLabel: [
+            item.variant?.name,
             item.variant?.color || (item.attributeValueIds || [])
               .map(getGalleryColorNameFromId)
               .find(Boolean),

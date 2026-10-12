@@ -73,6 +73,7 @@ const emptyForm = (categories = []) => ({
   productType: 'SINGLE',
   comboItems: [],
   variants: [],
+  weightVariants: [],
   attributeValueIds: [],
 
   /*
@@ -157,7 +158,15 @@ function normalizeProduct(
 
     productType: product.productType || 'SINGLE',
     comboItems: Array.isArray(product.comboItems) ? product.comboItems.map(item => ({ productId: item.includedProductId || item.productId, quantity: Number(item.quantity || 1), product: item.includedProduct || item.product || null })) : [],
-    variants: Array.isArray(product.variants) ? product.variants.map((variant) => ({ id: variant.id, size: variant.size || '', color: variant.color || '', price: variant.price == null ? '' : String(variant.price), stock: Number(variant.stock || 0), sku: variant.sku || '', attributeValueIds: variant.attributeValues?.map((item) => item.attributeValueId) || [] })) : [],
+    variants: Array.isArray(product.variants) ? product.variants.filter((variant) => !variant.name).map((variant) => ({ id: variant.id, size: variant.size || '', color: variant.color || '', price: variant.price == null ? '' : String(variant.price), stock: Number(variant.stock || 0), sku: variant.sku || '', attributeValueIds: variant.attributeValues?.map((item) => item.attributeValueId) || [] })) : [],
+    weightVariants: Array.isArray(product.variants) ? product.variants.filter((variant) => variant.name).map((variant) => ({
+      id: variant.id,
+      name: variant.name,
+      regularPrice: variant.regularPrice == null ? '' : String(variant.regularPrice),
+      salePrice: variant.salePrice == null ? '' : String(variant.salePrice),
+      stock: Number(variant.stock || 0),
+      sku: variant.sku || '',
+    })) : [],
     attributeValueIds: Array.isArray(product.attributeValues) ? product.attributeValues.map((item) => item.attributeValueId) : [],
 
     shortDescription:
@@ -326,6 +335,35 @@ export default function ProductForm({
     }));
   }
 
+  function updateWeightVariant(index, name, value) {
+    setForm((current) => ({
+      ...current,
+      weightVariants: current.weightVariants.map((variant, variantIndex) => (
+        variantIndex === index ? { ...variant, [name]: value } : variant
+      )),
+    }));
+  }
+
+  function addWeightVariant() {
+    setForm((current) => ({
+      ...current,
+      weightVariants: [...current.weightVariants, {
+        name: '',
+        regularPrice: '',
+        salePrice: '',
+        stock: 0,
+        sku: '',
+      }],
+    }));
+  }
+
+  function removeWeightVariant(index) {
+    setForm((current) => ({
+      ...current,
+      weightVariants: current.weightVariants.filter((_, variantIndex) => variantIndex !== index),
+    }));
+  }
+
   function updateVariantAttribute(index, attribute, valueId) {
     const attributeValueIds = new Set(attribute.values.map((value) => value.id));
     setForm((current) => ({
@@ -345,6 +383,7 @@ export default function ProductForm({
   }
 
   const selectedCategory = categories.find((category) => category.id === form.categoryId);
+  const showWeightVariants = Boolean(selectedCategory?.enableWeightVariants || form.weightVariants.length);
   const configuredAttributes = (selectedCategory?.attributes || [])
     .map((categoryAttribute) => categoryAttribute?.attribute)
     .filter((attribute) => attribute && attribute.active !== false)
@@ -471,6 +510,20 @@ export default function ProductForm({
         throw new Error('Add at least one product to this combo.');
       }
 
+      if (form.weightVariants.some((variant) => !variant.name.trim() || variant.regularPrice === '')) {
+        throw new Error('Each weight variant needs a name and regular price.');
+      }
+      const weightNames = form.weightVariants.map((variant) => variant.name.trim().toLocaleLowerCase());
+      if (new Set(weightNames).size !== weightNames.length) {
+        throw new Error('Weight variant names must be unique.');
+      }
+      if (form.weightVariants.some((variant) => variant.salePrice !== '' && Number(variant.salePrice) > Number(variant.regularPrice))) {
+        throw new Error('A weight variant sale price cannot be greater than its regular price.');
+      }
+      if (form.weightVariants.length && !selectedCategory?.enableWeightVariants) {
+        throw new Error('Remove the weight variants or enable them for the selected category.');
+      }
+
       /*
        * SHORT DESCRIPTION
        * Saved separately from full description.
@@ -584,6 +637,15 @@ export default function ProductForm({
           stock: Number(variant.stock || 0),
           sku: variant.sku.trim(),
           attributeValueIds: variant.attributeValueIds,
+        })),
+
+        weightVariants: form.weightVariants.map((variant) => ({
+          ...(variant.id ? { id: variant.id } : {}),
+          name: variant.name.trim(),
+          regularPrice: Number(variant.regularPrice),
+          salePrice: variant.salePrice === '' ? null : Number(variant.salePrice),
+          stock: Number(variant.stock || 0),
+          sku: variant.sku.trim(),
         })),
 
         attributeValueIds: form.attributeValueIds,
@@ -1350,6 +1412,52 @@ export default function ProductForm({
                 <Plus size={15} /> Add variant
               </button>
             </section>
+
+            {showWeightVariants && (
+              <section className={styles.card}>
+                <SectionTitle>Weight Variants</SectionTitle>
+                <p className={styles.cardDescription}>
+                  Set a label, regular price, optional sale price and stock for every pack size.
+                  {selectedCategory?.enableWeightVariants
+                    ? ''
+                    : ' Enable Weight Variants for the selected category, or remove these weights before saving.'}
+                </p>
+
+                <div className={styles.variantList}>
+                  {form.weightVariants.map((variant, index) => (
+                    <div className={styles.variantCard} key={variant.id || `new-weight-${index}`}>
+                      <div className={styles.variantCardHeader}>
+                        <strong>Weight {index + 1}</strong>
+                        <button type="button" onClick={() => removeWeightVariant(index)} aria-label={`Remove weight variant ${index + 1}`}>
+                          <X size={14} />
+                          Remove
+                        </button>
+                      </div>
+                      <div className={styles.formGridThree}>
+                        <Field label="Weight / Unit" required>
+                          <input value={variant.name} onChange={event => updateWeightVariant(index, 'name', event.target.value)} placeholder="e.g. 250 GM, 1 KG" />
+                        </Field>
+                        <Field label="Regular Price" required>
+                          <PriceInput value={variant.regularPrice} onChange={value => updateWeightVariant(index, 'regularPrice', value)} />
+                        </Field>
+                        <Field label="Sale Price" help="Optional">
+                          <PriceInput value={variant.salePrice} onChange={value => updateWeightVariant(index, 'salePrice', value)} />
+                        </Field>
+                        <Field label="Stock Count" required>
+                          <input type="number" min="0" step="1" value={variant.stock} onChange={event => updateWeightVariant(index, 'stock', Math.max(0, Number(event.target.value) || 0))} />
+                        </Field>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {selectedCategory?.enableWeightVariants && (
+                  <button type="button" className={styles.addVariantButton} onClick={addWeightVariant}>
+                    <Plus size={15} /> Add New Variant/Weight
+                  </button>
+                )}
+              </section>
+            )}
 
             <section
               className={

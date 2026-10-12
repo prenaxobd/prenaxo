@@ -6,6 +6,7 @@ import { X, Minus, Plus, Trash2, ShoppingBag, Ticket, ChevronDown, ArrowRight, L
 import { bn } from '@/lib/i18n';
 import { mergeGuestCart } from './guest-cart';
 import { getCartItemImage, getCartItemOptionLabels } from './cart-options';
+import { getProductVariantPrice } from '@/lib/product-pricing';
 
 const CartContext = createContext(null);
 
@@ -291,7 +292,7 @@ export function CartProvider({ children }) {
   function clearCart() { setCart({ items: [] }); setOpen(false); localStorage.removeItem('khatibazar-cart'); }
   const items = cart.items || [];
   const count = items.reduce((total, item) => total + item.quantity, 0);
-  const subtotal = items.reduce((total, item) => total + Number(item.variant?.price ?? item.product?.salePrice ?? item.product?.regularPrice ?? 0) * item.quantity, 0);
+  const subtotal = items.reduce((total, item) => total + getProductVariantPrice(item.variant, item.product) * item.quantity, 0);
   return <CartContext.Provider value={{ items, count, subtotal, add, addMany, update, remove, clearCart, ready, isOpen: open, open: () => setOpen(true) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
 }
 
@@ -378,7 +379,7 @@ function CartDrawer({ items, count, subtotal, open, close, update, remove }) {
             <Link className="drawer-shop-now" href="/shop" onClick={close}>কেনাকাটা করুন <ArrowRight size={15}/></Link>
           </div>
         ) : items.map((item) => {
-          const price = Number(item.variant?.price ?? item.product?.salePrice ?? item.product?.regularPrice ?? 0);
+          const price = getProductVariantPrice(item.variant, item.product);
           const image = getCartItemImage(item);
 
           return (

@@ -9,6 +9,7 @@ import { LoaderCircle } from 'lucide-react';
 import { useCart } from '@/components/cart/CartProvider';
 import { mergeGuestCart } from '@/components/cart/guest-cart';
 import { getCartItemImage, getCartItemOptionLabels } from '@/components/cart/cart-options';
+import { getProductVariantPrice } from '@/lib/product-pricing';
 
 export default function CheckoutView() {
   const router = useRouter();
@@ -1167,11 +1168,7 @@ function OrderSummary({
           <span>Price</span>
         </div>
         {items.map((item) => {
-          const price = Number(
-            item.variant?.price ||
-              item.product.salePrice ||
-              item.product.regularPrice
-          );
+          const price = getProductVariantPrice(item.variant, item.product);
 
           const itemTotal =
             price * item.quantity;

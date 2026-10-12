@@ -133,6 +133,14 @@ export default async function NewProductPage({
                   index,
               })
             ),
+
+          variants:
+            product.variants.map((variant) => ({
+              ...variant,
+              price: variant.price == null ? null : Number(variant.price),
+              regularPrice: variant.regularPrice == null ? null : Number(variant.regularPrice),
+              salePrice: variant.salePrice == null ? null : Number(variant.salePrice),
+            })),
         }
       : null;
 

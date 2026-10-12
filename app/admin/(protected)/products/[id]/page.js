@@ -89,6 +89,14 @@ export default async function EditProductPage({ params }) {
         variant.price == null
           ? ''
           : String(variant.price),
+      regularPrice:
+        variant.regularPrice == null
+          ? ''
+          : String(variant.regularPrice),
+      salePrice:
+        variant.salePrice == null
+          ? ''
+          : String(variant.salePrice),
     })),
 
   };

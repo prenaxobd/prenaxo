@@ -1,7 +1,7 @@
 'use client';
 
 import { Heart, MessageCircle, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OptimizedImage from '@/components/OptimizedImage';
 import { useCart } from '@/components/cart/CartProvider';
@@ -13,8 +13,10 @@ import {
   getColorOptionImage,
   getProductOptionGroups,
 } from '@/components/product/product-option-images';
+import { getProductVariantPrice } from '@/lib/product-pricing';
 
 const NO_OPTION_IDS = [];
+const NOOP = () => {};
 
 function isColorAttribute(attribute) {
   return String(attribute?.kind || '').toUpperCase() === 'COLOR' ||
@@ -112,12 +114,21 @@ export default function ProductActions({
   const selectedAttributeValueIds = optionSelection
     ? optionSelection.selectedAttributeValueIds
     : NO_OPTION_IDS;
-  const setSelectedAttributeValueIds = optionSelection?.setSelectedAttributeValueIds || (() => {});
+  const setSelectedAttributeValueIds = optionSelection?.setSelectedAttributeValueIds || NOOP;
+  const selectedWeightVariantId = optionSelection?.selectedWeightVariantId || '';
+  const setSelectedWeightVariantId = optionSelection?.setSelectedWeightVariantId || NOOP;
   const cartProduct = useMemo(() => product || { id: productId }, [product, productId]);
   const variants = useMemo(
     () => (Array.isArray(cartProduct.variants) ? cartProduct.variants : []),
     [cartProduct.variants]
   );
+  const weightVariants = useMemo(
+    () => cartProduct.category?.enableWeightVariants
+      ? variants.filter((variant) => Boolean(variant.name))
+      : [],
+    [cartProduct.category?.enableWeightVariants, variants]
+  );
+  const selectedWeightVariant = weightVariants.find((variant) => variant.id === selectedWeightVariantId) || null;
   const [quantities, setQuantities] = useState({});
   const [removedCombinationKeys, setRemovedCombinationKeys] = useState(() => new Set());
   const [quantity, setQuantity] = useState(1);
@@ -125,6 +136,16 @@ export default function ProductActions({
   const [wishlistBusy, setWishlistBusy] = useState(false);
   const [bulkOptionsBusy, setBulkOptionsBusy] = useState(false);
   const saved = wishlistStore?.isSaved(cartProduct.id) || false;
+
+  useEffect(() => {
+    if (!weightVariants.length) {
+      if (selectedWeightVariantId) setSelectedWeightVariantId('');
+      return;
+    }
+    if (!weightVariants.some((variant) => variant.id === selectedWeightVariantId)) {
+      setSelectedWeightVariantId(weightVariants.find((variant) => Number(variant.stock || 0) > 0)?.id || weightVariants[0].id);
+    }
+  }, [selectedWeightVariantId, setSelectedWeightVariantId, weightVariants]);
 
   const attributeGroups = useMemo(
     () => getProductOptionGroups(cartProduct),
@@ -468,6 +489,46 @@ export default function ProductActions({
     if (buyNowAfterAdd) router.push('/checkout');
   }
 
+  function getWeightCartQuantity(variantId) {
+    return (cart.items || [])
+      .filter((item) => item.productId === cartProduct.id && item.variantId === variantId)
+      .reduce((total, item) => total + Number(item.quantity || 0), 0);
+  }
+
+  async function addSelectedWeight(buyNowAfterAdd = false) {
+    setMessage('');
+    const variant = selectedWeightVariant;
+    const availableQuantity = Math.max(0, Number(variant?.stock || 0) - getWeightCartQuantity(variant?.id));
+    if (!variant || availableQuantity < 1 || quantity > availableQuantity || disabled) {
+      setMessage('This weight is unavailable or exceeds available stock.');
+      return;
+    }
+
+    try {
+      if (!(await requireAccount())) return;
+    } catch (error) {
+      setMessage(error.message || 'Could not verify your account. Please try again.');
+      return;
+    }
+
+    const result = await cart.add({
+      ...cartProduct,
+      variantId: variant.id,
+      variant,
+      stock: Number(variant.stock || 0),
+      regularPrice: variant.regularPrice,
+      salePrice: variant.salePrice,
+    }, quantity);
+
+    if (!result.ok) {
+      setMessage(result.error || 'Unable to add this weight to cart.');
+      return;
+    }
+
+    setMessage(`${variant.name} added to cart.`);
+    if (buyNowAfterAdd) router.push('/checkout');
+  }
+
   async function addSelectedItems() {
     setMessage('');
 
@@ -539,6 +600,46 @@ export default function ProductActions({
 
   return (
     <>
+      {weightVariants.length > 0 && (
+        <section className="product-size-matrix" aria-label="Choose product weight">
+          <div className="product-size-matrix-heading">
+            <strong>Weight / Unit</strong>
+            <strong>Price</strong>
+            <strong>Stock</strong>
+          </div>
+          {weightVariants.map((variant) => {
+            const available = Number(variant.stock || 0) > 0;
+            const selected = variant.id === selectedWeightVariantId;
+            const variantPrice = getProductVariantPrice(variant, cartProduct);
+            const variantRegularPrice = Number(variant.regularPrice || 0);
+            const discounted = variant.salePrice != null && variantPrice < variantRegularPrice;
+            return (
+              <button
+                type="button"
+                key={variant.id}
+                className={`product-size-matrix-row ${selected ? 'selected' : ''} ${!available ? 'option-unavailable' : ''}`}
+                onClick={() => {
+                  setSelectedWeightVariantId(variant.id);
+                  setMessage('');
+                }}
+                disabled={!available}
+                aria-pressed={selected}
+                aria-label={`${variant.name}, ৳${variantPrice.toLocaleString()}${available ? '' : ', out of stock'}`}
+              >
+                <strong>{variant.name}</strong>
+                <strong className="product-size-matrix-price">
+                  ৳{variantPrice.toLocaleString()}
+                  {discounted && <del>৳{variantRegularPrice.toLocaleString()}</del>}
+                </strong>
+                <span className={available ? '' : 'is-out-of-stock'}>
+                  {available ? `${variant.stock} in stock` : 'Out of stock'}
+                </span>
+              </button>
+            );
+          })}
+        </section>
+      )}
+
       {attributeGroups
         .filter((attribute) => !(supportsSizeMatrix && attribute.id === sizeGroup.id))
         .map((attribute) => {
@@ -817,7 +918,55 @@ export default function ProductActions({
         </section>
       )}
 
-      {!supportsSizeMatrix && !supportsColorMatrix && (
+      {weightVariants.length > 0 && (
+        <div className="product-action-controls">
+          <div className="product-qty" aria-label="Quantity selector">
+            <button
+              type="button"
+              disabled={quantity <= 1}
+              onClick={() => setQuantity((current) => Math.max(1, current - 1))}
+              aria-label="Decrease quantity"
+            ><Minus size={15}/></button>
+            <span>{quantity}</span>
+            <button
+              type="button"
+              disabled={!selectedWeightVariant || quantity >= Math.max(0, Number(selectedWeightVariant.stock || 0) - getWeightCartQuantity(selectedWeightVariant.id))}
+              onClick={() => setQuantity((current) => Math.min(Math.max(1, Number(selectedWeightVariant?.stock || 0) - getWeightCartQuantity(selectedWeightVariant?.id)), current + 1))}
+              aria-label="Increase quantity"
+            ><Plus size={15}/></button>
+          </div>
+          <div className="product-action-buttons">
+            <button
+              type="button"
+              className="btn product-primary-btn"
+              disabled={disabled || !selectedWeightVariant || Number(selectedWeightVariant.stock || 0) <= getWeightCartQuantity(selectedWeightVariant.id)}
+              onClick={() => void addSelectedWeight()}
+            >
+              <ShoppingBag size={17}/>
+              <span>Add to cart</span>
+            </button>
+            <button
+              type="button"
+              className="btn product-secondary-btn"
+              disabled={disabled || !selectedWeightVariant || Number(selectedWeightVariant.stock || 0) <= getWeightCartQuantity(selectedWeightVariant.id)}
+              onClick={() => void addSelectedWeight(true)}
+            >
+              Buy now
+            </button>
+            <button
+              type="button"
+              className="btn product-icon-btn"
+              onClick={() => void wishlist()}
+              disabled={!wishlistStore?.ready || wishlistBusy}
+              aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+              aria-pressed={saved}
+              title={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+            ><Heart size={18} fill={saved ? 'currentColor' : 'none'}/></button>
+          </div>
+        </div>
+      )}
+
+      {!supportsSizeMatrix && !supportsColorMatrix && weightVariants.length === 0 && (
         <div className={`product-action-controls ${hasAttributeOptions ? 'has-variant-options' : ''}`}>
         {!hasAttributeOptions && (
           <div className="product-qty" aria-label="Quantity selector">
@@ -867,7 +1016,7 @@ export default function ProductActions({
         </div>
       )}
 
-      {!supportsColorMatrix && !supportsSizeMatrix && (
+      {!supportsColorMatrix && !supportsSizeMatrix && weightVariants.length === 0 && (
         <div className="product-color-matrix-contact-row product-generic-contact-row">
           <button
             type="button"

@@ -21,6 +21,7 @@ import {
 import ProductReviews from '@/components/product/ProductReviews';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductActions from '@/components/product/ProductActions';
+import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
 import { ProductOptionProvider } from '@/components/product/ProductOptionContext';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import DeliveryChecker from '@/components/product/DeliveryChecker';
@@ -606,14 +607,21 @@ export default async function ProductPage({
     ).toUpperCase()}`;
 
 
+  const weightVariants = product.category?.enableWeightVariants
+    ? product.variants.filter((variant) => variant.name)
+    : [];
   const stock =
+    weightVariants.length
+      ? weightVariants.reduce((total, variant) => total + Number(variant.stock || 0), 0)
+      :
     Number(
       product.stock || 0
     );
 
-
   const inStock =
-    product.variants?.length > 0
+    weightVariants.length > 0
+      ? weightVariants.some((variant) => Number(variant.stock || 0) > 0)
+      : product.variants?.length > 0
       ? product.variants.some((variant) => Number(variant.stock || 0) > 0)
       : stock > 0;
 
@@ -857,27 +865,14 @@ export default async function ProductPage({
 
           <div className="product-price-area">
 
-            <div className="product-price-main">
-
-              <span className="current-price">
-                ৳{price.toLocaleString()}
-              </span>
-
-              {hasDiscount && (
-                <span className="old-price">
-                  ৳
-                  {regularPrice.toLocaleString()}
-                </span>
-              )}
-
-            </div>
-
-
-            {hasDiscount && (
-              <span className="discount-badge">
-                Save {discount}%
-              </span>
-            )}
+            <ProductPriceDisplay
+              weightVariants={weightVariants}
+              regularPrice={regularPrice}
+              salePrice={salePrice}
+              price={price}
+              hasDiscount={hasDiscount}
+              discount={discount}
+            />
 
           </div>
 

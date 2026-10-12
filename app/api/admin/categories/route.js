@@ -11,6 +11,7 @@ const schema = z.object({
 	image: z.string().nullable().optional(),
 	parentId: z.string().nullable().optional().or(z.literal('')).transform(value => value || null),
 	active: z.boolean().default(true),
+	enableWeightVariants: z.boolean().default(false),
 	attributeIds: z.array(z.string()).default([]),
 });
 
@@ -147,6 +148,13 @@ export async function PATCH(request) {
 		const existing = await prisma.category.findUnique({ where: { id }, select: { image: true, active: true, parentId: true } });
 		if (!existing) throw new Error('Category not found.');
 		if (data.active === false && existing.active) await requirePermission('categories.delete');
+		if (data.enableWeightVariants === false) {
+			const weightVariant = await prisma.productVariant.findFirst({
+				where: { name: { not: null }, product: { categoryId: id } },
+				select: { id: true },
+			});
+			if (weightVariant) throw new Error('Remove all product weight variants before disabling this category option.');
+		}
 		const changesParent = Object.hasOwn(data, 'parentId');
 		const parentId = changesParent ? data.parentId : existing.parentId;
 		const isArchiving = data.active === false && existing.active;

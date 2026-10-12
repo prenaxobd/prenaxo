@@ -21,6 +21,13 @@ describe('cart gallery color selections', () => {
     })).toBe('Blue');
   });
 
+  it('shows a selected weight variant in the cart option label', () => {
+    expect(getCartItemOptionLabels({
+      variant: { name: '500 GM' },
+      attributeValueIds: [],
+    })).toBe('500 GM');
+  });
+
   it('uses the selected gallery color image in the cart', () => {
     expect(getCartItemImage({
       product,

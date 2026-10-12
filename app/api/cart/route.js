@@ -61,7 +61,15 @@ export async function GET() {
             },
           },
           variant: {
-            select: { id: true, price: true, color: true, size: true },
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              regularPrice: true,
+              salePrice: true,
+              color: true,
+              size: true,
+            },
           },
         },
       },
@@ -108,6 +116,16 @@ export async function POST(request) {
         : Promise.resolve([]),
     ]);
     const existingProductIds = new Set(products.map((product) => product.id));
+    const variantIds = [...new Set(incomingItems
+      .map((item) => item?.variantId ? String(item.variantId) : null)
+      .filter(Boolean))];
+    const variants = variantIds.length
+      ? await prisma.productVariant.findMany({
+          where: { id: { in: variantIds } },
+          select: { id: true, productId: true },
+        })
+      : [];
+    const productIdByVariantId = new Map(variants.map((variant) => [variant.id, variant.productId]));
 
     await prisma.$transaction(async (tx) => {
       for (const item of incomingItems) {
@@ -117,6 +135,9 @@ export async function POST(request) {
         const variantId = item.variantId ? String(item.variantId) : null;
         const quantity = Number(item.quantity || 1);
 
+        if (variantId && productIdByVariantId.get(variantId) !== productId) {
+          throw new Error('The selected product variant does not belong to this product.');
+        }
         if (!Number.isFinite(quantity) || quantity <= 0) continue;
         if (!existingProductIds.has(productId)) continue;
 
@@ -172,6 +193,13 @@ export async function PATCH(request) {
 
     if (!productId) {
       return NextResponse.json({ error: 'Product not found in cart.' }, { status: 400 });
+    }
+    if (variantId) {
+      const variant = await prisma.productVariant.findFirst({
+        where: { id: variantId, productId },
+        select: { id: true },
+      });
+      if (!variant) throw new Error('The selected product variant does not belong to this product.');
     }
 
     const cart = await prisma.cart.findUnique({ where: { userId: user.id } });

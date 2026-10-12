@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import styles from './ProductView.module.css';
+import { getProductVariantPrice } from '@/lib/product-pricing';
 
 export default function ProductView({
   product,
@@ -362,7 +363,11 @@ export default function ProductView({
                   variant.color ? `Color: ${variant.color}` : null,
                   variant.size ? `Size: ${variant.size}` : null,
                 ].filter(Boolean);
-                const labels = relationLabels.length > 0 ? relationLabels : legacyLabels;
+                const labels = variant.name
+                  ? [variant.name]
+                  : relationLabels.length > 0
+                    ? relationLabels
+                    : legacyLabels;
 
                 return (
                   <div className={styles.variantCard} key={variant.id}>
@@ -379,7 +384,7 @@ export default function ProductView({
                     </div>
                     <div className={styles.variantFooter}>
                       <span>SKU {variant.sku || '—'}</span>
-                      <strong>৳{Number(variant.price ?? price).toLocaleString('en-BD')}</strong>
+                      <strong>৳{getProductVariantPrice(variant, product).toLocaleString('en-BD')}</strong>
                     </div>
                   </div>
                 );

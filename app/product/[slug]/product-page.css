@@ -916,6 +916,35 @@
   border-top: 1px solid #edf1ee;
 }
 
+.single-product-page button.product-size-matrix-row {
+  width: 100%;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.single-product-page button.product-size-matrix-row.selected {
+  background: #f1faf5;
+  box-shadow: inset 3px 0 #07965a;
+}
+
+.single-product-page button.product-size-matrix-row:disabled {
+  cursor: not-allowed;
+  opacity: .65;
+}
+
+.single-product-page .product-size-matrix-price del {
+  display: block;
+  color: #829087;
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .single-product-page .product-size-matrix-row > strong:first-child {
   color: var(--product-ink);
   font-size: 13px;

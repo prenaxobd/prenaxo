@@ -4,7 +4,7 @@ import {
 } from '../product/product-option-images';
 
 export function getCartItemOptionLabels(item) {
-  const variantLabels = [item.variant?.color, item.variant?.size];
+  const variantLabels = [item.variant?.name, item.variant?.color, item.variant?.size];
   const selectedIds = new Set(item.attributeValueIds || []);
   const attributeLabels = (item.product?.attributeValues || [])
     .filter((attributeValue) =>

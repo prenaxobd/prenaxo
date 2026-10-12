@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Minus, Plus, ShieldCheck, ShoppingBag, Trash2, Truck } from 'lucide-react';
 import { useCart } from '@/components/cart/CartProvider';
 import { getCartItemImage, getCartItemOptionLabels } from '@/components/cart/cart-options';
+import { getProductVariantPrice } from '@/lib/product-pricing';
 
 export default function CartView() {
   const cart = useCart();
@@ -51,8 +52,10 @@ export default function CartView() {
           </div>
 
           {items.map((item) => {
-            const price = Number(item.variant?.price ?? item.product?.salePrice ?? item.product?.regularPrice ?? 0);
-            const regular = Number(item.product?.regularPrice || 0);
+            const price = getProductVariantPrice(item.variant, item.product);
+            const regular = Number(item.variant?.name
+              ? item.variant?.regularPrice || 0
+              : item.product?.regularPrice || 0);
             const selectedOptions = getCartItemOptionLabels(item);
             const image = getCartItemImage(item);
 

@@ -6,9 +6,15 @@ const ProductOptionContext = createContext(null);
 
 export function ProductOptionProvider({ children }) {
   const [selectedAttributeValueIds, setSelectedAttributeValueIds] = useState([]);
+  const [selectedWeightVariantId, setSelectedWeightVariantId] = useState('');
 
   return (
-    <ProductOptionContext.Provider value={{ selectedAttributeValueIds, setSelectedAttributeValueIds }}>
+    <ProductOptionContext.Provider value={{
+      selectedAttributeValueIds,
+      setSelectedAttributeValueIds,
+      selectedWeightVariantId,
+      setSelectedWeightVariantId,
+    }}>
       {children}
     </ProductOptionContext.Provider>
   );

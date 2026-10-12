@@ -4,7 +4,7 @@ import OptimizedImage from '@/components/OptimizedImage';
 import { useMemo, useState } from 'react';
 import MediaUploader from '@/components/admin/MediaUploader';
 
-const empty = { name: '', slug: '', description: '', image: '', parentId: null, active: true, attributeIds: [] };
+const empty = { name: '', slug: '', description: '', image: '', parentId: null, active: true, enableWeightVariants: false, attributeIds: [] };
 
 async function getResponseError(response, fallback) {
   try {
@@ -198,6 +198,7 @@ export default function CategoryManager({ initialCategories, attributes = [], pe
         <label>Parent category<select value={form.parentId || ''} onChange={event => updateForm('parentId', event.target.value || null)}><option value="">Root category</option>{parentOptions.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
         <label>Description<textarea value={form.description || ''} onChange={event => updateForm('description', event.target.value)} /></label>
         {!form.id && <label className="check-label"><input type="checkbox" checked={form.active} onChange={event => updateForm('active', event.target.checked)} /> Active</label>}
+        <label className="check-label"><input type="checkbox" checked={Boolean(form.enableWeightVariants)} onChange={event => updateForm('enableWeightVariants', event.target.checked)} /> Enable Weight Variants</label>
         <fieldset><legend>Enabled attributes</legend>{attributes.map(attribute => <label className="check-label" key={attribute.id}><input type="checkbox" checked={(form.attributeIds || []).includes(attribute.id)} onChange={event => updateForm('attributeIds', event.target.checked ? [...new Set([...(form.attributeIds || []), attribute.id])] : (form.attributeIds || []).filter(id => id !== attribute.id))} />{attribute.name}</label>)}</fieldset>
       </section><MediaUploader label="Category image" multiple={false} images={form.image ? [{ url: form.image, isPrimary: true }] : []} onChange={images => updateForm('image', images[0]?.url || '')} /></div>
       <div className="admin-form-actions"><button className="btn" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save category'}</button></div>
