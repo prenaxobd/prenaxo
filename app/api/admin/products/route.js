@@ -407,8 +407,8 @@ export async function POST(request) {
         null
       );
 
-      await validateAttributeSelections(tx, data.categoryId, attributeValueIds, variants);
-      await validateWeightVariants(tx, data.categoryId, weightVariants);
+      await validateAttributeSelections(tx, categoryId, attributeValueIds, variants);
+      await validateWeightVariants(tx, categoryId, weightVariants);
 
       /**
        * IMPORTANT:
