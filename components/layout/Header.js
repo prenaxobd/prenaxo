@@ -4,6 +4,7 @@ import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { startTransition, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import CategoryNavigationLink from '@/components/layout/CategoryNavigationLink';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faChevronDown,
@@ -237,16 +238,27 @@ function ResultGroup({ title, items, onSelect }) {
       <strong>{title}</strong>
 
       {items.map((item) => (
-        <Link
-          href={item.href}
-          key={item.id}
-          className="header-result"
-          onClick={onSelect}
-        >
-          <span>{item.name}</span>
-
-          <FontAwesomeIcon icon={faChevronDown} />
-        </Link>
+        item.href.startsWith('/category/') ? (
+          <CategoryNavigationLink
+            href={item.href}
+            key={item.id}
+            className="header-result"
+            onClick={onSelect}
+          >
+            <span>{item.name}</span>
+            <FontAwesomeIcon icon={faChevronDown} />
+          </CategoryNavigationLink>
+        ) : (
+          <Link
+            href={item.href}
+            key={item.id}
+            className="header-result"
+            onClick={onSelect}
+          >
+            <span>{item.name}</span>
+            <FontAwesomeIcon icon={faChevronDown} />
+          </Link>
+        )
       ))}
     </div>
   );
@@ -1219,13 +1231,13 @@ export default function Header() {
               <div className="mobile-sub-links">
                 {categoryLinks.map(
                   (category) => (
-                    <Link
+                    <CategoryNavigationLink
                       href={`/category/${category.slug}`}
                       key={category.id}
                       onClick={closePanels}
                     >
                       {category.name}
-                    </Link>
+                    </CategoryNavigationLink>
                   )
                 )}
               </div>

@@ -101,6 +101,13 @@ function productsFor(type, data, section) {
   }
 
   if (type === 'CATEGORY') {
+    const configuredSection = data.sections.find((item) => item.id === section.id);
+    if (configuredSection?.useManualProducts) {
+      return configuredSection.products
+        .map((item) => item.product)
+        .slice(0, limit);
+    }
+
     return (
       data.categorySections
         .find(
@@ -209,6 +216,7 @@ export default async function Home() {
           eyebrow: 'Freshly added',
         },
       ];
+  const hasDealsSection = configuredSections.some((section) => section.type === 'DEALS');
 
   return (
     <>
@@ -283,6 +291,14 @@ export default async function Home() {
             ) : null}
           </React.Fragment>
         ))}
+
+        {!hasDealsSection && data.brands.length > 0 ? (
+          <HomeScrollReveal>
+            <div className="home-scroll-reveal">
+              <BrandRail brands={data.brands} />
+            </div>
+          </HomeScrollReveal>
+        ) : null}
 
         {/* =====================================================
             REVIEW RAIL

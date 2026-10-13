@@ -38,7 +38,7 @@ function getBrandImage(brand) {
 
 export default function BrandRail({ brands = [] }) {
   const items = Array.isArray(brands)
-    ? brands.slice(0, 12)
+    ? brands
     : [];
 
   const [active, setActive] = useState(0);

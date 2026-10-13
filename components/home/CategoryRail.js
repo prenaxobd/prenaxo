@@ -2,6 +2,7 @@
 import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
+import CategoryNavigationLink from '@/components/layout/CategoryNavigationLink';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -119,7 +120,7 @@ export default function CategoryRail({ categories }) {
                 key={category.id}
               >
 
-                <Link
+                <CategoryNavigationLink
                   className="home-category-card"
                   href={`/category/${category.slug}`}
                 >
@@ -145,7 +146,7 @@ export default function CategoryRail({ categories }) {
                     {category.name}
                   </strong>
 
-                </Link>
+                </CategoryNavigationLink>
 
               </div>
 

@@ -458,6 +458,8 @@ model Product {
 
   wishlistItems WishlistItem[]
 
+  homepageSections HomepageSectionProduct[]
+
   seo ProductSEO?
 
   analyticsEvents AnalyticsEvent[]
@@ -926,6 +928,8 @@ model HomepageSection {
 
   category Category? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   productLimit Int @default(8)
+  useManualProducts Boolean @default(false)
+  products HomepageSectionProduct[]
 
   active Boolean @default(true)
 
@@ -933,6 +937,22 @@ model HomepageSection {
 
   @@index([categoryId])
   @@map("homepagesection")
+}
+
+model HomepageSectionProduct {
+  id String @id @default(cuid())
+
+  sectionId String
+  productId String
+  sortOrder Int @default(0)
+
+  section HomepageSection @relation(fields: [sectionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([sectionId, productId])
+  @@index([sectionId, sortOrder])
+  @@index([productId])
+  @@map("homepagesectionproduct")
 }
 
 /**

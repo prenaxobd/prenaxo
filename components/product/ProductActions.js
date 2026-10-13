@@ -128,10 +128,16 @@ export default function ProductActions({
       : [],
     [cartProduct.category?.enableWeightVariants, variants]
   );
-  const selectedWeightVariant = weightVariants.find((variant) => variant.id === selectedWeightVariantId) || null;
   const [quantities, setQuantities] = useState({});
   const [removedCombinationKeys, setRemovedCombinationKeys] = useState(() => new Set());
   const [quantity, setQuantity] = useState(1);
+  const [selectedWeightVariantIds, setSelectedWeightVariantIds] = useState(() => {
+    const defaultVariant = weightVariants.find((variant) =>
+      variant.id === selectedWeightVariantId && Number(variant.stock || 0) > 0
+    ) || weightVariants.find((variant) => Number(variant.stock || 0) > 0);
+    return defaultVariant ? [defaultVariant.id] : [];
+  });
+  const [weightQuantities, setWeightQuantities] = useState({});
   const [message, setMessage] = useState('');
   const [wishlistBusy, setWishlistBusy] = useState(false);
   const [bulkOptionsBusy, setBulkOptionsBusy] = useState(false);
@@ -362,14 +368,37 @@ export default function ProductActions({
   const availableSizeEntries = sizeEntries.filter((entry) =>
     !entry.unavailable && entry.quantity <= entry.availableQuantity
   );
-  const bulkEntries = supportsColorMatrix ? colorEntries : availableSizeEntries;
+  const weightEntries = weightVariants
+    .filter((variant) => selectedWeightVariantIds.includes(variant.id))
+    .map((variant) => {
+      const stock = Number(variant.stock || 0);
+      const availableQuantity = Math.max(0, stock - getWeightCartQuantity(variant.id));
+
+      return {
+        variant,
+        attributeValueIds: [],
+        quantity: weightQuantities[variant.id] || 1,
+        stock,
+        availableQuantity,
+        price: getProductVariantPrice(variant, cartProduct),
+        unavailable: availableQuantity < 1 ||
+          (weightQuantities[variant.id] || 1) > availableQuantity,
+      };
+    });
+  const bulkEntries = weightVariants.length
+    ? weightEntries
+    : supportsColorMatrix
+      ? colorEntries
+      : availableSizeEntries;
   const bulkOptionsUnavailable =
     bulkEntries.length === 0 ||
-    (supportsColorMatrix && colorEntries.some((entry) =>
+    ((supportsColorMatrix && !weightVariants.length && colorEntries.some((entry) =>
       entry.unavailable || entry.quantity > entry.availableQuantity
-    ));
-  const whatsappEntries = supportsColorMatrix || supportsSizeMatrix
-    ? bulkEntries
+    )) || weightEntries.some((entry) => entry.unavailable));
+  const whatsappEntries = weightVariants.length
+    ? weightEntries
+    : supportsColorMatrix || supportsSizeMatrix
+      ? bulkEntries
     : hasAttributeOptions
       ? entriesWithAvailableStock
       : [{
@@ -407,7 +436,16 @@ export default function ProductActions({
       const addedQuantity = bulkEntries.reduce((total, entry) => total + entry.quantity, 0);
       const result = await cart.addMany(
         bulkEntries.map((entry) => ({
-          product: createCartProduct(entry),
+          product: weightVariants.length
+            ? {
+                ...cartProduct,
+                variantId: entry.variant.id,
+                variant: entry.variant,
+                stock: entry.stock,
+                regularPrice: entry.variant.regularPrice,
+                salePrice: entry.variant.salePrice,
+              }
+            : createCartProduct(entry),
           quantity: entry.quantity,
         }))
       );
@@ -436,8 +474,10 @@ export default function ProductActions({
     if (whatsappUnavailable) {
       setMessage(
         whatsappEntries.length === 0
-          ? hasAttributeOptions
-            ? `Please select ${attributeGroups.map((group) => group.name.toLowerCase()).join(' and ')} first.`
+          ? weightVariants.length
+            ? 'Please select one or more weights to order.'
+            : hasAttributeOptions
+              ? `Please select ${attributeGroups.map((group) => group.name.toLowerCase()).join(' and ')} first.`
             : 'This product is currently unavailable.'
           : 'One or more selected options are unavailable or exceed available stock.'
       );
@@ -452,7 +492,7 @@ export default function ProductActions({
       'Assalamu Alaikum, I would like to order from Prenaxo:',
       `Product: ${cartProduct.name || 'Product'}`,
       ...whatsappEntries.map((entry) =>
-        `- ${getOptionLabel(entry) || 'Option'} x ${entry.quantity} — ৳${(entry.price * entry.quantity).toLocaleString()}`
+        `- ${entry.variant?.name || getOptionLabel(entry) || 'Option'} x ${entry.quantity} — ৳${(entry.price * entry.quantity).toLocaleString()}`
       ),
       `Total items: ${whatsappEntries.reduce((total, entry) => total + entry.quantity, 0)}`,
       `Total: ৳${orderTotal.toLocaleString()}`,
@@ -495,41 +535,36 @@ export default function ProductActions({
       .reduce((total, item) => total + Number(item.quantity || 0), 0);
   }
 
-  async function addSelectedWeight(buyNowAfterAdd = false) {
+  function toggleWeightVariant(variant, checked) {
+    if (checked) {
+      setSelectedWeightVariantId(variant.id);
+      setSelectedWeightVariantIds((current) =>
+        current.includes(variant.id) ? current : [...current, variant.id]
+      );
+    } else {
+      setSelectedWeightVariantIds((current) => current.filter((id) => id !== variant.id));
+      if (selectedWeightVariantId === variant.id) {
+        const nextVariant = weightVariants.find((item) =>
+          item.id !== variant.id && selectedWeightVariantIds.includes(item.id)
+        );
+        setSelectedWeightVariantId(nextVariant?.id || '');
+      }
+    }
     setMessage('');
-    const variant = selectedWeightVariant;
-    const availableQuantity = Math.max(0, Number(variant?.stock || 0) - getWeightCartQuantity(variant?.id));
-    if (!variant || availableQuantity < 1 || quantity > availableQuantity || disabled) {
-      setMessage('This weight is unavailable or exceeds available stock.');
-      return;
-    }
-
-    try {
-      if (!(await requireAccount())) return;
-    } catch (error) {
-      setMessage(error.message || 'Could not verify your account. Please try again.');
-      return;
-    }
-
-    const result = await cart.add({
-      ...cartProduct,
-      variantId: variant.id,
-      variant,
-      stock: Number(variant.stock || 0),
-      regularPrice: variant.regularPrice,
-      salePrice: variant.salePrice,
-    }, quantity);
-
-    if (!result.ok) {
-      setMessage(result.error || 'Unable to add this weight to cart.');
-      return;
-    }
-
-    setMessage(`${variant.name} added to cart.`);
-    if (buyNowAfterAdd) router.push('/checkout');
   }
 
-  async function addSelectedItems() {
+  function setWeightQuantity(variant, nextQuantity) {
+    const availableQuantity = Math.max(
+      0,
+      Number(variant.stock || 0) - getWeightCartQuantity(variant.id)
+    );
+    setWeightQuantities((current) => ({
+      ...current,
+      [variant.id]: Math.max(1, Math.min(availableQuantity, nextQuantity)),
+    }));
+  }
+
+  async function addSelectedItems(buyNowAfterAdd = false) {
     setMessage('');
 
     if (unavailable) {
@@ -573,11 +608,12 @@ export default function ProductActions({
     }
 
     setMessage(`${addedQuantity} item${addedQuantity === 1 ? '' : 's'} added to cart.`);
+    if (buyNowAfterAdd) router.push('/checkout');
     return true;
   }
 
   async function buyNow() {
-    if (await addSelectedItems()) router.push('/checkout');
+    await addSelectedItems(true);
   }
 
   async function wishlist() {
@@ -601,40 +637,57 @@ export default function ProductActions({
   return (
     <>
       {weightVariants.length > 0 && (
-        <section className="product-size-matrix" aria-label="Choose product weight">
+        <section className="product-size-matrix product-weight-matrix" aria-label="Select product weights">
           <div className="product-size-matrix-heading">
-            <strong>Weight / Unit</strong>
+            <strong>Weight</strong>
             <strong>Price</strong>
-            <strong>Stock</strong>
+            <strong>Stock / Quantity</strong>
           </div>
           {weightVariants.map((variant) => {
-            const available = Number(variant.stock || 0) > 0;
-            const selected = variant.id === selectedWeightVariantId;
-            const variantPrice = getProductVariantPrice(variant, cartProduct);
-            const variantRegularPrice = Number(variant.regularPrice || 0);
-            const discounted = variant.salePrice != null && variantPrice < variantRegularPrice;
+            const stock = Number(variant.stock || 0);
+            const availableQuantity = Math.max(0, stock - getWeightCartQuantity(variant.id));
+            const selected = selectedWeightVariantIds.includes(variant.id);
+            const rowQuantity = weightQuantities[variant.id] || 1;
+            const price = getProductVariantPrice(variant, cartProduct);
+            const regularPrice = Number(variant.regularPrice || 0);
+
             return (
-              <button
-                type="button"
-                key={variant.id}
-                className={`product-size-matrix-row ${selected ? 'selected' : ''} ${!available ? 'option-unavailable' : ''}`}
-                onClick={() => {
-                  setSelectedWeightVariantId(variant.id);
-                  setMessage('');
-                }}
-                disabled={!available}
-                aria-pressed={selected}
-                aria-label={`${variant.name}, ৳${variantPrice.toLocaleString()}${available ? '' : ', out of stock'}`}
-              >
-                <strong>{variant.name}</strong>
+              <div className={`product-size-matrix-row product-weight-matrix-row ${selected ? 'is-selected' : ''}`} key={variant.id}>
+                <label className="product-weight-matrix-select">
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    disabled={availableQuantity < 1}
+                    onChange={(event) => toggleWeightVariant(variant, event.target.checked)}
+                    aria-label={`Select ${variant.name}`}
+                  />
+                  <strong>{variant.name}</strong>
+                </label>
                 <strong className="product-size-matrix-price">
-                  ৳{variantPrice.toLocaleString()}
-                  {discounted && <del>৳{variantRegularPrice.toLocaleString()}</del>}
+                  ৳{price.toLocaleString()}
+                  {regularPrice > price && <del>৳{regularPrice.toLocaleString()}</del>}
                 </strong>
-                <span className={available ? '' : 'is-out-of-stock'}>
-                  {available ? `${variant.stock} in stock` : 'Out of stock'}
-                </span>
-              </button>
+                <div className="product-weight-matrix-stock">
+                  <span className={availableQuantity < 1 ? 'is-out-of-stock' : ''}>
+                    {availableQuantity > 0 ? `${availableQuantity} in stock` : 'Out of stock'}
+                  </span>
+                  <div className="product-qty product-size-matrix-qty" aria-label={`${variant.name} quantity`}>
+                    <button
+                      type="button"
+                      disabled={!selected || rowQuantity <= 1}
+                      onClick={() => setWeightQuantity(variant, rowQuantity - 1)}
+                      aria-label={`Decrease ${variant.name} quantity`}
+                    ><Minus size={12}/></button>
+                    <span>{rowQuantity}</span>
+                    <button
+                      type="button"
+                      disabled={!selected || rowQuantity >= availableQuantity}
+                      onClick={() => setWeightQuantity(variant, rowQuantity + 1)}
+                      aria-label={`Increase ${variant.name} quantity`}
+                    ><Plus size={12}/></button>
+                  </div>
+                </div>
+              </div>
             );
           })}
         </section>
@@ -811,34 +864,34 @@ export default function ProductActions({
         </section>
       )}
 
-      {(supportsColorMatrix || supportsSizeMatrix) && (
+      {(supportsColorMatrix || supportsSizeMatrix || weightVariants.length > 0) && (
         <div className="product-color-matrix-bulk-actions">
           <button
             type="button"
             className="btn product-primary-btn"
-            disabled={disabled || bulkOptionsBusy}
+            disabled={disabled || bulkOptionsBusy || (weightVariants.length > 0 && bulkOptionsUnavailable)}
             onClick={() => void addAllOptions()}
           >
             <ShoppingBag size={16}/>
-            <span>Add all to cart</span>
+            <span>{weightVariants.length ? 'Add selected to cart' : 'Add all to cart'}</span>
           </button>
           <button
             type="button"
             className="btn product-secondary-btn"
-            disabled={disabled || bulkOptionsBusy}
+            disabled={disabled || bulkOptionsBusy || (weightVariants.length > 0 && bulkOptionsUnavailable)}
             onClick={() => void addAllOptions(true)}
           >
-            Buy all now
+            {weightVariants.length ? 'Buy selected now' : 'Buy all now'}
           </button>
         </div>
       )}
 
-      {(supportsColorMatrix || supportsSizeMatrix) && (
+      {(supportsColorMatrix || supportsSizeMatrix || weightVariants.length > 0) && (
         <div className="product-color-matrix-contact-row">
           <button
             type="button"
             className="product-color-matrix-whatsapp"
-            disabled={disabled}
+            disabled={disabled || (weightVariants.length > 0 && whatsappUnavailable)}
             onClick={orderOptionsOnWhatsApp}
           >
             <MessageCircle size={18}/>
@@ -916,54 +969,6 @@ export default function ProductActions({
             <p className="selected-variant-empty">No combinations selected. Change an option to add it back.</p>
           )}
         </section>
-      )}
-
-      {weightVariants.length > 0 && (
-        <div className="product-action-controls">
-          <div className="product-qty" aria-label="Quantity selector">
-            <button
-              type="button"
-              disabled={quantity <= 1}
-              onClick={() => setQuantity((current) => Math.max(1, current - 1))}
-              aria-label="Decrease quantity"
-            ><Minus size={15}/></button>
-            <span>{quantity}</span>
-            <button
-              type="button"
-              disabled={!selectedWeightVariant || quantity >= Math.max(0, Number(selectedWeightVariant.stock || 0) - getWeightCartQuantity(selectedWeightVariant.id))}
-              onClick={() => setQuantity((current) => Math.min(Math.max(1, Number(selectedWeightVariant?.stock || 0) - getWeightCartQuantity(selectedWeightVariant?.id)), current + 1))}
-              aria-label="Increase quantity"
-            ><Plus size={15}/></button>
-          </div>
-          <div className="product-action-buttons">
-            <button
-              type="button"
-              className="btn product-primary-btn"
-              disabled={disabled || !selectedWeightVariant || Number(selectedWeightVariant.stock || 0) <= getWeightCartQuantity(selectedWeightVariant.id)}
-              onClick={() => void addSelectedWeight()}
-            >
-              <ShoppingBag size={17}/>
-              <span>Add to cart</span>
-            </button>
-            <button
-              type="button"
-              className="btn product-secondary-btn"
-              disabled={disabled || !selectedWeightVariant || Number(selectedWeightVariant.stock || 0) <= getWeightCartQuantity(selectedWeightVariant.id)}
-              onClick={() => void addSelectedWeight(true)}
-            >
-              Buy now
-            </button>
-            <button
-              type="button"
-              className="btn product-icon-btn"
-              onClick={() => void wishlist()}
-              disabled={!wishlistStore?.ready || wishlistBusy}
-              aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'}
-              aria-pressed={saved}
-              title={saved ? 'Remove from wishlist' : 'Add to wishlist'}
-            ><Heart size={18} fill={saved ? 'currentColor' : 'none'}/></button>
-          </div>
-        </div>
       )}
 
       {!supportsSizeMatrix && !supportsColorMatrix && weightVariants.length === 0 && (

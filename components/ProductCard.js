@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import { useWishlist } from '@/components/wishlist/WishlistProvider';
 import { useAccountRequired } from '@/components/auth/AccountRequiredProvider';
+import { getProductVariantPrice } from '@/lib/product-pricing';
 
 
 /*
@@ -124,6 +125,17 @@ export default function ProductCard({
 
   const [adding, setAdding] =
     useState(false);
+  const weightVariants = product.category?.enableWeightVariants
+    ? (product.variants || []).filter((variant) => variant.name)
+    : [];
+  const [selectedWeightVariantId, setSelectedWeightVariantId] = useState(() => (
+    weightVariants.find((variant) => Number(variant.stock || 0) > 0)?.id ||
+    weightVariants[0]?.id ||
+    ''
+  ));
+  const selectedWeightVariant = weightVariants.find((variant) => variant.id === selectedWeightVariantId)
+    || weightVariants.find((variant) => Number(variant.stock || 0) > 0)
+    || null;
   const [savingWishlist, setSavingWishlist] =
     useState(false);
 
@@ -182,6 +194,19 @@ export default function ProductCard({
         )
       : 0;
 
+  const displayedPrice = selectedWeightVariant
+    ? getProductVariantPrice(selectedWeightVariant, product)
+    : price;
+  const displayedRegularPrice = selectedWeightVariant
+    ? Number(selectedWeightVariant.regularPrice || 0)
+    : regularPrice;
+  const displayedDiscount = displayedRegularPrice > displayedPrice && displayedRegularPrice > 0
+    ? Math.round(((displayedRegularPrice - displayedPrice) / displayedRegularPrice) * 100)
+    : discount;
+  const availableStock = weightVariants.length
+    ? Number(selectedWeightVariant?.stock || 0)
+    : Number(product.stock || 0);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -225,7 +250,7 @@ export default function ProductCard({
 
     if (
       adding ||
-      product.stock <= 0
+      availableStock <= 0
     ) {
       return;
     }
@@ -236,11 +261,17 @@ export default function ProductCard({
     try {
       if (!(await requireAccount())) return;
 
-      const result =
-        await cart.add(
-          product,
-          1
-        );
+      const cartProduct = selectedWeightVariant
+        ? {
+            ...product,
+            variantId: selectedWeightVariant.id,
+            variant: selectedWeightVariant,
+            regularPrice: selectedWeightVariant.regularPrice,
+            salePrice: selectedWeightVariant.salePrice,
+            stock: selectedWeightVariant.stock,
+          }
+        : product;
+      const result = await cart.add(cartProduct, 1);
 
 
       if (result.ok) {
@@ -371,10 +402,10 @@ export default function ProductCard({
 
         {/* DISCOUNT */}
 
-        {discount > 0 && (
+        {displayedDiscount > 0 && (
 
           <span className="product-discount">
-            -{discount}%
+            -{displayedDiscount}%
           </span>
 
         )}
@@ -486,16 +517,16 @@ export default function ProductCard({
 
             <span className="current-price">
 
-              ৳{price.toLocaleString()}
+              ৳{displayedPrice.toLocaleString()}
 
             </span>
 
 
-            {discount > 0 && (
+            {displayedDiscount > 0 && (
 
               <span className="old-price">
 
-                ৳{regularPrice.toLocaleString()}
+                ৳{displayedRegularPrice.toLocaleString()}
 
               </span>
 
@@ -503,12 +534,47 @@ export default function ProductCard({
 
           </div>
 
+          {weightVariants.length > 0 && (
+            <span
+              className={`product-card-stock-status ${availableStock > 0 ? 'is-in-stock' : 'is-out-of-stock'}`}
+              aria-live="polite"
+            >
+              {availableStock > 0 ? 'In stock' : 'Out of stock'}
+            </span>
+          )}
+
         </div>
 
-        {flashSale && product.stock > 0 && (
+        {weightVariants.length > 0 && (
+          <div className="product-card-weight-options" aria-label="Select weight">
+            {weightVariants.map((variant) => {
+              const selected = variant.id === selectedWeightVariant?.id;
+              const inStock = Number(variant.stock || 0) > 0;
+              return (
+                <button
+                  type="button"
+                  key={variant.id}
+                  className={selected ? 'selected' : ''}
+                  disabled={!inStock}
+                  aria-pressed={selected}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setSelectedWeightVariantId(variant.id);
+                    setMessage('');
+                  }}
+                >
+                  {variant.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {flashSale && availableStock > 0 && (
           <div className="flash-card-stock">
-            <div><span>Only {product.stock} left</span><span>{Math.round((Number(product.stock) / Math.max(1, maxStock)) * 100)}%</span></div>
-            <span className="flash-card-stock-bar" role="progressbar" aria-label="Stock remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round((Number(product.stock) / Math.max(1, maxStock)) * 100)}><i style={{ width: `${Math.min(100, Math.max(0, Math.round((Number(product.stock) / Math.max(1, maxStock)) * 100)))}%` }} /></span>
+            <div><span>Only {availableStock} left</span><span>{Math.round((availableStock / Math.max(1, maxStock)) * 100)}%</span></div>
+            <span className="flash-card-stock-bar" role="progressbar" aria-label="Stock remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round((availableStock / Math.max(1, maxStock)) * 100)}><i style={{ width: `${Math.min(100, Math.max(0, Math.round((availableStock / Math.max(1, maxStock)) * 100)))}%` }} /></span>
           </div>
         )}
 
@@ -531,7 +597,7 @@ export default function ProductCard({
               onClick={addCart}
               disabled={
                 adding ||
-                product.stock <= 0
+                availableStock <= 0
               }
             >
 
@@ -545,7 +611,7 @@ export default function ProductCard({
 
                 </>
 
-              ) : product.stock <= 0 ? (
+              ) : availableStock <= 0 ? (
 
                 <>
 
@@ -576,7 +642,7 @@ export default function ProductCard({
             onClick={addCart}
             disabled={
               adding ||
-              product.stock <= 0
+              availableStock <= 0
             }
           >
 
@@ -590,7 +656,7 @@ export default function ProductCard({
 
               </>
 
-            ) : product.stock <= 0 ? (
+            ) : availableStock <= 0 ? (
 
               <>
 

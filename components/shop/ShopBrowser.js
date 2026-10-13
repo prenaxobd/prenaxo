@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import CategoryNavigationLink from '@/components/layout/CategoryNavigationLink';
 import { useRouter } from 'next/navigation';
 import {
   ChevronDown,
@@ -11,7 +12,7 @@ import {
   ChevronRight,
   LayoutGrid,
 } from 'lucide-react';
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import ProductCard from '@/components/ProductCard';
 
@@ -137,6 +138,7 @@ export default function ShopBrowser({
 
   const [currentPage, setCurrentPage] =
     useState(serverPage);
+  const [isNavigationPending, startNavigation] = useTransition();
   const hasMounted = useRef(false);
 
   useEffect(() => {
@@ -166,12 +168,18 @@ export default function ShopBrowser({
     if (currentPage > 1) query.set('page', String(currentPage));
 
     const nextUrl = query.toString() ? `${basePath}?${query}` : basePath;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (currentUrl === nextUrl) return undefined;
+
+    const categoryFilterChanged =
+      category !== (lockedCategory || initialFilters.category || 'all') ||
+      subcategory !== (initialFilters.subcategory || 'all');
     const timeoutId = window.setTimeout(() => {
-      router.replace(nextUrl, { scroll: false });
-    }, 250);
+      startNavigation(() => router.replace(nextUrl, { scroll: false }));
+    }, categoryFilterChanged ? 0 : 250);
 
     return () => window.clearTimeout(timeoutId);
-  }, [availability, basePath, brand, category, currentPage, lockedCategory, priceRange, ratingFilter, router, search, sort, subcategory]);
+  }, [availability, basePath, brand, category, currentPage, initialFilters.category, initialFilters.subcategory, lockedCategory, priceRange, ratingFilter, router, search, sort, startNavigation, subcategory]);
 
 
   /* =======================================================
@@ -632,6 +640,7 @@ export default function ShopBrowser({
           <section
             className="shop-results"
             aria-label="Product results"
+            aria-busy={isNavigationPending}
           >
 
 
@@ -725,7 +734,9 @@ export default function ShopBrowser({
                 PRODUCTS
             ================================================= */}
 
-            {paginatedProducts.length > 0 ? (
+            {isNavigationPending ? (
+              <ProductGridSkeleton />
+            ) : paginatedProducts.length > 0 ? (
 
               <>
 
@@ -1081,11 +1092,11 @@ function FilterPanel({
               categories={categoryTree}
               category={category}
               subcategory={subcategory}
-              onSelectCategory={value => {
-                setCategory(value);
+              onSelectAll={() => {
+                setCategory('all');
                 setSubcategory('all');
               }}
-              onSelectSubcategory={setSubcategory}
+              close={close}
             />
           </FilterSection>
         )}
@@ -1309,92 +1320,96 @@ function FilterSection({
 
 }
 
-function CategoryFilter({
-  categories,
-  category,
-  subcategory,
-  onSelectCategory,
-  onSelectSubcategory,
-}) {
+function CategoryFilter({ categories, category, subcategory, onSelectAll, close }) {
   const [openParentId, setOpenParentId] = useState(null);
-
-  function selectParent(item) {
-    onSelectCategory(item.slug);
-    if (item.children.length) setOpenParentId(item.id);
-    else setOpenParentId(null);
-  }
 
   return (
     <div className="shop-filter-scroll-list shop-filter-category-list" role="group" aria-label="Filter by category">
-        <button
-          type="button"
-          className={`shop-category-option ${category === 'all' ? 'is-selected' : ''}`}
-          aria-pressed={category === 'all'}
-          onClick={() => {
-            onSelectCategory('all');
-            setOpenParentId(null);
-          }}
-        >
-          <span>All categories</span>
-        </button>
-        {categories.map(item => {
-          const isSelected = category === item.slug;
-          const isOpen = openParentId === item.id;
+      <button
+        type="button"
+        className={`shop-category-option ${category === 'all' ? 'is-selected' : ''}`}
+        aria-pressed={category === 'all'}
+        onClick={() => {
+          onSelectAll();
+          setOpenParentId(null);
+        }}
+      >
+        <span>All categories</span>
+      </button>
+      {categories.map(item => {
+        const isSelected = category === item.slug;
+        const isOpen = openParentId === item.id;
 
-          return (
-            <div
-              key={item.id}
-              className="shop-category-option-group"
-              onMouseEnter={() => item.children.length && setOpenParentId(item.id)}
-              onMouseLeave={() => setOpenParentId(current => current === item.id ? null : current)}
-              onFocus={() => item.children.length && setOpenParentId(item.id)}
-            >
-              <button
-                type="button"
+        return (
+          <div
+            key={item.id}
+            className="shop-category-option-group"
+            onMouseEnter={() => item.children.length && setOpenParentId(item.id)}
+            onMouseLeave={() => setOpenParentId(current => current === item.id ? null : current)}
+            onFocus={() => item.children.length && setOpenParentId(item.id)}
+          >
+            <div className="shop-category-parent-row">
+              <CategoryNavigationLink
+                href={`/category/${item.slug}`}
                 className={`shop-category-option ${isSelected ? 'is-selected' : ''} ${isOpen ? 'is-open' : ''}`}
-                aria-pressed={isSelected}
-                aria-haspopup={item.children.length ? 'true' : undefined}
-                aria-expanded={item.children.length ? isOpen : undefined}
-                onClick={() => selectParent(item)}
+                onClick={close}
               >
                 <span>{item.name}</span>
-                {item.children.length > 0 && <ChevronRight size={15} aria-hidden="true" />}
-              </button>
-              {isOpen && item.children.length > 0 && (
-                <div className="shop-category-submenu" aria-label={`${item.name} subcategories`}>
-                  <button
-                    type="button"
-                    className={`shop-category-suboption ${category === item.slug && subcategory === 'all' ? 'is-selected' : ''}`}
-                    aria-pressed={category === item.slug && subcategory === 'all'}
-                    onClick={() => {
-                      onSelectCategory(item.slug);
-                      onSelectSubcategory('all');
-                      setOpenParentId(null);
-                    }}
-                  >
-                    <span>All in {item.name}</span>
-                  </button>
-                  {item.children.map(child => (
-                    <button
-                      key={child.id}
-                      type="button"
-                      className={`shop-category-suboption ${category === item.slug && subcategory === child.slug ? 'is-selected' : ''}`}
-                      aria-pressed={category === item.slug && subcategory === child.slug}
-                      onClick={() => {
-                        onSelectCategory(item.slug);
-                        onSelectSubcategory(child.slug);
-                        setOpenParentId(null);
-                      }}
-                    >
-                      <span>{child.name}</span>
-                    </button>
-                  ))}
-                </div>
+              </CategoryNavigationLink>
+              {item.children.length > 0 && (
+                <button
+                  type="button"
+                  className={`shop-category-expand ${isOpen ? 'is-open' : ''}`}
+                  aria-label={`${isOpen ? 'Hide' : 'Show'} ${item.name} subcategories`}
+                  aria-expanded={isOpen}
+                  onClick={() => setOpenParentId(isOpen ? null : item.id)}
+                >
+                  <ChevronRight size={15} aria-hidden="true" />
+                </button>
               )}
             </div>
-          );
-        })}
-      </div>
+            {isOpen && item.children.length > 0 && (
+              <div className="shop-category-submenu" aria-label={`${item.name} subcategories`}>
+                <CategoryNavigationLink
+                  href={`/category/${item.slug}`}
+                  className={`shop-category-suboption ${isSelected && subcategory === 'all' ? 'is-selected' : ''}`}
+                  onClick={close}
+                >
+                  <span>All in {item.name}</span>
+                </CategoryNavigationLink>
+                {item.children.map(child => (
+                  <CategoryNavigationLink
+                    key={child.id}
+                    href={`/category/${item.slug}?subcategory=${encodeURIComponent(child.slug)}`}
+                    className={`shop-category-suboption ${isSelected && subcategory === child.slug ? 'is-selected' : ''}`}
+                    onClick={close}
+                  >
+                    <span>{child.name}</span>
+                  </CategoryNavigationLink>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProductGridSkeleton() {
+  return (
+    <div className="shop-loading-grid" role="status" aria-label="Loading products">
+      {Array.from({ length: 8 }, (_, index) => (
+        <article className="shop-loading-card" aria-hidden="true" key={index}>
+          <span className="shop-skeleton shop-skeleton-card-image" />
+          <span className="shop-skeleton shop-skeleton-card-category" />
+          <span className="shop-skeleton shop-skeleton-card-title" />
+          <span className="shop-skeleton shop-skeleton-card-title shop-skeleton-card-title-short" />
+          <span className="shop-skeleton shop-skeleton-card-price" />
+          <span className="shop-skeleton shop-skeleton-card-button" />
+        </article>
+      ))}
+    </div>
   );
 }
 

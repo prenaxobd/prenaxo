@@ -204,6 +204,12 @@ export default async function CategoryPage({
     category: product.category
       ? { ...product.category, name: product.category.name.trim() }
       : null,
+    variants: (product.variants || []).map((variant) => ({
+      ...variant,
+      price: variant.price == null ? null : Number(variant.price),
+      regularPrice: variant.regularPrice == null ? null : Number(variant.regularPrice),
+      salePrice: variant.salePrice == null ? null : Number(variant.salePrice),
+    })),
     regularPrice: product.regularPrice?.toString() || null,
     salePrice: product.salePrice?.toString() || null,
     costPrice: product.costPrice?.toString() || null,

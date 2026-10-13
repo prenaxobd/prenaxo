@@ -22,6 +22,7 @@ import ProductReviews from '@/components/product/ProductReviews';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductActions from '@/components/product/ProductActions';
 import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
+import ProductWeightStockDisplay from '@/components/product/ProductWeightStockDisplay';
 import { ProductOptionProvider } from '@/components/product/ProductOptionContext';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import DeliveryChecker from '@/components/product/DeliveryChecker';
@@ -709,7 +710,13 @@ export default async function ProductPage({
         className="container product-main"
       >
 
-        <ProductOptionProvider>
+        <ProductOptionProvider
+          defaultWeightVariantId={
+            weightVariants.find((variant) => Number(variant.stock || 0) > 0)?.id ||
+            weightVariants[0]?.id ||
+            ''
+          }
+        >
         <div className="product-gallery-column">
 
           <ProductGallery
@@ -854,9 +861,11 @@ export default async function ProductPage({
 
               <span className="stock-dot" />
 
-              {inStock
-                ? `${stock} available`
-                : 'Out of stock'}
+              {weightVariants.length > 0
+                ? <ProductWeightStockDisplay weightVariants={weightVariants} fallbackStock={stock} />
+                : inStock
+                  ? `${stock} available`
+                  : 'Out of stock'}
 
             </div>
 

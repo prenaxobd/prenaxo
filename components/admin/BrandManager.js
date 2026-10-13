@@ -46,10 +46,12 @@ export default function BrandManager({ initialBrands = [], permissions = [] }) {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [actionId, setActionId] = useState(null);
   const [pendingActionId, setPendingActionId] = useState(null);
+  const [pendingHomeBrandId, setPendingHomeBrandId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const canCreate = permissions.includes('brands.create');
   const canEdit = permissions.includes('brands.edit');
   const canArchive = permissions.includes('brands.delete');
+  const homepageBrandCount = brands.filter((brand) => brand.active && brand.featured).length;
 
   const visible = brands.filter((brand) =>
     `${brand.name || ''} ${brand.slug || ''}`
@@ -118,6 +120,39 @@ export default function BrandManager({ initialBrands = [], permissions = [] }) {
       setMessage(error.message || 'Unable to save brand.');
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function toggleHomepageBrand(brand) {
+    const showOnHomepage = !brand.featured;
+    setPendingHomeBrandId(brand.id);
+    setMessage('');
+
+    try {
+      const response = await fetch('/api/admin/brands', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: brand.id,
+          featured: showOnHomepage,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to update homepage brand visibility.');
+      }
+
+      setBrands((items) =>
+        items.map((item) => item.id === brand.id ? { ...item, ...data } : item)
+      );
+      setMessage(`${brand.name} ${showOnHomepage ? 'will appear on' : 'was removed from'} the homepage.`);
+    } catch (error) {
+      setMessage(error.message || 'Unable to update homepage brand visibility.');
+    } finally {
+      setPendingHomeBrandId(null);
     }
   }
 
@@ -362,8 +397,11 @@ export default function BrandManager({ initialBrands = [], permissions = [] }) {
                   }
                 />
 
-                Featured
+                Show this brand on the homepage
               </label>
+              <p className="muted">
+                This is independent of the brand&apos;s Active status. Inactive brands are never displayed.
+              </p>
 
               <label className="check-label">
                 <input
@@ -405,7 +443,7 @@ export default function BrandManager({ initialBrands = [], permissions = [] }) {
           <option value="ARCHIVED">Archived</option>
         </select>
 
-        <span>{visible.length} brands</span>
+        <span>{visible.length} brands · {homepageBrandCount} shown on homepage</span>
       </div>
 
       <div className="admin-table-wrap brand-table-wrap">
@@ -417,6 +455,7 @@ export default function BrandManager({ initialBrands = [], permissions = [] }) {
               <th>Slug</th>
               <th>Products</th>
               <th>Status</th>
+              <th>Homepage</th>
               <th>Updated</th>
               <th>Actions</th>
             </tr>
@@ -430,11 +469,6 @@ export default function BrandManager({ initialBrands = [], permissions = [] }) {
                     {brand.name}
                   </strong>
 
-                  {brand.featured && (
-                    <small className="featured-mark">
-                      Featured
-                    </small>
-                  )}
                 </td>
 
                 <td>
@@ -462,6 +496,35 @@ export default function BrandManager({ initialBrands = [], permissions = [] }) {
                   >
                     {brand.active ? 'Active' : 'Archived'}
                   </span>
+                </td>
+
+                <td>
+                  {canEdit ? (
+                    <button
+                      className={`brand-home-toggle ${brand.featured && brand.active ? 'is-enabled' : ''}`}
+                      type="button"
+                      disabled={pendingHomeBrandId !== null || isSaving || (!brand.active && !brand.featured)}
+                      aria-pressed={Boolean(brand.featured)}
+                      title={
+                        !brand.active
+                          ? brand.featured
+                            ? 'Remove this brand from the homepage selection'
+                            : 'Restore this brand before showing it on the homepage'
+                          : undefined
+                      }
+                      onClick={() => toggleHomepageBrand(brand)}
+                    >
+                      {pendingHomeBrandId === brand.id
+                        ? 'Saving...'
+                        : brand.featured && brand.active
+                          ? 'Shown'
+                          : brand.featured
+                            ? 'Selected · inactive'
+                          : 'Hidden'}
+                    </button>
+                  ) : (
+                    <span>{brand.featured && brand.active ? 'Shown' : 'Hidden'}</span>
+                  )}
                 </td>
 
                 <td>
