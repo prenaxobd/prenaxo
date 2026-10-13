@@ -30,7 +30,7 @@ const weightVariantSchema = z.object({
     (value) => value === '' || value === null || value === undefined ? null : value,
     z.coerce.number().nonnegative().nullable()
   ).optional(),
-  stock: z.coerce.number().int().nonnegative(),
+  stock: z.coerce.number().int().nonnegative().default(0),
   sku: z.preprocess((value) => typeof value === 'string' && value.trim() === '' ? undefined : value, z.string().min(1).optional()),
 }).superRefine((variant, context) => {
   if (variant.salePrice !== null && variant.salePrice !== undefined && variant.salePrice > variant.regularPrice) {
@@ -277,28 +277,28 @@ async function validateAttributeSelections(tx, categoryId, attributeValueIds, va
     throw new Error('One or more selected product options are not configured for this category.');
   }
 
-  async function validateWeightVariants(tx, categoryId, weightVariants) {
-    if (!weightVariants.length) return;
-    if (!categoryId) throw new Error('Assign a category before adding product weight variants.');
-
-    const category = await tx.category.findUnique({
-      where: { id: categoryId },
-      select: { enableWeightVariants: true },
-    });
-    if (!category?.enableWeightVariants) {
-      throw new Error('Enable Weight Variants for this category before adding product weights.');
-    }
-
-    const names = weightVariants.map((variant) => variant.name.trim().toLocaleLowerCase());
-    if (new Set(names).size !== names.length) {
-      throw new Error('Weight variant names must be unique for this product.');
-    }
-  }
-
   for (const variant of variants) {
     if ((variant.attributeValueIds || []).some((valueId) => !selectedIds.includes(valueId))) {
       throw new Error('Each combination must use selected product options.');
     }
+  }
+}
+
+async function validateWeightVariants(tx, categoryId, weightVariants) {
+  if (!weightVariants.length) return;
+  if (!categoryId) throw new Error('Assign a category before adding product weight variants.');
+
+  const category = await tx.category.findUnique({
+    where: { id: categoryId },
+    select: { enableWeightVariants: true },
+  });
+  if (!category?.enableWeightVariants) {
+    throw new Error('Enable Weight Variants for this category before adding product weights.');
+  }
+
+  const names = weightVariants.map((variant) => variant.name.trim().toLocaleLowerCase());
+  if (new Set(names).size !== names.length) {
+    throw new Error('Weight variant names must be unique for this product.');
   }
 }
 

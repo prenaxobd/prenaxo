@@ -510,17 +510,24 @@ export default function ProductForm({
         throw new Error('Add at least one product to this combo.');
       }
 
-      if (form.weightVariants.some((variant) => !variant.name.trim() || variant.regularPrice === '')) {
+      const weightVariants = form.weightVariants.filter((variant) => (
+        variant.name.trim() ||
+        variant.regularPrice !== '' ||
+        variant.salePrice !== '' ||
+        variant.sku.trim() ||
+        Number(variant.stock) > 0
+      ));
+      if (weightVariants.some((variant) => !variant.name.trim() || variant.regularPrice === '')) {
         throw new Error('Each weight variant needs a name and regular price.');
       }
-      const weightNames = form.weightVariants.map((variant) => variant.name.trim().toLocaleLowerCase());
+      const weightNames = weightVariants.map((variant) => variant.name.trim().toLocaleLowerCase());
       if (new Set(weightNames).size !== weightNames.length) {
         throw new Error('Weight variant names must be unique.');
       }
-      if (form.weightVariants.some((variant) => variant.salePrice !== '' && Number(variant.salePrice) > Number(variant.regularPrice))) {
+      if (weightVariants.some((variant) => variant.salePrice !== '' && Number(variant.salePrice) > Number(variant.regularPrice))) {
         throw new Error('A weight variant sale price cannot be greater than its regular price.');
       }
-      if (form.weightVariants.length && !selectedCategory?.enableWeightVariants) {
+      if (weightVariants.length && !selectedCategory?.enableWeightVariants) {
         throw new Error('Remove the weight variants or enable them for the selected category.');
       }
 
@@ -639,7 +646,7 @@ export default function ProductForm({
           attributeValueIds: variant.attributeValueIds,
         })),
 
-        weightVariants: form.weightVariants.map((variant) => ({
+        weightVariants: weightVariants.map((variant) => ({
           ...(variant.id ? { id: variant.id } : {}),
           name: variant.name.trim(),
           regularPrice: Number(variant.regularPrice),
