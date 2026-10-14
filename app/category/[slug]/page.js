@@ -289,6 +289,7 @@ export async function CategoryPage({
       pageTitle: shopPageTitle.trim(),
       basePath: `/category/${normalizedCategorySlug}`,
       prettySubcategoryUrls: normalizedCategorySlug === 'mans-fashion',
+      clientFiltering: true,
       lockedCategory: category.slug,
       pageClassName: styles.categoryShopPage,
       contentId: 'category-products',

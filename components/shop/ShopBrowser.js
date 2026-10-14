@@ -67,6 +67,7 @@ export default function ShopBrowser({
   pageTitle = 'Shop Best Quality Products Online',
   basePath = '/shop',
   prettySubcategoryUrls = false,
+  clientFiltering = false,
   lockedCategory = null,
   pageClassName = '',
   contentId,
@@ -140,6 +141,12 @@ export default function ShopBrowser({
   const [currentPage, setCurrentPage] =
     useState(serverPage);
   const [isNavigationPending, startNavigation] = useTransition();
+  const [clientResults, setClientResults] = useState({
+    products,
+    total,
+    totalPages,
+  });
+  const [filterError, setFilterError] = useState('');
   const hasMounted = useRef(false);
 
   useEffect(() => {
@@ -173,6 +180,63 @@ export default function ShopBrowser({
       : basePath;
     const nextUrl = query.toString() ? `${categoryPath}?${query}` : categoryPath;
     const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (clientFiltering) {
+      if (currentUrl === nextUrl) return undefined;
+
+      const requestQuery = new URLSearchParams(query);
+      requestQuery.set('category', lockedCategory || category);
+      if (subcategory !== 'all') requestQuery.set('subcategory', subcategory);
+      const controller = new AbortController();
+
+      if (currentUrl !== nextUrl) {
+        window.history.replaceState(null, '', nextUrl);
+      }
+
+      const categoryFilterChanged =
+        category !== (lockedCategory || initialFilters.category || 'all') ||
+        subcategory !== (initialFilters.subcategory || 'all');
+      const timeoutId = window.setTimeout(() => {
+        startNavigation(async () => {
+          setFilterError('');
+          try {
+            const response = await fetch(`/api/shop/products?${requestQuery.toString()}`, {
+              signal: controller.signal,
+            });
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.error || 'Unable to update products');
+            }
+            if (
+              !Array.isArray(data.products) ||
+              !Number.isFinite(data.total) ||
+              !Number.isFinite(data.totalPages)
+            ) {
+              throw new Error('The product response was invalid');
+            }
+            startTransition(() => {
+              setClientResults({
+                products: data.products,
+                total: data.total,
+                totalPages: data.totalPages,
+              });
+            });
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              console.error('Shop filter request failed:', error);
+              startTransition(() => {
+                setFilterError('We could not update the products. Please try again.');
+              });
+            }
+          }
+        });
+      }, categoryFilterChanged ? 0 : 250);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+        controller.abort();
+      };
+    }
+
     if (currentUrl === nextUrl) return undefined;
 
     const categoryFilterChanged =
@@ -183,7 +247,7 @@ export default function ShopBrowser({
     }, categoryFilterChanged ? 0 : 250);
 
     return () => window.clearTimeout(timeoutId);
-  }, [availability, basePath, brand, category, currentPage, initialFilters.category, initialFilters.subcategory, lockedCategory, prettySubcategoryUrls, priceRange, ratingFilter, router, search, sort, startNavigation, subcategory]);
+  }, [availability, basePath, brand, category, clientFiltering, currentPage, initialFilters.category, initialFilters.subcategory, lockedCategory, prettySubcategoryUrls, priceRange, ratingFilter, router, search, sort, startNavigation, subcategory]);
 
 
   /* =======================================================
@@ -242,7 +306,10 @@ export default function ShopBrowser({
      FILTER + SORT
   ======================================================= */
 
-  const filteredProducts = products;
+  const filteredProducts = clientFiltering ? clientResults.products : products;
+  const displayedTotal = clientFiltering ? clientResults.total : total;
+  const displayedTotalPages = clientFiltering ? clientResults.totalPages : totalPages;
+  const isProductsLoading = isNavigationPending;
 
 
   /* =======================================================
@@ -251,15 +318,15 @@ export default function ShopBrowser({
 
   useEffect(() => {
 
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (displayedTotalPages > 0 && currentPage > displayedTotalPages) {
 
-      startTransition(() => setCurrentPage(totalPages));
+      startTransition(() => setCurrentPage(displayedTotalPages));
 
     }
 
   }, [
     currentPage,
-    totalPages,
+    displayedTotalPages,
   ]);
 
 
@@ -277,7 +344,7 @@ export default function ShopBrowser({
   ======================================================= */
 
   const showingStart =
-    total > 0
+    displayedTotal > 0
       ? startIndex + 1
       : 0;
 
@@ -320,15 +387,17 @@ export default function ShopBrowser({
 
     if (
       page < 1 ||
-      page > totalPages
+      page > displayedTotalPages
     ) {
       return;
     }
 
     setCurrentPage(page);
-    const query = new URLSearchParams(window.location.search);
-    query.set('page', String(page));
-    router.push(`${window.location.pathname}?${query.toString()}`, { scroll: false });
+    if (!clientFiltering) {
+      const query = new URLSearchParams(window.location.search);
+      query.set('page', String(page));
+      router.push(`${window.location.pathname}?${query.toString()}`, { scroll: false });
+    }
 
     window.scrollTo({
       top: 0,
@@ -351,11 +420,11 @@ export default function ShopBrowser({
      * 1 2 3 4 5
      */
 
-    if (totalPages <= 7) {
+    if (displayedTotalPages <= 7) {
 
       for (
         let i = 1;
-        i <= totalPages;
+        i <= displayedTotalPages;
         i++
       ) {
 
@@ -381,7 +450,7 @@ export default function ShopBrowser({
         3,
         4,
         '...',
-        totalPages,
+        displayedTotalPages,
       ];
 
     }
@@ -394,16 +463,16 @@ export default function ShopBrowser({
 
     if (
       currentPage >=
-      totalPages - 3
+      displayedTotalPages - 3
     ) {
 
       return [
         1,
         '...',
-        totalPages - 3,
-        totalPages - 2,
-        totalPages - 1,
-        totalPages,
+        displayedTotalPages - 3,
+        displayedTotalPages - 2,
+        displayedTotalPages - 1,
+        displayedTotalPages,
       ];
 
     }
@@ -421,7 +490,7 @@ export default function ShopBrowser({
       currentPage,
       currentPage + 1,
       '...',
-      totalPages,
+      displayedTotalPages,
     ];
 
   }
@@ -477,11 +546,11 @@ export default function ShopBrowser({
 
           <span className="shop-result-pill">
 
-            {total}
+            {displayedTotal}
             {' '}
             products
             {' • '}
-            Page {currentPage} of {Math.max(totalPages, 1)}
+            Page {currentPage} of {Math.max(displayedTotalPages, 1)}
 
           </span>
 
@@ -645,7 +714,7 @@ export default function ShopBrowser({
           <section
             className="shop-results"
             aria-label="Product results"
-            aria-busy={isNavigationPending}
+            aria-busy={isProductsLoading}
           >
 
 
@@ -739,7 +808,9 @@ export default function ShopBrowser({
                 PRODUCTS
             ================================================= */}
 
-            {isNavigationPending ? (
+            {filterError ? (
+              <p className="shop-filter-error" role="alert">{filterError}</p>
+            ) : isProductsLoading ? (
               <ProductGridSkeleton />
             ) : paginatedProducts.length > 0 ? (
 
@@ -767,7 +838,7 @@ export default function ShopBrowser({
                     PAGINATION
                 ================================================= */}
 
-                {totalPages > 1 && (
+                {displayedTotalPages > 1 && (
 
                   <nav
                     className="shop-pagination"
@@ -871,7 +942,7 @@ export default function ShopBrowser({
                       }
                       disabled={
                         currentPage ===
-                        totalPages
+                        displayedTotalPages
                       }
                       aria-label="Next page"
                     >
