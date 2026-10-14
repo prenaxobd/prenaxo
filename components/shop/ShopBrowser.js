@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import CategoryNavigationLink from '@/components/layout/CategoryNavigationLink';
 import { useRouter } from 'next/navigation';
 import {
   ChevronDown,
@@ -63,6 +62,7 @@ export default function ShopBrowser({
   initialFilters = {},
   brands: availableBrands = [],
   categories: availableCategories = [],
+  categoryProductCount = 0,
   priceBounds = { min: 0, max: 0 },
   pageTitle = 'Shop Best Quality Products Online',
   basePath = '/shop',
@@ -600,6 +600,7 @@ export default function ShopBrowser({
 
             categories={categories}
             allCategories={availableCategories}
+            categoryProductCount={categoryProductCount}
             subcategories={subcategories}
             priceBounds={priceBounds}
             lockedCategory={lockedCategory}
@@ -943,6 +944,7 @@ function FilterPanel({
 
   categories,
   allCategories,
+  categoryProductCount,
   subcategories,
   priceBounds,
   lockedCategory,
@@ -1096,9 +1098,18 @@ function FilterPanel({
               categories={categoryTree}
               category={category}
               subcategory={subcategory}
+              totalCount={categoryProductCount}
               onSelectAll={() => {
                 setCategory('all');
                 setSubcategory('all');
+              }}
+              onSelectCategory={(slug) => {
+                setCategory(lockedCategory || slug);
+                setSubcategory('all');
+              }}
+              onSelectSubcategory={(categorySlug, subcategorySlug) => {
+                setCategory(lockedCategory || categorySlug);
+                setSubcategory(subcategorySlug);
               }}
               close={close}
             />
@@ -1324,7 +1335,16 @@ function FilterSection({
 
 }
 
-function CategoryFilter({ categories, category, subcategory, onSelectAll, close }) {
+function CategoryFilter({
+  categories,
+  category,
+  subcategory,
+  totalCount,
+  onSelectAll,
+  onSelectCategory,
+  onSelectSubcategory,
+  close,
+}) {
   const [openParentId, setOpenParentId] = useState(null);
 
   return (
@@ -1338,7 +1358,9 @@ function CategoryFilter({ categories, category, subcategory, onSelectAll, close 
           setOpenParentId(null);
         }}
       >
-        <span>All categories</span>
+        <span className="shop-category-radio" aria-hidden="true" />
+        <span className="shop-category-label">All categories</span>
+        <span className="shop-category-count">{totalCount}</span>
       </button>
       {categories.map(item => {
         const isSelected = category === item.slug;
@@ -1353,13 +1375,19 @@ function CategoryFilter({ categories, category, subcategory, onSelectAll, close 
             onFocus={() => item.children.length && setOpenParentId(item.id)}
           >
             <div className="shop-category-parent-row">
-              <CategoryNavigationLink
-                href={`/category/${item.slug}`}
+              <button
+                type="button"
                 className={`shop-category-option ${isSelected ? 'is-selected' : ''} ${isOpen ? 'is-open' : ''}`}
-                onClick={close}
+                aria-pressed={isSelected && subcategory === 'all'}
+                onClick={() => {
+                  onSelectCategory(item.slug);
+                  close();
+                }}
               >
-                <span>{item.name}</span>
-              </CategoryNavigationLink>
+                <span className="shop-category-radio" aria-hidden="true" />
+                <span className="shop-category-label">{item.name}</span>
+                <span className="shop-category-count">{item.productCount}</span>
+              </button>
               {item.children.length > 0 && (
                 <button
                   type="button"
@@ -1374,24 +1402,34 @@ function CategoryFilter({ categories, category, subcategory, onSelectAll, close 
             </div>
             {isOpen && item.children.length > 0 && (
               <div className="shop-category-submenu" aria-label={`${item.name} subcategories`}>
-                <CategoryNavigationLink
-                  href={`/category/${item.slug}`}
+                <button
+                  type="button"
                   className={`shop-category-suboption ${isSelected && subcategory === 'all' ? 'is-selected' : ''}`}
-                  onClick={close}
+                  aria-pressed={isSelected && subcategory === 'all'}
+                  onClick={() => {
+                    onSelectCategory(item.slug);
+                    close();
+                  }}
                 >
-                  <span>All in {item.name}</span>
-                </CategoryNavigationLink>
+                  <span className="shop-category-radio" aria-hidden="true" />
+                  <span className="shop-category-label">All in {item.name}</span>
+                  <span className="shop-category-count">{item.productCount}</span>
+                </button>
                 {item.children.map(child => (
-                  <CategoryNavigationLink
+                  <button
+                    type="button"
                     key={child.id}
-                    href={item.slug === 'mans-fashion'
-                      ? `/category/${item.slug}/${encodeURIComponent(child.slug)}`
-                      : `/category/${item.slug}?subcategory=${encodeURIComponent(child.slug)}`}
                     className={`shop-category-suboption ${isSelected && subcategory === child.slug ? 'is-selected' : ''}`}
-                    onClick={close}
+                    aria-pressed={isSelected && subcategory === child.slug}
+                    onClick={() => {
+                      onSelectSubcategory(item.slug, child.slug);
+                      close();
+                    }}
                   >
-                    <span>{child.name}</span>
-                  </CategoryNavigationLink>
+                    <span className="shop-category-radio" aria-hidden="true" />
+                    <span className="shop-category-label">{child.name}</span>
+                    <span className="shop-category-count">{child.productCount}</span>
+                  </button>
                 ))}
               </div>
             )}

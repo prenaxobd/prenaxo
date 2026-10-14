@@ -4594,7 +4594,7 @@ body.header-menu-open {
 
     display: flex;
 
-    width: min(88vw, 360px);
+    width: min(78vw, 320px);
 
     flex-direction: column;
 
@@ -6883,6 +6883,53 @@ body.header-menu-open {
   color: var(--brand-primary);
 }
 
+.shop-category-option,
+.shop-category-suboption {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.shop-category-option.is-selected,
+.shop-category-suboption.is-selected {
+  background: #fff3f3;
+  color: var(--brand-primary);
+}
+
+.shop-category-radio {
+  position: relative;
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.shop-category-option.is-selected .shop-category-radio,
+.shop-category-suboption.is-selected .shop-category-radio {
+  border: 3px solid #fbd5d5;
+  background: var(--brand-primary);
+  box-shadow: 0 0 0 1px var(--brand-primary);
+}
+
+.shop-category-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-category-count {
+  margin-left: auto;
+  color: #94a3a8;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .shop-category-option.is-open > svg {
   color: var(--brand-primary);
   transform: translateX(2px);
@@ -6967,6 +7014,11 @@ body.header-menu-open {
 .shop-category-suboption.is-selected {
   background: rgba(214, 40, 40, .06);
   color: var(--brand-primary);
+}
+
+.shop-category-suboption {
+  width: 100%;
+  text-align: left;
 }
 
 .shop-filter-scroll-list {
@@ -7630,8 +7682,8 @@ body.header-menu-open {
     top: 0;
     left: 0;
     bottom: 0;
-    width: min(320px, 85vw);
-    max-width: 340px;
+    width: min(300px, 78vw);
+    max-width: 300px;
     height: 100dvh;
     z-index: 10001;
     border-radius: 0 18px 18px 0;
@@ -8055,8 +8107,8 @@ body.header-menu-open {
     top: 0;
     left: 0;
     bottom: auto;
-    width: min(320px, 85vw);
-    max-width: 340px;
+    width: min(300px, 78vw);
+    max-width: 300px;
     height: 100dvh;
     z-index: 10001;
     overflow-y: auto;
@@ -19979,7 +20031,11 @@ body.cart-drawer-open { overflow: hidden; }
   .mobile-menu-section a,
   .mobile-menu-section .mobile-accordion,
   .mobile-menu-account .mobile-login-link {
-    min-height: 48px;
+    box-sizing: border-box;
+    min-height: 40px;
+    padding: 6px 9px;
+    font-size: 12px;
+    line-height: 1.2;
   }
 
   .home-section .section-head > a,

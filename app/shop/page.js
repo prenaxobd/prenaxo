@@ -1,5 +1,5 @@
 import { getShopProducts } from '@/lib/products';
-import { getPublicBrands, getPublicCategories, getPublicPriceBounds } from '@/lib/public-data';
+import { getPublicBrands, getPublicCategoriesWithProductCounts, getPublicPriceBounds } from '@/lib/public-data';
 import ShopBrowser from '@/components/shop/ShopBrowser';
 
 import {
@@ -113,13 +113,7 @@ export async function generateMetadata({
 
 export default async function Shop({ searchParams }) {
   const params = await searchParams;
-  const categories = (await getPublicCategories()).map((category) => ({
-    id: category.id,
-    name: category.name,
-    slug: category.slug,
-    parentId: category.parentId,
-    active: category.active,
-  }));
+  const { categories, total: categoryProductCount } = await getPublicCategoriesWithProductCounts();
   const requestedCategory = params?.category || 'all';
   const requestedSubcategory = params?.subcategory || 'all';
   const matchedCategory = requestedCategory === 'all'
@@ -177,6 +171,7 @@ export default async function Shop({ searchParams }) {
       initialFilters={filters}
       brands={brands.map(({ id, name }) => ({ id, name }))}
       categories={categories}
+      categoryProductCount={categoryProductCount}
       priceBounds={priceBounds}
       pageTitle="Buy Best Quality Products & Trends"
     />
