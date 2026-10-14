@@ -24,6 +24,7 @@ const CATEGORY_HERO_IMAGES = {
   'lamp-light': '/uploads/lamp_category_bg.webp',
   honey: 'https://res.cloudinary.com/ethp0qrs/image/upload/v1790486340/Honey-Nuts-Collection.webp',
   'honey-nuts': 'https://res.cloudinary.com/ethp0qrs/image/upload/v1790486340/Honey-Nuts-Collection.webp',
+  'mans-fashion': 'https://res.cloudinary.com/ethp0qrs/image/upload/v1790486340/Man_s-Clothing-Collection.webp',
   'mans-clothing': 'https://res.cloudinary.com/ethp0qrs/image/upload/v1790486340/Man_s-Clothing-Collection.webp',
 };
 
@@ -52,7 +53,7 @@ export async function generateMetadata({
     };
   }
 
-  const isFashionCategory = ['mans-clothing', 'womens-fashion'].includes(category.slug);
+  const isFashionCategory = ['mans-clothing', 'mans-fashion', 'womens-fashion'].includes(category.slug);
 
   const fallbackDescription =
     cleanText(
@@ -66,7 +67,7 @@ export async function generateMetadata({
   const title =
     category.seo?.metaTitle ||
     (isFashionCategory
-      ? `${category.slug === 'mans-clothing' ? "Men's" : "Women's"} Fashion Online in Bangladesh | Prenaxo.com`
+      ? `${['mans-clothing', 'mans-fashion'].includes(category.slug) ? "Men's" : "Women's"} Fashion Online in Bangladesh | Prenaxo.com`
       : `${category.name} | ${SITE_NAME}`);
 
 
@@ -171,14 +172,15 @@ export async function generateMetadata({
    CATEGORY PAGE
 ===================================================== */
 
-export default async function CategoryPage({
+export async function CategoryPage({
   params,
   searchParams,
 }) {
-  const { slug } = await params;
+  const { slug, subcategory: routeSubcategory } = await params;
   const query = await searchParams;
   const currentPage = Math.max(1, Number(query?.page) || 1);
-  const subcategorySlug = typeof query?.subcategory === 'string' ? query.subcategory : '';
+  const subcategorySlug = routeSubcategory ||
+    (typeof query?.subcategory === 'string' ? query.subcategory : '');
   const productsPerPage = 12;
 
 
@@ -229,10 +231,10 @@ export default async function CategoryPage({
       ? absoluteUrl(category.image)
       : null;
   const normalizedCategorySlug = category.slug.trim();
-  const isShopBrowserCategory = ['mans-clothing', 'womens-fashion', 'lamp-light', 'watches', 'honey', 'honey-nuts'].includes(normalizedCategorySlug);
-  const shopPageTitle = category.slug === 'mans-clothing'
+  const isShopBrowserCategory = ['mans-clothing', 'mans-fashion', 'womens-fashion', 'lamp-light', 'watches', 'honey', 'honey-nuts', 't-shirts'].includes(normalizedCategorySlug);
+  const shopPageTitle = ['mans-clothing', 'mans-fashion'].includes(normalizedCategorySlug)
     ? "Men's Fashion"
-    : category.slug === 'womens-fashion'
+    : normalizedCategorySlug === 'womens-fashion'
       ? "Women's Fashion"
       : category.name;
 
@@ -286,6 +288,7 @@ export default async function CategoryPage({
       priceBounds,
       pageTitle: shopPageTitle.trim(),
       basePath: `/category/${normalizedCategorySlug}`,
+      prettySubcategoryUrls: normalizedCategorySlug === 'mans-fashion',
       lockedCategory: category.slug,
       pageClassName: styles.categoryShopPage,
       contentId: 'category-products',
@@ -521,3 +524,5 @@ export default async function CategoryPage({
     </>
   );
 }
+
+export default CategoryPage;

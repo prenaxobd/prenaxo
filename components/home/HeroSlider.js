@@ -19,7 +19,8 @@ function BannerImage({ banner, priority = false, sizes }) {
       className="home-hero-image"
       sizes={sizes}
       quality={65}
-      preload={priority}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : 'auto'}
       draggable="false"
     />
   );

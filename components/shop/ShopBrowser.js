@@ -66,6 +66,7 @@ export default function ShopBrowser({
   priceBounds = { min: 0, max: 0 },
   pageTitle = 'Shop Best Quality Products Online',
   basePath = '/shop',
+  prettySubcategoryUrls = false,
   lockedCategory = null,
   pageClassName = '',
   contentId,
@@ -157,7 +158,7 @@ export default function ShopBrowser({
   useEffect(() => {
     const query = new URLSearchParams();
     if (category !== 'all' && category !== lockedCategory) query.set('category', category);
-    if (subcategory !== 'all') query.set('subcategory', subcategory);
+    if (subcategory !== 'all' && !prettySubcategoryUrls) query.set('subcategory', subcategory);
     if (search) query.set('search', search);
     if (brand !== 'all') query.set('brand', brand);
     if (priceRange.min) query.set('min', priceRange.min);
@@ -167,7 +168,10 @@ export default function ShopBrowser({
     if (sort !== 'newest') query.set('sort', sort);
     if (currentPage > 1) query.set('page', String(currentPage));
 
-    const nextUrl = query.toString() ? `${basePath}?${query}` : basePath;
+    const categoryPath = prettySubcategoryUrls && subcategory !== 'all'
+      ? `${basePath}/${encodeURIComponent(subcategory)}`
+      : basePath;
+    const nextUrl = query.toString() ? `${categoryPath}?${query}` : categoryPath;
     const currentUrl = `${window.location.pathname}${window.location.search}`;
     if (currentUrl === nextUrl) return undefined;
 
@@ -179,7 +183,7 @@ export default function ShopBrowser({
     }, categoryFilterChanged ? 0 : 250);
 
     return () => window.clearTimeout(timeoutId);
-  }, [availability, basePath, brand, category, currentPage, initialFilters.category, initialFilters.subcategory, lockedCategory, priceRange, ratingFilter, router, search, sort, startNavigation, subcategory]);
+  }, [availability, basePath, brand, category, currentPage, initialFilters.category, initialFilters.subcategory, lockedCategory, prettySubcategoryUrls, priceRange, ratingFilter, router, search, sort, startNavigation, subcategory]);
 
 
   /* =======================================================
@@ -324,7 +328,7 @@ export default function ShopBrowser({
     setCurrentPage(page);
     const query = new URLSearchParams(window.location.search);
     query.set('page', String(page));
-    router.push(`${basePath}?${query.toString()}`, { scroll: false });
+    router.push(`${window.location.pathname}?${query.toString()}`, { scroll: false });
 
     window.scrollTo({
       top: 0,
@@ -1380,7 +1384,9 @@ function CategoryFilter({ categories, category, subcategory, onSelectAll, close 
                 {item.children.map(child => (
                   <CategoryNavigationLink
                     key={child.id}
-                    href={`/category/${item.slug}?subcategory=${encodeURIComponent(child.slug)}`}
+                    href={item.slug === 'mans-fashion'
+                      ? `/category/${item.slug}/${encodeURIComponent(child.slug)}`
+                      : `/category/${item.slug}?subcategory=${encodeURIComponent(child.slug)}`}
                     className={`shop-category-suboption ${isSelected && subcategory === child.slug ? 'is-selected' : ''}`}
                     onClick={close}
                   >
