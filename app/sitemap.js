@@ -49,6 +49,8 @@ export default async function sitemap() {
         },
 
         select: {
+          id: true,
+          parentId: true,
           slug: true,
           createdAt: true,
 
@@ -118,6 +120,7 @@ export default async function sitemap() {
 
     const categoryUrls =
       categories
+        .filter((category) => !category.parentId)
         .filter(
           (category) =>
             category.seo?.robotsIndex !==

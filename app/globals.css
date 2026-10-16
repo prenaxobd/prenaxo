@@ -14913,7 +14913,10 @@ body.header-menu-open {
 
 .home-category-carousel .home-category-card {
   width: 100%;
+  min-width: 0;
   min-height: 126px;
+  flex: 1 1 0;
+  box-sizing: border-box;
   gap: 8px;
 }
 

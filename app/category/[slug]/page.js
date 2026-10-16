@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 
 import OptimizedImage from '@/components/OptimizedImage';
 import ProductCard from '@/components/ProductCard';
 import ShopBrowser from '@/components/shop/ShopBrowser';
 import { getPublicCategoryBrands, getPublicCategories, getPublicCategory, getPublicCategoryPage, getPublicPriceBounds } from '@/lib/public-data';
 import { getShopProducts } from '@/lib/products';
+import { getCategoryCollectionUrl } from '@/lib/category-navigation';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import styles from './category.module.css';
 
@@ -191,6 +192,16 @@ export async function CategoryPage({
     notFound();
   }
 
+  if (category.parentCategory) {
+    permanentRedirect(
+      getCategoryCollectionUrl(
+        category.parentCategory.slug,
+        category.slug,
+        query
+      )
+    );
+  }
+
   const categoryHeroImage =
     CATEGORY_HERO_IMAGES[category.slug?.trim().toLowerCase()];
 
@@ -230,8 +241,20 @@ export async function CategoryPage({
     category.image
       ? absoluteUrl(category.image)
       : null;
-  const normalizedCategorySlug = category.slug.trim();
-  const isShopBrowserCategory = ['mans-clothing', 'mans-fashion', 'womens-fashion', 'lamp-light', 'watches', 'honey', 'honey-nuts', 't-shirts'].includes(normalizedCategorySlug);
+  const normalizedCategorySlug = category.slug.trim().toLowerCase();
+  const isShopBrowserCategory =
+    [
+      'mans-clothing',
+      'mans-fashion',
+      'womens-fashion',
+      'lamp-light',
+      'watches',
+      'honey',
+      'honey-nuts',
+      't-shirts',
+      'winter-collection',
+    ].includes(normalizedCategorySlug) ||
+    category.name.trim().toLowerCase() === 'winter collection';
   const shopPageTitle = ['mans-clothing', 'mans-fashion'].includes(normalizedCategorySlug)
     ? "Men's Fashion"
     : normalizedCategorySlug === 'womens-fashion'
@@ -288,7 +311,7 @@ export async function CategoryPage({
       priceBounds,
       pageTitle: shopPageTitle.trim(),
       basePath: `/category/${normalizedCategorySlug}`,
-      prettySubcategoryUrls: normalizedCategorySlug === 'mans-fashion',
+      prettySubcategoryUrls: false,
       clientFiltering: true,
       lockedCategory: category.slug,
       pageClassName: styles.categoryShopPage,
