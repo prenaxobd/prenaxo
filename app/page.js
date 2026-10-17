@@ -113,7 +113,7 @@ function productsFor(type, data, section) {
         .find(
           (item) => item.id === section.categoryId
         )
-        ?.products.slice(0, limit) || []
+        ?.products || []
     );
   }
 
