@@ -293,7 +293,7 @@ export function CartProvider({ children }) {
   const items = cart.items || [];
   const count = items.reduce((total, item) => total + item.quantity, 0);
   const subtotal = items.reduce((total, item) => total + getProductVariantPrice(item.variant, item.product) * item.quantity, 0);
-  return <CartContext.Provider value={{ items, count, subtotal, add, addMany, update, remove, clearCart, ready, isOpen: open, open: () => setOpen(true) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
+  return <CartContext.Provider value={{ items, count, subtotal, add, addMany, update, remove, clearCart, ready, isOpen: open, open: () => setOpen(true), close: () => setOpen(false) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
 }
 
 export function useCart() { return useContext(CartContext); }

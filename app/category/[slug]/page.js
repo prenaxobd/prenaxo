@@ -242,19 +242,7 @@ export async function CategoryPage({
       ? absoluteUrl(category.image)
       : null;
   const normalizedCategorySlug = category.slug.trim().toLowerCase();
-  const isShopBrowserCategory =
-    [
-      'mans-clothing',
-      'mans-fashion',
-      'womens-fashion',
-      'lamp-light',
-      'watches',
-      'honey',
-      'honey-nuts',
-      't-shirts',
-      'winter-collection',
-    ].includes(normalizedCategorySlug) ||
-    category.name.trim().toLowerCase() === 'winter collection';
+  const isShopBrowserCategory = category.parentId === null;
   const shopPageTitle = ['mans-clothing', 'mans-fashion'].includes(normalizedCategorySlug)
     ? "Men's Fashion"
     : normalizedCategorySlug === 'womens-fashion'

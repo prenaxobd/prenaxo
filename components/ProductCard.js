@@ -2,6 +2,7 @@
 import OptimizedImage from '@/components/OptimizedImage';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import {
   Heart,
@@ -106,6 +107,7 @@ export default function ProductCard({
 }) {
 
   const cardRef = useRef(null);
+  const router = useRouter();
   const cart = useCart();
   const wishlistStore = useWishlist();
   const { requireAccount, showAccountRequired } = useAccountRequired();
@@ -123,8 +125,7 @@ export default function ProductCard({
   const saved = wishlistStore?.isSaved(product.id) || false;
   const wishlistLoading = !wishlistStore?.ready;
 
-  const [adding, setAdding] =
-    useState(false);
+  const [addingAction, setAddingAction] = useState(null);
   const weightVariants = product.category?.enableWeightVariants
     ? (product.variants || []).filter((variant) => variant.name)
     : [];
@@ -242,20 +243,20 @@ export default function ProductCard({
   |--------------------------------------------------------------------------
   */
 
-  async function addCart(event) {
+  async function addCart(event, action = 'cart') {
 
     event.preventDefault();
     event.stopPropagation();
 
 
     if (
-      adding ||
+      addingAction ||
       availableStock <= 0
     ) {
       return;
     }
 
-    setAdding(true);
+    setAddingAction(action);
     setMessage('');
 
     try {
@@ -276,15 +277,13 @@ export default function ProductCard({
 
       if (result.ok) {
 
-        setMessage(
-          'Added to cart ✓'
-        );
-
-
-        setTimeout(
-          () => setMessage(''),
-          2000
-        );
+        if (action === 'order') {
+          cart.close();
+          router.push('/checkout');
+        } else {
+          setMessage('Added to cart ✓');
+          setTimeout(() => setMessage(''), 2000);
+        }
 
       } else {
 
@@ -302,7 +301,7 @@ export default function ProductCard({
 
     } finally {
 
-      setAdding(false);
+      setAddingAction(null);
 
     }
 
@@ -546,28 +545,30 @@ export default function ProductCard({
         </div>
 
         {weightVariants.length > 0 && (
-          <div className="product-card-weight-options" aria-label="Select weight">
-            {weightVariants.map((variant) => {
-              const selected = variant.id === selectedWeightVariant?.id;
-              const inStock = Number(variant.stock || 0) > 0;
-              return (
-                <button
-                  type="button"
-                  key={variant.id}
-                  className={selected ? 'selected' : ''}
-                  disabled={!inStock}
-                  aria-pressed={selected}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setSelectedWeightVariantId(variant.id);
-                    setMessage('');
-                  }}
-                >
-                  {variant.name}
-                </button>
-              );
-            })}
+          <div className="product-card-weight-options-slot">
+            <div className="product-card-weight-options" aria-label="Select weight">
+              {weightVariants.map((variant) => {
+                const selected = variant.id === selectedWeightVariant?.id;
+                const inStock = Number(variant.stock || 0) > 0;
+                return (
+                  <button
+                    type="button"
+                    key={variant.id}
+                    className={selected ? 'selected' : ''}
+                    disabled={!inStock}
+                    aria-pressed={selected}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSelectedWeightVariantId(variant.id);
+                      setMessage('');
+                    }}
+                  >
+                    {variant.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -581,8 +582,8 @@ export default function ProductCard({
 
         {/* ACTIONS */}
 
-        {viewMode === 'list' ? (
-          <div className="product-card-actions product-card-actions-list">
+        <div className={`product-card-actions ${viewMode === 'list' ? 'product-card-actions-list' : 'product-card-actions-grid'}`}>
+          {viewMode === 'list' && (
             <Link
               href={`/product/${product.slug}`}
               className="product-card-view-btn"
@@ -590,96 +591,41 @@ export default function ProductCard({
               <Eye size={16} />
               Details
             </Link>
-
+          )}
+          <div className="product-card-purchase-actions">
             <button
               type="button"
-              className="product-add-cart"
-              onClick={addCart}
-              disabled={
-                adding ||
-                availableStock <= 0
-              }
+              className="product-card-order-now"
+              onClick={(event) => addCart(event, 'order')}
+              disabled={Boolean(addingAction) || availableStock <= 0}
+              aria-busy={addingAction === 'order'}
             >
-
-              {adding ? (
-
+              {addingAction === 'order' ? (
                 <>
-
                   <span className="cart-spinner" />
-
-                  Adding...
-
+                  Processing...
                 </>
-
               ) : availableStock <= 0 ? (
-
-                <>
-
-                  <ShoppingCart size={17} />
-
-                  Out of Stock
-
-                </>
-
+                'Out of Stock'
               ) : (
-
-                <>
-
-                  <ShoppingCart size={17} />
-
-                  Add to Cart
-
-                </>
-
+                'Order Now'
               )}
-
+            </button>
+            <button
+              type="button"
+              className="product-add-cart product-card-cart-icon"
+              onClick={addCart}
+              disabled={Boolean(addingAction) || availableStock <= 0}
+              aria-label={addingAction === 'cart' ? 'Adding to cart' : 'Add to cart'}
+              title="Add to cart"
+              aria-busy={addingAction === 'cart'}
+            >
+              {addingAction === 'cart'
+                ? <span className="cart-spinner" />
+                : <ShoppingCart size={18} aria-hidden="true" />}
             </button>
           </div>
-        ) : (
-          <button
-            type="button"
-            className="product-add-cart product-add-cart-grid"
-            onClick={addCart}
-            disabled={
-              adding ||
-              availableStock <= 0
-            }
-          >
-
-            {adding ? (
-
-              <>
-
-                <span className="cart-spinner" />
-
-                Adding...
-
-              </>
-
-            ) : availableStock <= 0 ? (
-
-              <>
-
-                <ShoppingCart size={17} />
-
-                Out of Stock
-
-              </>
-
-            ) : (
-
-              <>
-
-                <ShoppingCart size={17} />
-
-                Add to Cart
-
-              </>
-
-            )}
-
-          </button>
-        )}
+        </div>
 
 
         {/* MESSAGE */}
