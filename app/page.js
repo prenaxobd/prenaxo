@@ -7,6 +7,7 @@ import BrandRail from '@/components/home/BrandRail';
 import ProductRail from '@/components/home/ProductRail';
 import ReviewRail from '@/components/home/ReviewRail';
 import HomeScrollReveal from '@/components/home/HomeScrollReveal';
+import { filterParentCategoryHomepageSections } from '@/lib/homepage-category-sections';
 
 import {
   SITE_NAME,
@@ -113,7 +114,7 @@ function productsFor(type, data, section) {
         .find(
           (item) => item.id === section.categoryId
         )
-        ?.products || []
+        ?.products.slice(0, limit) || []
     );
   }
 
@@ -179,8 +180,9 @@ export default async function Home() {
     getSiteSettings(),
   ]);
 
-  const configuredSections = data.sections.length
-    ? data.sections
+  const visibleConfiguredSections = filterParentCategoryHomepageSections(data.sections);
+  const configuredSections = visibleConfiguredSections.length
+    ? visibleConfiguredSections
     : [
         {
           id: 'deals',
