@@ -3091,7 +3091,12 @@
   }
 
   .single-product-page .product-details-content {
-    padding: 18px 15px;
+    padding: 18px 8px;
+  }
+
+  .single-product-page .product-description-block {
+    padding-right: 8px;
+    padding-left: 8px;
   }
 
   .single-product-page .product-details-content h2 {
@@ -3155,7 +3160,13 @@
   }
 
   .single-product-page .product-details-content {
-    padding: 16px 12px;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .single-product-page .product-description-block {
+    padding-right: 6px;
+    padding-left: 6px;
   }
 }
 
