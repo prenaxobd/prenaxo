@@ -180,7 +180,8 @@ export default async function Home() {
     getSiteSettings(),
   ]);
 
-  const visibleConfiguredSections = filterParentCategoryHomepageSections(data.sections);
+  const visibleConfiguredSections = filterParentCategoryHomepageSections(data.sections)
+    .filter((section) => section.type !== 'FEATURED');
   const configuredSections = visibleConfiguredSections.length
     ? visibleConfiguredSections
     : [
@@ -196,12 +197,6 @@ export default async function Home() {
           type: 'TOP_SELLING',
           title: 'Top selling products',
           eyebrow: 'Loved by local homes',
-        },
-        {
-          id: 'featured',
-          type: 'FEATURED',
-          title: 'Featured products',
-          eyebrow: 'Chosen for you',
         },
         ...data.categorySections.map((category) => ({
           id: category.id,
