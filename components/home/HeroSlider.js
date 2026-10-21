@@ -4,7 +4,7 @@ import OptimizedImage from '@/components/OptimizedImage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const AUTOPLAY_MS = 4500;
+const AUTOPLAY_MS = 5000;
 const SWIPE_THRESHOLD = 50;
 
 function BannerImage({ banner, priority = false, sizes }) {
@@ -128,7 +128,6 @@ export default function HeroSlider({
     if (
       validBanners.length < 2 ||
       isPaused ||
-      window.matchMedia('(max-width: 767px)').matches ||
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     ) {
       return;
