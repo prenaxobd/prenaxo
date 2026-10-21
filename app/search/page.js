@@ -1,5 +1,6 @@
 import ProductCard from '@/components/ProductCard';
 import { prisma } from '@/lib/prisma';
+import styles from './search.module.css';
 
 export async function generateMetadata() {
   return {
@@ -58,11 +59,24 @@ export default async function SearchPage({ searchParams }) {
     include: {
       category: true,
       images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+      variants: true,
     },
     orderBy: { name: 'asc' },
     skip: (safePage - 1) * productsPerPage,
     take: productsPerPage,
   });
+  const serializedProducts = products.map((product) => ({
+    ...product,
+    regularPrice: product.regularPrice === null ? null : Number(product.regularPrice),
+    salePrice: product.salePrice === null ? null : Number(product.salePrice),
+    costPrice: product.costPrice === null ? null : Number(product.costPrice),
+    variants: product.variants.map((variant) => ({
+      ...variant,
+      price: variant.price === null ? null : Number(variant.price),
+      regularPrice: variant.regularPrice === null ? null : Number(variant.regularPrice),
+      salePrice: variant.salePrice === null ? null : Number(variant.salePrice),
+    })),
+  }));
   const searchHref = (nextPage) => {
     const nextParams = new URLSearchParams();
     if (query) nextParams.set('q', query);
@@ -71,26 +85,34 @@ export default async function SearchPage({ searchParams }) {
   };
 
   return (
-    <main className="container">
-      <div className="page-title">
-        <div className="eyebrow" style={{ color: 'var(--coral)' }}>Search</div>
+    <main className={`container ${styles.searchPage}`}>
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>Search</p>
         <h1>{query ? `Results for “${query}”` : 'Find your next good thing'}</h1>
+        {query && <p className={styles.query}>Showing products matching “{query}”</p>}
+      </header>
+
+      <div className={styles.resultsSummary} aria-live="polite">
+        <span>{total.toLocaleString()} {total === 1 ? 'product' : 'products'} found</span>
+        {totalPages > 1 && <span>Page {safePage} of {totalPages}</span>}
       </div>
 
       {products.length ? (
-        <div className="shop-grid">
-          {products.map((product) => (
+        <div className={styles.resultsGrid}>
+          {serializedProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
       ) : (
-        <p className="muted">No products matched your search.</p>
+        <section className={styles.emptyState}>
+          <h2>No products found</h2>
+          <p>Try another search term or check the spelling.</p>
+        </section>
       )}
 
       {totalPages > 1 && (
-        <nav aria-label="Search pagination">
+        <nav className={styles.pagination} aria-label="Search pagination">
           {safePage > 1 && <a href={searchHref(safePage - 1)}>Previous</a>}
-          <span> Page {safePage} of {totalPages} </span>
           {safePage < totalPages && <a href={searchHref(safePage + 1)}>Next</a>}
         </nav>
       )}
