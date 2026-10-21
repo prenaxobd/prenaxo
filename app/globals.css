@@ -5767,8 +5767,8 @@ body.header-menu-open {
 
   display: grid;
 
-  width: 52px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
 
   place-items: center;
 
@@ -5776,9 +5776,9 @@ body.header-menu-open {
 
   border: 0;
 
-  border-radius: 50%;
+  border-radius: 11px;
 
-  background: rgba(255, 255, 255, 0.94);
+  background: #ffffff;
 
   color: #172033;
 
@@ -5791,7 +5791,7 @@ body.header-menu-open {
     scale(0.92);
 
   box-shadow:
-    0 5px 18px rgba(0, 0, 0, 0.14);
+    0 3px 12px rgba(0, 0, 0, 0.16);
 
   transition:
     opacity 180ms ease,
@@ -5813,13 +5813,24 @@ body.header-menu-open {
     scale(1);
 }
 
+.home-hero-arrow:focus-visible {
+  opacity: 1;
+
+  outline: 3px solid rgba(23, 32, 51, 0.48);
+  outline-offset: 3px;
+
+  transform:
+    translateY(-50%)
+    scale(1);
+}
+
 
 /* =========================================================
    PREVIOUS ARROW
    ========================================================= */
 
 .home-hero-arrow-prev {
-  left: 0;
+  left: 15px;
 }
 
 
@@ -5828,7 +5839,7 @@ body.header-menu-open {
    ========================================================= */
 
 .home-hero-arrow-next {
-  right: 0;
+  right: 15px;
 }
 
 
@@ -5844,7 +5855,7 @@ body.header-menu-open {
     scale(1.06);
 
   box-shadow:
-    0 7px 22px rgba(0, 0, 0, 0.18);
+    0 5px 16px rgba(0, 0, 0, 0.2);
 }
 
 
@@ -5937,18 +5948,18 @@ body.header-menu-open {
 
 
   .home-hero-arrow {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
   }
 
 
   .home-hero-arrow-prev {
-    left: 0;
+    left: 12px;
   }
 
 
   .home-hero-arrow-next {
-    right: 0;
+    right: 12px;
   }
 
 }
@@ -20241,24 +20252,21 @@ body.cart-drawer-open { overflow: hidden; }
 
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .home-hero-arrow {
-    background: transparent;
+    background: #ffffff;
     color: #1f2937;
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, .95)) drop-shadow(0 1px 3px rgba(0, 0, 0, .45));
-    box-shadow: none;
+    filter: none;
   }
 
   .home-hero-main:hover .home-hero-arrow,
   .home-hero-main:focus-within .home-hero-arrow {
     opacity: 1;
     transform: translateY(-50%);
-    background: transparent;
-    box-shadow: none;
   }
 
   .home-hero-arrow:hover {
-    background: transparent;
-    box-shadow: none;
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, .95)) drop-shadow(0 1px 4px rgba(0, 0, 0, .45));
+    background: #ffffff;
+    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.2);
+    filter: none;
   }
 }
 
