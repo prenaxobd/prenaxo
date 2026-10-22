@@ -6166,7 +6166,7 @@ body.header-menu-open {
     align-items: center !important;
     justify-content: space-between !important;
     gap: 12px;
-    margin-bottom: 14px;
+    margin-bottom: 8px;
   }
 
   .home-section .section-head h2 {
@@ -15334,7 +15334,7 @@ body.header-menu-open {
   /* CATEGORY */
 
   .home-category-carousel {
-    margin-top: 4px;
+    margin-top: 0;
   }
 
   .home-category-carousel .home-category-card {
@@ -20085,8 +20085,13 @@ body.cart-drawer-open { overflow: hidden; }
   }
 
   .product-wishlist {
-    width: 48px !important;
-    height: 48px !important;
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .product-wishlist svg {
+    width: 16px;
+    height: 16px;
   }
 
   .product-add-cart.product-add-cart-grid {
@@ -20668,7 +20673,7 @@ body.cart-drawer-open { overflow: hidden; }
   }
 
   .home-product-carousel .product-card-weight-options-slot {
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
 
   .home-product-carousel .product-card .product-card-stock-status {
@@ -20677,7 +20682,7 @@ body.cart-drawer-open { overflow: hidden; }
 
   .home-product-carousel .product-add-cart.product-add-cart-grid {
     font-size: 11px;
-    margin-top: 9px !important;
+    margin-top: 0 !important;
   }
 }
 
@@ -20827,7 +20832,7 @@ body.cart-drawer-open { overflow: hidden; }
 .shop-page .shop-grid:not(.list-view) .product-card-actions,
 .flash-sale-page .flash-product-grid:not(.list-view) .product-card-actions {
   margin-top: auto;
-  padding-top: 9px;
+  padding-top: 4px;
 }
 
 .shop-page .shop-grid:not(.list-view) .product-add-cart.product-add-cart-grid,
@@ -20844,10 +20849,28 @@ body.cart-drawer-open { overflow: hidden; }
 
 .shop-page .shop-grid:not(.list-view) .product-card-weight-options-slot,
 .flash-sale-page .flash-product-grid:not(.list-view) .product-card-weight-options-slot {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 @media (max-width: 767px) {
+  .product-card .product-card-weight-options-slot,
+  .home-product-carousel .product-card-weight-options-slot,
+  .shop-page .shop-grid:not(.list-view) .product-card-weight-options-slot,
+  .flash-sale-page .flash-product-grid:not(.list-view) .product-card-weight-options-slot {
+    margin-bottom: 3px;
+  }
+
+  .product-card .product-card-actions-grid,
+  .home-product-carousel .product-card .product-card-actions-grid,
+  .shop-page .shop-grid:not(.list-view) .product-card .product-card-actions-grid,
+  .flash-sale-page .flash-product-grid:not(.list-view) .product-card .product-card-actions-grid {
+    padding-top: 3px;
+  }
+
+  .home-product-carousel .product-add-cart.product-add-cart-grid {
+    margin-top: 0 !important;
+  }
+
   .shop-page .shop-grid:not(.list-view) .product-image,
   .flash-sale-page .flash-product-grid:not(.list-view) .product-image {
     height: clamp(120px, 36vw, 145px);
@@ -20936,22 +20959,33 @@ body.cart-drawer-open { overflow: hidden; }
   .product-card .product-image,
   .shop-page .shop-grid:not(.list-view) .product-image,
   .flash-sale-page .flash-product-grid:not(.list-view) .product-image {
-    height: 138px;
-    min-height: 138px;
+    height: 150px;
+    min-height: 150px;
   }
 }
 
 @media (max-width: 380px) {
+  .product-wishlist {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .product-wishlist svg {
+    width: 14px;
+    height: 14px;
+  }
+
   .product-card .product-image,
   .shop-page .shop-grid:not(.list-view) .product-image,
   .flash-sale-page .flash-product-grid:not(.list-view) .product-image {
-    height: 122px;
-    min-height: 122px;
+    height: 140px;
+    min-height: 140px;
   }
 }
 
 .product-card-actions-grid {
   width: 100%;
+  padding-top: 4px;
 }
 
 .product-card-purchase-actions {
@@ -21111,7 +21145,7 @@ body.cart-drawer-open { overflow: hidden; }
 
 .related-slide .product-card .product-card-actions {
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: 4px;
 }
 
 .related-slide .product-card .product-card-purchase-actions {
@@ -21124,6 +21158,10 @@ body.cart-drawer-open { overflow: hidden; }
 }
 
 @media (max-width: 620px) {
+  .related-slide .product-card .product-card-actions-grid {
+    padding-top: 3px;
+  }
+
   .related-slide .product-card .product-name {
     font-size: 12px;
   }

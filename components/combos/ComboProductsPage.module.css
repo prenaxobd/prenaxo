@@ -567,7 +567,7 @@
 
 @media (max-width: 700px) {
   .imageWrap {
-    height: clamp(120px, 36vw, 145px);
+    height: clamp(150px, 38vw, 165px);
     padding: 7px;
   }
 
@@ -591,8 +591,13 @@
   .wishlistButton {
     top: 8px;
     right: 8px;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .wishlistButton svg {
+    width: 16px;
+    height: 16px;
   }
 
   .discountBadge {
@@ -612,11 +617,21 @@
 
 @media (max-width: 360px) {
   .imageWrap {
-    height: 120px;
+    height: 140px;
   }
 
   .cardBody {
     padding: 7px;
+  }
+
+  .wishlistButton {
+    width: 32px;
+    height: 32px;
+  }
+
+  .wishlistButton svg {
+    width: 14px;
+    height: 14px;
   }
 
   .productName {
