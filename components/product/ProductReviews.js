@@ -34,6 +34,9 @@ function Stars({ value = 0, size = 18 }) {
 export default function ProductReviews({
   productId,
   reviews = [],
+  averageRating,
+  reviewCount: totalReviewCount,
+  ratingDistribution = {},
 }) {
 
   const [items, setItems] =
@@ -60,10 +63,10 @@ export default function ProductReviews({
   =============================================== */
 
   const reviewCount =
-    items.length;
+    totalReviewCount ?? items.length;
 
   const average =
-    reviewCount > 0
+    averageRating ?? (items.length > 0
       ? Number(
           (
             items.reduce(
@@ -73,7 +76,7 @@ export default function ProductReviews({
             ) / reviewCount
           ).toFixed(1)
         )
-      : 0;
+      : 0);
 
 
   /* ===============================================
@@ -199,13 +202,8 @@ export default function ProductReviews({
           {[5, 4, 3, 2, 1].map(
             (star) => {
 
-              const count =
-                items.filter(
-                  (item) =>
-                    Number(
-                      item.rating
-                    ) === star
-                ).length;
+              const count = ratingDistribution[star]
+                ?? items.filter((item) => Number(item.rating) === star).length;
 
               const percentage =
                 reviewCount

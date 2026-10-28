@@ -1,15 +1,15 @@
 import ProductCard from '@/components/ProductCard';
 import { prisma } from '@/lib/prisma';
+import { getPageMetadata } from '@/lib/seo';
 import styles from './search.module.css';
 
 export async function generateMetadata() {
-  return {
+  return getPageMetadata({
     title: 'Search',
-    robots: {
-      index: false,
-      follow: true,
-    },
-  };
+    description: 'Search products available in the Prenaxo online store.',
+    path: '/search',
+    robots: { index: false, follow: true },
+  });
 }
 
 function normalizeSearchTokens(rawQuery) {

@@ -4,7 +4,6 @@ import ShopBrowser from '@/components/shop/ShopBrowser';
 
 import {
   SITE_NAME,
-  SITE_URL,
   absoluteUrl,
   getSiteSettings,
 } from '@/lib/seo';
@@ -23,18 +22,14 @@ export async function generateMetadata({
     await getSiteSettings();
 
   const hasFilter =
-    params?.category ||
-    params?.subcategory ||
-    params?.brand ||
-    params?.search ||
-    params?.q;
+    Object.keys(params || {}).length > 0;
 
 
-  const title = 'Buy Best Quality Products & Trends | Prenaxo';
+  const title = 'Shop Online in Bangladesh | Prenaxo';
 
 
   const description =
-    'Browse quality products at Prenaxo. Shop everyday essentials, trending products, great deals and reliable delivery across Bangladesh.';
+    'Browse Prenaxo products, categories and available offers. Review current product details, pricing and availability before you order online.';
 
 
   return {

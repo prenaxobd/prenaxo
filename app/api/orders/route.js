@@ -118,6 +118,12 @@ export async function POST(request) {
       throw new Error('Online payments must be between ৳10 and ৳500,000.');
     }
 
+    const trackingItems = cart.items.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: getProductVariantPrice(item.variant, item.product),
+    }));
+
     const productQuantities = new Map();
     const variantQuantities = new Map();
 
@@ -226,6 +232,7 @@ export async function POST(request) {
           paymentMethodName: paymentMethod.name,
           paymentMethodType: paymentMethod.type,
           paymentStatus: order.paymentStatus,
+          items: trackingItems,
           paymentRedirectUrl: redirectUrl,
         }, { status: 201 });
       } catch (error) {
@@ -244,6 +251,7 @@ export async function POST(request) {
       paymentMethodName: paymentMethod.name,
       paymentMethodType: paymentMethod.type,
       paymentStatus: order.paymentStatus,
+      items: trackingItems,
     }, { status: 201 });
   } catch (error) {
     return NextResponse.json(

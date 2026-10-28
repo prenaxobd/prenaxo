@@ -1,9 +1,9 @@
 import './globals.css';
-import Script from 'next/script';
 
 import StorefrontShell from '@/components/layout/StorefrontShell';
 import Footer from '@/components/layout/Footer';
 import AuthSessionProvider from '@/components/auth/SessionProvider';
+import MetaPixel from '@/components/MetaPixel';
 import {
   SITE_NAME,
   SITE_URL,
@@ -19,7 +19,7 @@ export async function generateMetadata() {
 
   const title =
     settings?.metaTitle ||
-    `${siteName} | Quality Products at Great Prices`;
+    `${SITE_NAME} | Online Shopping in Bangladesh`;
 
   const description =
     settings?.metaDescription ||
@@ -57,7 +57,7 @@ export async function generateMetadata() {
 
     title: {
       default: title,
-      template: `%s | ${siteName}`,
+      template: `%s | ${SITE_NAME}`,
     },
 
     keywords,
@@ -131,13 +131,7 @@ export default function RootLayout({ children }) {
             {children}
           </StorefrontShell>
         </AuthSessionProvider>
-        <Script id="facebook-pixel-queue" strategy="afterInteractive">
-          {`!function(f){if(f.fbq)return;var n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window);
-fbq('init','1485362603491782');
-fbq('track','PageView');
-var loadPrenaxoPixel=function(){if(window.__prenaxoPixelLoaded)return;window.__prenaxoPixelLoaded=true;var s=document.createElement('script');s.async=true;s.src='https://connect.facebook.net/en_US/fbevents.js';document.head.appendChild(s)};
-window.setTimeout(loadPrenaxoPixel,15000)`}
-        </Script>
+        <MetaPixel />
         <noscript>
           <img
             height="1"

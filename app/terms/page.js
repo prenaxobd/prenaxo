@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import styles from './TermsConditions.module.css';
+import { getPageMetadata } from '@/lib/seo';
 
-export const metadata = {
-  title: 'Terms & Conditions | Prenaxo',
+export const metadata = getPageMetadata({
+  title: 'Terms & Conditions',
   description: "Read Prenaxo's Terms & Conditions covering orders, payments, delivery, returns, refunds, accounts and website usage.",
-};
+  path: '/terms',
+});
 
 const sections = [
   ['acceptance', 'Acceptance of Terms'], ['about', 'About Prenaxo'], ['eligibility', 'Eligibility and User Responsibility'], ['account', 'Customer Account'], ['products', 'Products and Product Information'], ['prices', 'Product Prices'], ['availability', 'Product Availability'], ['placement', 'Order Placement'], ['confirmation', 'Order Confirmation'], ['cancellation', 'Order Cancellation'], ['payment', 'Payment'], ['delivery', 'Delivery and Shipping'], ['receiving', 'Receiving an Order'], ['returns', 'Returns'], ['refunds', 'Refunds'], ['exchange', 'Exchange / Replacement'], ['reviews', 'Customer Reviews'], ['prohibited-use', 'Prohibited Use'], ['intellectual-property', 'Intellectual Property'], ['third-party-services', 'Third-Party Services'], ['availability-of-site', 'Website Availability'], ['limitation', 'Limitation of Liability'], ['force-majeure', 'Force Majeure'], ['privacy', 'Privacy'], ['changes', 'Changes to Terms'], ['governing-law', 'Governing Law'], ['customer-rights', 'Customer Rights'], ['contact', 'Contact Us'],

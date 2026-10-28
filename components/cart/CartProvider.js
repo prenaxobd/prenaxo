@@ -7,6 +7,7 @@ import { bn } from '@/lib/i18n';
 import { mergeGuestCart } from './guest-cart';
 import { getCartItemImage, getCartItemOptionLabels } from './cart-options';
 import { getProductVariantPrice } from '@/lib/product-pricing';
+import { createMetaCommerceParameters, trackMetaEvent } from '@/lib/meta-pixel';
 
 const CartContext = createContext(null);
 
@@ -91,6 +92,7 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState({ items: [] });
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
+  const [synced, setSynced] = useState(false);
   const updateQueues = useRef(new Map());
   const updateVersions = useRef(new Map());
   const confirmedItems = useRef(new Map());
@@ -116,22 +118,25 @@ export function CartProvider({ children }) {
             serverCart = await refreshed.json();
             localStorage.removeItem('khatibazar-cart');
           } catch {
-            startTransition(() => setCart((current) => ({
+              setCart((current) => ({
               ...current,
               items: mergeCartItems(localCart().items, current.items),
-            })));
+              }));
             return;
           }
         }
 
-        startTransition(() => setCart((current) => ({
+          setCart((current) => ({
           ...serverCart,
           items: mergeCartItems(current.items, serverCart.items || []),
-        })));
+          }));
         if ((serverCart?.items || []).length) localStorage.removeItem('khatibazar-cart');
       })
       .catch(() => {})
-      .finally(() => setReady(true));
+      .finally(() => {
+        setReady(true);
+        setSynced(true);
+      });
   }, []);
   useEffect(() => { if (ready && !cart.id) saveLocal(cart); }, [cart, ready]);
   useEffect(() => { const close = event => event.key === 'Escape' && setOpen(false); window.addEventListener('keydown', close); return () => window.removeEventListener('keydown', close); }, []);
@@ -204,7 +209,13 @@ export function CartProvider({ children }) {
       return nextCart;
     });
 
-    if (!cart.id) return { ok: true };
+    if (!cart.id) {
+      trackMetaEvent('AddToCart', {
+        ...createMetaCommerceParameters(additions),
+        content_type: 'product',
+      });
+      return { ok: true };
+    }
 
     try {
       const response = await fetch('/api/cart', {
@@ -224,6 +235,10 @@ export function CartProvider({ children }) {
       if (!response.ok) throw new Error(data.error || 'কার্ট আপডেট করা যায়নি।');
 
       setCart((currentCart) => ({ ...currentCart, id: data.id || currentCart.id }));
+      trackMetaEvent('AddToCart', {
+        ...createMetaCommerceParameters(additions),
+        content_type: 'product',
+      });
       return { ok: true };
     } catch (error) {
       setCart((currentCart) => ({
@@ -293,7 +308,7 @@ export function CartProvider({ children }) {
   const items = cart.items || [];
   const count = items.reduce((total, item) => total + item.quantity, 0);
   const subtotal = items.reduce((total, item) => total + getProductVariantPrice(item.variant, item.product) * item.quantity, 0);
-  return <CartContext.Provider value={{ items, count, subtotal, add, addMany, update, remove, clearCart, ready, isOpen: open, open: () => setOpen(true), close: () => setOpen(false) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
+  return <CartContext.Provider value={{ items, count, subtotal, add, addMany, update, remove, clearCart, ready, synced, isOpen: open, open: () => setOpen(true), close: () => setOpen(false) }}>{children}<CartDrawer items={items} count={count} subtotal={subtotal} open={open} close={() => setOpen(false)} update={update} remove={remove}/></CartContext.Provider>;
 }
 
 export function useCart() { return useContext(CartContext); }

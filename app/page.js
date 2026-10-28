@@ -23,11 +23,11 @@ export async function generateMetadata() {
 
   const title =
     settings?.metaTitle ||
-    `${SITE_NAME} | Quality Products at Great Prices`;
+    `${SITE_NAME} | Online Shopping in Bangladesh`;
 
   const description =
     settings?.metaDescription ||
-    'Shop quality products online in Bangladesh at Prenaxo. Discover everyday essentials, trending products, great deals and reliable delivery.';
+    'Shop online with Prenaxo in Bangladesh. Browse products across current categories and review available prices, details and offers.';
 
   const canonical = getCanonical(settings?.canonicalUrl, '/');
 
@@ -225,6 +225,10 @@ export default async function Home() {
       />
 
       <main className="home-page">
+        <header className="home-page-intro">
+          <h1>Shop online in Bangladesh with Prenaxo</h1>
+          <p>Browse products, categories and offers from Prenaxo&apos;s online store.</p>
+        </header>
 
         {/* =====================================================
             HERO AREA

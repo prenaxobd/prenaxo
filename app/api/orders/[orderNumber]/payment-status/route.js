@@ -10,7 +10,19 @@ export async function GET(_request, { params }) {
     const { orderNumber } = await params;
     const order = await prisma.order.findFirst({
       where: { orderNumber, userId: user.id },
-      select: { orderNumber: true, paymentMethod: true, paymentStatus: true },
+      select: {
+        orderNumber: true,
+        paymentMethod: true,
+        paymentStatus: true,
+        total: true,
+        items: {
+          select: {
+            productId: true,
+            quantity: true,
+            unitPrice: true,
+          },
+        },
+      },
     });
     if (!order) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
     const method = await prisma.paymentMethod.findUnique({ where: { code: order.paymentMethod }, select: { type: true, name: true } });

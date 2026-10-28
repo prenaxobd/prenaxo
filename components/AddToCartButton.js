@@ -20,9 +20,6 @@ export default function AddToCartButton({ product, productId, quantity = 1 }) {
 
       const result = await cart.add(product || { id: productId }, quantity);
       setState(result.ok ? 'added' : 'error');
-      if (result.ok && typeof window !== 'undefined' && window.fbq) {
-        window.fbq('track', 'AddToCart');
-      }
     } catch {
       setState('error');
     }

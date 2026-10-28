@@ -3,19 +3,18 @@ import OptimizedImage from '@/components/OptimizedImage';
 
 import './CheckoutView.css';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoaderCircle } from 'lucide-react';
 import { useCart } from '@/components/cart/CartProvider';
-import { mergeGuestCart } from '@/components/cart/guest-cart';
 import { getCartItemImage, getCartItemOptionLabels } from '@/components/cart/cart-options';
 import { getProductVariantPrice } from '@/lib/product-pricing';
+import { createMetaCommerceParameters, trackMetaEvent, trackMetaPurchaseOnce } from '@/lib/meta-pixel';
 
 export default function CheckoutView() {
   const router = useRouter();
-  const { ready: cartReady, clearCart } = useCart();
+  const { items: sharedCartItems, ready: cartReady, synced: cartSynced, clearCart } = useCart();
   const [authState, setAuthState] = useState('loading');
-  const [cart, setCart] = useState(null);
   const [delivery, setDelivery] = useState(null);
   const [paymentOptions, setPaymentOptions] = useState([]);
   const [paymentLoading, setPaymentLoading] = useState(true);
@@ -38,6 +37,7 @@ export default function CheckoutView() {
     paymentTransactionId: '',
     couponCode: '',
   });
+  const checkoutStarted = useRef(false);
 
   useEffect(() => {
     if (!cartReady) return undefined;
@@ -94,18 +94,18 @@ export default function CheckoutView() {
     }
 
     async function loadCheckoutData() {
+      void loadPaymentOptions();
+
       try {
         setError('');
         setPaymentError('');
 
-        const [authResponse, cartResponse, deliveryResponse] = await Promise.all([
+        const [authResponse, deliveryResponse] = await Promise.all([
           fetch('/api/auth/me', { cache: 'no-store' }),
-          fetch('/api/cart'),
           fetch('/api/delivery'),
         ]);
-        const [authData, cartData, deliveryData] = await Promise.all([
+        const [authData, deliveryData] = await Promise.all([
           authResponse.json().catch(() => ({})),
-          cartResponse.json().catch(() => ({ items: [] })),
           deliveryResponse.json().catch(() => ({})),
         ]);
 
@@ -118,46 +118,7 @@ export default function CheckoutView() {
           setPaymentLoading(false);
           return;
         }
-
         setAuthState('authenticated');
-        void loadPaymentOptions();
-
-        let localCart = { items: [] };
-
-        try {
-          const stored =
-            JSON.parse(
-              localStorage.getItem(
-                'khatibazar-cart'
-              ) || '{"items":[]}'
-            );
-
-          localCart = stored || { items: [] };
-        } catch {
-          localCart = { items: [] };
-        }
-
-        let cartFromServer =
-          cartResponse.ok && cartData
-            ? cartData
-            : { items: [] };
-
-        // A guest cart is stored locally first. Persist it before checkout so
-        // the order API and the checkout view use the same source of truth.
-        if (cartResponse.ok && !(cartFromServer.items || []).length && localCart.items?.length) {
-          await mergeGuestCart(localCart.items);
-
-          const refreshedCartResponse = await fetch('/api/cart');
-          if (refreshedCartResponse.ok) {
-            cartFromServer = await refreshedCartResponse.json();
-            localStorage.removeItem('khatibazar-cart');
-          }
-        }
-
-        const fallbackCart =
-          (cartFromServer.items || []).length > 0
-            ? cartFromServer
-            : localCart;
 
         if (!deliveryResponse.ok) {
           throw new Error(
@@ -166,7 +127,6 @@ export default function CheckoutView() {
           );
         }
 
-        setCart(fallbackCart);
         setDelivery(deliveryData);
 
         const firstZone =
@@ -218,6 +178,9 @@ export default function CheckoutView() {
     };
   }, [cartReady]);
 
+  const cart = cartSynced && authState === 'authenticated' && delivery
+    ? { items: sharedCartItems }
+    : null;
   const items = cart?.items || [];
 
   const zones = delivery?.zones || [];
@@ -230,10 +193,7 @@ export default function CheckoutView() {
 
   const subtotal = items.reduce(
     (sum, item) => {
-      const price = Number(
-        item.product.salePrice ||
-          item.product.regularPrice
-      );
+      const price = getProductVariantPrice(item.variant, item.product);
 
       return (
         sum +
@@ -304,6 +264,16 @@ export default function CheckoutView() {
       ...current,
       [key]: value,
     }));
+  }
+
+  function beginCheckout() {
+    if (checkoutStarted.current || !cartReady || !items.length || authState !== 'authenticated') return;
+    checkoutStarted.current = true;
+    trackMetaEvent('InitiateCheckout', {
+      ...createMetaCommerceParameters(items, total),
+      content_type: 'product',
+      num_items: items.reduce((count, item) => count + Number(item.quantity || 0), 0),
+    });
   }
 
   async function submit(event) {
@@ -412,8 +382,11 @@ export default function CheckoutView() {
         );
       }
 
-      if ((selectedPayment?.type === 'COD' || data.paymentStatus === 'PAID') && typeof window !== 'undefined' && window.fbq) {
-        window.fbq('track', 'Purchase', { currency: 'BDT' });
+      if (data.paymentMethodType === 'COD' || data.paymentStatus === 'PAID') {
+        trackMetaPurchaseOnce(
+          data.orderNumber,
+          createMetaCommerceParameters(data.items, data.total)
+        );
       }
 
       localStorage.removeItem(
@@ -598,6 +571,7 @@ export default function CheckoutView() {
       <div className="checkout-layout">
         <form
           className="checkout-form"
+          onFocusCapture={beginCheckout}
           onSubmit={submit}
         >
           {/* CONTACT INFORMATION */}
@@ -939,6 +913,10 @@ export default function CheckoutView() {
                                   'paymentTransactionId',
                                   ''
                                 );
+                                trackMetaEvent('AddPaymentInfo', {
+                                  ...createMetaCommerceParameters(items, total),
+                                  content_type: 'product',
+                                });
                               }}
                             />
 

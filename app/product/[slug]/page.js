@@ -1,6 +1,7 @@
 import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import './product-page.css';
 
 import {
@@ -13,18 +14,16 @@ import {
   MapPin,
 } from 'lucide-react';
 
-import {
-  getProduct,
-  getRelatedProducts,
-} from '@/lib/products';
+import { getProduct } from '@/lib/products';
 
 import ProductReviews from '@/components/product/ProductReviews';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductActions from '@/components/product/ProductActions';
+import MetaProductView from '@/components/MetaProductView';
 import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
 import ProductWeightStockDisplay from '@/components/product/ProductWeightStockDisplay';
 import { ProductOptionProvider } from '@/components/product/ProductOptionContext';
-import RelatedProducts from '@/components/product/RelatedProducts';
+import RelatedProductsSection from '@/components/product/RelatedProductsSection';
 import DeliveryChecker from '@/components/product/DeliveryChecker';
 import ProductDetailsTabs from '@/components/product/ProductDetailsTabs';
 
@@ -37,7 +36,6 @@ import {
   getRobots,
   getCanonical,
   getProductPrice,
-  getProductAvailability,
   safeJsonLd,
 } from '@/lib/seo';
 
@@ -70,7 +68,9 @@ export async function generateMetadata({
     product.seo;
 
 
-  const title = product.name;
+  const title =
+    cleanText(seo?.metaTitle) ||
+    `${product.name} | ${SITE_NAME}`;
 
 
   const canonical = getCanonical(
@@ -79,22 +79,26 @@ export async function generateMetadata({
   );
 
   const description = truncate(
-    cleanText(
-      product.shortDescription || product.description
-    ) || `Shop ${product.name} online at ${SITE_NAME}.`,
+    cleanText(seo?.metaDescription) ||
+      cleanText(
+        product.shortDescription || product.description
+      ) ||
+      `Shop ${product.name} online at ${SITE_NAME}.`,
     160
   );
 
-
-  const image = product.images?.[0]?.url
-      ? absoluteUrl(
-          product.images[0].url
-        )
-      : undefined;
+  const image =
+    absoluteUrl(seo?.ogImage) ||
+    absoluteUrl(product.images?.[0]?.url);
+  const ogTitle = cleanText(seo?.ogTitle) || title;
+  const ogDescription =
+    cleanText(seo?.ogDescription) || description;
 
 
   return {
-    title,
+    title: {
+      absolute: title,
+    },
 
     description,
 
@@ -103,15 +107,17 @@ export async function generateMetadata({
     },
 
     robots:
-      getRobots(seo),
+      product.active
+        ? getRobots(seo)
+        : { index: false, follow: true },
 
     openGraph: {
       type: 'website',
       locale: 'en_BD',
       url: canonical,
       siteName: SITE_NAME,
-      title,
-      description,
+      title: ogTitle,
+      description: ogDescription,
 
       images: image
         ? [
@@ -128,12 +134,16 @@ export async function generateMetadata({
     twitter: {
       card: 'summary_large_image',
 
-      title,
+      title: cleanText(seo?.twitterTitle) || ogTitle,
 
-      description,
+      description:
+        cleanText(seo?.twitterDescription) || ogDescription,
 
-      images:
-        image ? [image] : [],
+      images: seo?.twitterImage
+        ? [absoluteUrl(seo.twitterImage)].filter(Boolean)
+        : image
+          ? [image]
+          : [],
     },
   };
 }
@@ -145,16 +155,14 @@ export async function generateMetadata({
 
 function ProductStructuredData({
   product,
+  canonicalUrl,
   price,
   inStock,
   averageRating,
   reviewCount,
   approvedReviews,
 }) {
-  const productUrl =
-    absoluteUrl(
-      `/product/${product.slug}`
-    );
+  const productUrl = canonicalUrl;
 
 
   const images =
@@ -174,13 +182,6 @@ function ProductStructuredData({
   const categoryName =
     product.category?.name ||
     null;
-
-
-  const sku =
-    product.sku ||
-    `KB-${String(
-      product.id
-    ).toUpperCase()}`;
 
 
   const description =
@@ -212,7 +213,7 @@ function ProductStructuredData({
 
     description,
 
-    sku,
+    ...(product.sku ? { sku: product.sku } : {}),
 
     ...(images.length > 0
       ? {
@@ -238,35 +239,24 @@ function ProductStructuredData({
         }
       : {}),
 
-    offers: {
-      '@type':
-        'Offer',
-
-      url:
-        productUrl,
-
-      priceCurrency:
-        'BDT',
-
-      price:
-        Number(price).toFixed(2),
-
-      availability:
-        getProductAvailability(
-          product
-        ),
-
-      seller: {
-        '@type':
-          'Organization',
-
-        name:
-          SITE_NAME,
-
-        url:
-          SITE_URL,
-      },
-    },
+    ...(Number.isFinite(Number(price)) && Number(price) > 0
+      ? {
+          offers: {
+            '@type': 'Offer',
+            url: productUrl,
+            priceCurrency: 'BDT',
+            price: Number(price).toFixed(2),
+            availability: inStock
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
+            seller: {
+              '@type': 'Organization',
+              name: SITE_NAME,
+              url: SITE_URL,
+            },
+          },
+        }
+      : {}),
   };
 
 
@@ -472,8 +462,10 @@ export default async function ProductPage({
     notFound();
   }
 
-  const related = await getRelatedProducts(product.id, product.categoryId);
-
+  const canonicalUrl = getCanonical(
+    product.seo?.canonicalUrl,
+    `/product/${product.slug}`
+  );
 
   /* =========================================
      PRICE
@@ -539,58 +531,19 @@ export default async function ProductPage({
     );
 
 
-  const reviewCount =
-    approvedReviews.length;
-
-
-  const ratingTotal =
-    approvedReviews.reduce(
-      (total, review) =>
-        total +
-        Number(
-          review.rating || 0
-        ),
-      0
-    );
-
-
-  const averageRating =
-    reviewCount > 0
-      ? Number(
-          (
-            ratingTotal /
-            reviewCount
-          ).toFixed(1)
-        )
+  const reviewCount = product.reviewSummary?.count ?? approvedReviews.length;
+  const averageRating = product.reviewSummary
+    ? Number(Number(product.reviewSummary.average).toFixed(1))
+    : reviewCount
+      ? Number((approvedReviews.reduce((total, review) => total + Number(review.rating || 0), 0) / approvedReviews.length).toFixed(1))
       : 0;
-
-
-  const ratingDistribution = {
+  const ratingDistribution = product.reviewSummary?.ratingDistribution || {
     5: 0,
     4: 0,
     3: 0,
     2: 0,
     1: 0,
   };
-
-
-  approvedReviews.forEach(
-    (review) => {
-      const rating =
-        Number(
-          review.rating
-        );
-
-      if (
-        rating >= 1 &&
-        rating <= 5
-      ) {
-        ratingDistribution[
-          rating
-        ]++;
-      }
-    }
-  );
 
 
   /* =========================================
@@ -601,11 +554,7 @@ export default async function ProductPage({
     product.images || [];
 
 
-  const sku =
-    product.sku ||
-    `KB-${String(
-      product.id
-    ).toUpperCase()}`;
+  const sku = product.sku || '';
 
 
   const weightVariants = product.category?.enableWeightVariants
@@ -645,17 +594,25 @@ export default async function ProductPage({
   return (
     <main className="single-product-page">
 
-      <ProductStructuredData
-        product={product}
-        price={price}
-        inStock={inStock}
-        averageRating={averageRating}
-        reviewCount={reviewCount}
-        approvedReviews={
-          approvedReviews
-        }
-      />
+      {product.active && (
+        <ProductStructuredData
+          product={product}
+          canonicalUrl={canonicalUrl}
+          price={price}
+          inStock={inStock}
+          averageRating={averageRating}
+          reviewCount={reviewCount}
+          approvedReviews={approvedReviews}
+        />
+      )}
 
+      {product.active && (
+        <MetaProductView
+          productId={product.id}
+          productName={product.name}
+          price={price}
+        />
+      )}
 
       {/* =========================================
           BREADCRUMB
@@ -1138,9 +1095,12 @@ export default async function ProductPage({
           </div>
 
 
-          <RelatedProducts
-            products={related}
-          />
+          <Suspense fallback={null}>
+            <RelatedProductsSection
+              productId={product.id}
+              categoryId={product.categoryId}
+            />
+          </Suspense>
 
         </section>
       )}

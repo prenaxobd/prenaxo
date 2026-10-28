@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ArrowRight, Check, Clock3, PackageCheck } from 'lucide-react';
 import styles from './order-success.module.css';
+import { createMetaCommerceParameters, trackMetaPurchaseOnce } from '@/lib/meta-pixel';
 
 function subscribeToOrderStorage() {
   return () => {};
@@ -13,7 +14,9 @@ function getOrderSnapshot(orderNumber) {
   try {
     const savedOrder = sessionStorage.getItem('prenaxo-order-confirmation');
     const parsedOrder = savedOrder ? JSON.parse(savedOrder) : null;
-    return parsedOrder?.orderNumber === orderNumber ? savedOrder : null;
+    return parsedOrder && (!orderNumber || parsedOrder.orderNumber === orderNumber)
+      ? savedOrder
+      : null;
   } catch {
     return null;
   }
@@ -28,7 +31,6 @@ export default function OrderSuccessView({ orderNumber }) {
   const ready = orderSnapshot !== '__loading__';
   const order = ready && orderSnapshot ? JSON.parse(orderSnapshot) : null;
   const [verifiedPayment, setVerifiedPayment] = useState(null);
-  const purchaseTracked = useRef(false);
 
   useEffect(() => {
     if (!ready || !order?.orderNumber) return undefined;
@@ -67,12 +69,16 @@ export default function OrderSuccessView({ orderNumber }) {
   const paymentMethodName = verifiedPayment?.paymentMethodName || order?.paymentMethodName || order?.paymentMethod;
 
   useEffect(() => {
-    if (paymentStatus !== 'PAID' || purchaseTracked.current || !order) return;
-    purchaseTracked.current = true;
-    if (typeof window !== 'undefined' && window.fbq) {
-      window.fbq('track', 'Purchase', { currency: 'BDT', value: Number(order.total) });
-    }
-  }, [order, paymentStatus]);
+    if (
+      verifiedPayment?.paymentStatus !== 'PAID' ||
+      verifiedPayment.orderNumber !== order?.orderNumber
+    ) return;
+
+    trackMetaPurchaseOnce(
+      verifiedPayment.orderNumber,
+      createMetaCommerceParameters(verifiedPayment.items, verifiedPayment.total)
+    );
+  }, [order?.orderNumber, verifiedPayment]);
 
   if (!ready) {
     return (

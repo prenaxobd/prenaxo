@@ -12,24 +12,13 @@ export default function robots() {
         allow: '/',
 
         disallow: [
-          '/admin/',
+          '/admin',
           '/api/',
-          '/cart/',
-          '/checkout/',
-          '/wishlist/',
-          '/account/',
-          '/login/',
-          '/register/',
-          '/order-success/',
-          '/track-order/',
         ],
       },
     ],
 
     sitemap:
       `${SITE_URL}/sitemap.xml`,
-
-    host:
-      SITE_URL,
   };
 }
