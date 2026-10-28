@@ -225,11 +225,6 @@ export default async function Home() {
       />
 
       <main className="home-page">
-        <header className="home-page-intro">
-          <h1>Shop online in Bangladesh with Prenaxo</h1>
-          <p>Browse products, categories and offers from Prenaxo&apos;s online store.</p>
-        </header>
-
         {/* =====================================================
             HERO AREA
             Left  = Dynamic Hero Slider

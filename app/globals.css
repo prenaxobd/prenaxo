@@ -1,24 +1,5 @@
 @import 'tailwindcss';
 
-.home-page-intro {
-  width: min(calc(100% - 32px), 1400px);
-  margin: 18px auto 0;
-  padding: 0 24px;
-}
-
-.home-page-intro h1 {
-  margin: 0;
-  color: #1f2937;
-  font-size: clamp(1.35rem, 2.5vw, 2rem);
-  line-height: 1.25;
-}
-
-.home-page-intro p {
-  margin: 6px 0 0;
-  color: #64748b;
-  font-size: 0.95rem;
-}
-
 .account-required-backdrop {
   position: fixed;
   inset: 0;

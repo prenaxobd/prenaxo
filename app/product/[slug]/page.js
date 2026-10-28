@@ -1066,44 +1066,12 @@ export default async function ProductPage({
           RELATED PRODUCTS
       ========================================= */}
 
-      {related.length > 0 && (
-        <section className="container related-products">
-
-          <div className="section-heading">
-
-            <div>
-
-              <span>
-                YOU MAY ALSO LIKE
-              </span>
-
-              <h2>
-                Related Products
-              </h2>
-
-            </div>
-
-
-            <Link
-              href="/shop"
-              className="related-view-all"
-            >
-              View all
-              <ChevronRight size={16} />
-            </Link>
-
-          </div>
-
-
-          <Suspense fallback={null}>
-            <RelatedProductsSection
-              productId={product.id}
-              categoryId={product.categoryId}
-            />
-          </Suspense>
-
-        </section>
-      )}
+      <Suspense fallback={null}>
+        <RelatedProductsSection
+          productId={product.id}
+          categoryId={product.categoryId}
+        />
+      </Suspense>
 
     </main>
   );
