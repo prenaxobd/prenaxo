@@ -14,6 +14,7 @@ export async function GET(_request, { params }) {
         orderNumber: true,
         paymentMethod: true,
         paymentStatus: true,
+        status: true,
         total: true,
         items: {
           select: {

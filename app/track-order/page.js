@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
-  Clock3,
   CreditCard,
   LoaderCircle,
   MapPin,
@@ -14,7 +13,8 @@ import {
   ShieldCheck,
   Truck,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import OrderStatusNotice from '@/components/orders/OrderStatusNotice';
 import styles from './track-order.module.css';
 
 const orderSteps = [
@@ -54,11 +54,46 @@ export default function TrackOrder() {
   const [phone, setPhone] = useState('');
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
+  const [refreshError, setRefreshError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!order?.orderNumber || !phone) return undefined;
+
+    let active = true;
+    const refreshOrder = async () => {
+      try {
+        const response = await fetch(
+          `/api/orders/track?orderNumber=${encodeURIComponent(order.orderNumber)}&phone=${encodeURIComponent(phone)}`,
+          { cache: 'no-store' }
+        );
+        if (!response.ok) {
+          if (active) setRefreshError('Live order updates are temporarily unavailable. Please try searching again later.');
+          return;
+        }
+        const data = await response.json();
+        if (active && data?.success) {
+          setOrder(data.order);
+          setRefreshError('');
+        } else if (active) {
+          setRefreshError('Live order updates are temporarily unavailable. Please try searching again later.');
+        }
+      } catch {
+        if (active) setRefreshError('Live order updates are temporarily unavailable. Please try searching again later.');
+      }
+    };
+
+    const interval = window.setInterval(refreshOrder, 15000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [order?.orderNumber, phone]);
 
   async function search(event) {
     event.preventDefault();
     setError('');
+    setRefreshError('');
     setOrder(null);
     setLoading(true);
 
@@ -171,12 +206,13 @@ export default function TrackOrder() {
               </span>
             </div>
 
-            {cancelled ? (
-              <div className={styles.cancelledNotice}>
-                <Clock3 size={19} aria-hidden="true" />
-                <p>This order has been cancelled. Please contact our support team if you need help.</p>
-              </div>
-            ) : (
+            <OrderStatusNotice
+              status={order.status}
+              paymentStatus={order.paymentStatus}
+            />
+            {refreshError && <p className={styles.error} role="status">{refreshError}</p>}
+
+            {!cancelled && (
               <div className={styles.timeline} aria-label={`Order status: ${formatLabel(order.status)}`}>
                 {orderSteps.map(({ label, status, Icon }, index) => {
                   const complete = currentStep >= 0 && index < currentStep;

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ArrowRight, Check, Clock3, PackageCheck } from 'lucide-react';
+import OrderStatusNotice from '@/components/orders/OrderStatusNotice';
 import styles from './order-success.module.css';
 import { createMetaCommerceParameters, trackMetaPurchaseOnce } from '@/lib/meta-pixel';
 
@@ -65,6 +66,7 @@ export default function OrderSuccessView({ orderNumber }) {
   }, [ready, order?.orderNumber]);
 
   const paymentStatus = verifiedPayment?.paymentStatus || order?.paymentStatus;
+  const orderStatus = verifiedPayment?.status || order?.status;
   const paymentMethodType = verifiedPayment?.paymentMethodType || order?.paymentMethodType;
   const paymentMethodName = verifiedPayment?.paymentMethodName || order?.paymentMethodName || order?.paymentMethod;
 
@@ -118,6 +120,13 @@ export default function OrderSuccessView({ orderNumber }) {
               : 'We could not load this order. Please check your order link or contact our support team.'}
           </p>
         </header>
+
+        {order && (
+          <OrderStatusNotice
+            status={orderStatus}
+            paymentStatus={paymentStatus}
+          />
+        )}
 
         {order ? (
           <>

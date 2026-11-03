@@ -113,8 +113,8 @@ export default function OrderDetailManager({ initialOrder }) {
           <li>
             <strong>Phase 3 — Update only after verification</strong>
             <span>
-              Only after confirming the funds, approve the payment with a review note and change
-              Order status to PROCESSING. CONFIRMED is not an available status in this project.
+              After confirming the funds, approve the payment with a review note to mark it PAID
+              and move the order to PROCESSING. Rejecting the payment cancels the order.
             </span>
           </li>
         </ol>
@@ -124,7 +124,68 @@ export default function OrderDetailManager({ initialOrder }) {
     <section className="section order-items-card"><div className="section-head"><div><div className="section-kicker">ORDER CONTENTS</div><h2>Products</h2><p className="muted">{order.items.length} line items</p></div><div className="order-items-total">৳{Number(order.total).toLocaleString()}</div></div><div className="admin-table-wrap"><table className="table order-items-table"><thead><tr><th>Product</th><th>Selected options</th><th>Quantity</th><th>Unit price</th><th>Total</th></tr></thead><tbody>{order.items.map(item => { const labels = getOptionLabels(item); return <tr key={item.id}><td><div className="admin-order-product"><div className="admin-order-product-image">{item.product?.images?.[0]?.url ? <OptimizedImage src={item.product.images[0].url} alt="" /> : <Package size={19} />}</div><div><strong>{item.productName}</strong><small className="admin-item-sku">{item.product?.sku || ''}</small></div></div></td><td><div className="admin-order-options">{labels.length ? labels.map(label => <span key={label}>{label}</span>) : <em>Default option</em>}</div></td><td>{item.quantity}</td><td>৳{Number(item.unitPrice).toLocaleString()}</td><td><strong>৳{(Number(item.unitPrice) * item.quantity).toLocaleString()}</strong></td></tr>; })}</tbody></table></div><div className="order-admin-total"><span>Subtotal</span><b>৳{Number(order.subtotal).toLocaleString()}</b><span>Discount</span><b>-৳{Number(order.discount).toLocaleString()}</b><span>Shipping</span><b>৳{Number(order.shippingCharge).toLocaleString()}</b><strong>Total</strong><strong>৳{Number(order.total).toLocaleString()}</strong></div></section>
     <section className="section payment-card"><div><div className="section-kicker">PAYMENT</div><h2>{order.paymentMethodName}</h2><p className="muted">{order.paymentMethod} · {order.paymentMethodType}</p></div><span className="status">{order.paymentStatus.replaceAll('_', ' ')}</span>
       {order.paymentTransactionId && <div className="payment-reference-summary"><span>Customer transfer reference</span><strong>{order.paymentTransactionId}</strong></div>}
-      {(needsPaymentReview || cashPending) && <div className="payment-review-controls"><label>Review note<textarea value={paymentNote} onChange={event => setPaymentNote(event.target.value)} maxLength={500} rows={3} placeholder="Record what you checked or received" disabled={saving} /></label><div>{needsPaymentReview ? <><button type="button" className="btn" disabled={saving || paymentNote.trim().length < 5} onClick={() => update({ paymentStatus: 'PAID', paymentNote })}>{gatewayNeedsReview ? 'Accept verified payment' : 'Approve payment'}</button>{!gatewayNeedsReview && <button type="button" className="btn order-payment-reject" disabled={saving || paymentNote.trim().length < 5} onClick={() => update({ paymentStatus: 'FAILED', paymentNote })}>Reject reference</button>}</> : <button type="button" className="btn" disabled={saving || paymentNote.trim().length < 5} onClick={() => update({ paymentStatus: 'PAID', paymentNote })}>Confirm cash collected</button>}</div></div>}
+      {(needsPaymentReview || cashPending) && (
+        <div className="payment-review-controls">
+          <label>
+            Review note
+            <textarea
+              value={paymentNote}
+              onChange={event => setPaymentNote(event.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="Record what you checked or received"
+              disabled={saving}
+            />
+          </label>
+          <div>
+            {needsPaymentReview ? (
+              <>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={saving || paymentNote.trim().length < 5}
+                  onClick={() => update({
+                    status: order.paymentStatus === 'PENDING_VERIFICATION' ? 'PROCESSING' : undefined,
+                    paymentStatus: 'PAID',
+                    paymentNote,
+                  })}
+                >
+                  {gatewayNeedsReview
+                    ? 'Accept verified payment'
+                    : order.paymentStatus === 'PENDING_VERIFICATION'
+                      ? 'Confirm payment & process order'
+                      : 'Approve payment'}
+                </button>
+                {!gatewayNeedsReview && (
+                  <button
+                    type="button"
+                    className="btn order-payment-reject"
+                    disabled={saving || paymentNote.trim().length < 5}
+                    onClick={() => update({
+                      status: order.paymentStatus === 'PENDING_VERIFICATION' ? 'CANCELLED' : undefined,
+                      paymentStatus: 'FAILED',
+                      paymentNote,
+                    })}
+                  >
+                    {order.paymentStatus === 'PENDING_VERIFICATION'
+                      ? 'Cancel order & reject payment'
+                      : 'Reject reference'}
+                  </button>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn"
+                disabled={saving || paymentNote.trim().length < 5}
+                onClick={() => update({ paymentStatus: 'PAID', paymentNote })}
+              >
+                Confirm cash collected
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </section>
     <section className="section payment-history"><div className="section-kicker">AUDIT TRAIL</div><h2>Payment activity</h2>{order.paymentEvents?.length ? <ol>{order.paymentEvents.map(event => <li key={event.id}><div><strong>{event.status.replaceAll('_', ' ')}</strong><span>{event.source}</span></div><p>{event.note || 'Status recorded.'}</p><small>{new Date(event.createdAt).toLocaleString('en-GB')} · {event.actor?.name || (event.source === 'GATEWAY' ? 'SSLCommerz' : 'System')}</small></li>)}</ol> : <p className="muted">No payment activity recorded yet.</p>}</section>
   </>;

@@ -121,6 +121,7 @@ function getStatusLabel(status) {
 function getPaymentLabel(status) {
   const labels = {
     PENDING: 'Pending',
+    PENDING_VERIFICATION: 'Review needed',
     PAID: 'Paid',
     FAILED: 'Failed',
     REFUNDED: 'Refunded',
@@ -438,6 +439,38 @@ export default function OrderManager({
     } finally {
       setUpdatingId(null);
     }
+  }
+
+  async function confirmManualPayment(order) {
+    if (!window.confirm(
+      `Confirm payment for ${order.orderNumber} (${formatCurrency(order.total)})? Continue only after verifying the submitted transaction ID and exact amount in the provider statement.`
+    )) {
+      return;
+    }
+
+    await updateOrder(order.id, {
+      status: 'PROCESSING',
+      paymentStatus: 'PAID',
+      paymentNote: 'Manual payment verified against the provider statement.',
+    });
+  }
+
+  async function cancelManualPayment(order) {
+    const reason = window.prompt(
+      `Optional cancellation reason for order ${order.orderNumber}:`,
+      'Invalid Transaction ID'
+    );
+    if (reason === null) return;
+    if (reason.trim().length > 500) {
+      alert('The cancellation reason must be 500 characters or fewer.');
+      return;
+    }
+
+    await updateOrder(order.id, {
+      status: 'CANCELLED',
+      paymentStatus: 'FAILED',
+      paymentNote: reason.trim() || 'Manual payment could not be verified.',
+    });
   }
 
   async function bulkUpdate(status) {
@@ -824,6 +857,9 @@ export default function OrderManager({
                 const selected = selectedIds.includes(
                   order.id
                 );
+                const requiresManualReview =
+                  order.paymentStatus === 'PENDING_VERIFICATION' &&
+                  ['BANK_TRANSFER', 'MANUAL_WALLET'].includes(order.paymentMethodType);
 
                 const delivery =
                   getDeliveryType(order);
@@ -939,6 +975,12 @@ export default function OrderManager({
                       >
                         {order.paymentMethod || '-'}
                       </div>
+                      {requiresManualReview && order.paymentTransactionId && (
+                        <div className={styles.paymentTransactionId}>
+                          <span>Txn ID</span>
+                          <code>{order.paymentTransactionId}</code>
+                        </div>
+                      )}
                     </td>
 
                     <td>
@@ -982,114 +1024,87 @@ export default function OrderManager({
                     </td>
 
                     <td>
-                      <div
-                        className={
-                          styles.actionWrap
-                        }
-                      >
-                        <button
-                          type="button"
-                          className={
-                            styles.actionButton
-                          }
-                          onClick={() =>
-                            setOpenMenuId(
-                              openMenuId === order.id
-                                ? null
-                                : order.id
-                            )
-                          }
-                          aria-label="Order actions"
-                        >
-                          <MoreVertical size={17} />
-                        </button>
-
-                        {openMenuId === order.id && (
-                          <div
-                            className={
-                              styles.actionMenu
-                            }
+                      {requiresManualReview ? (
+                        <div className={styles.verificationActions} aria-label="Manual payment verification actions">
+                          <span className={styles.verificationActionLabel}>Payment review</span>
+                          <button
+                            type="button"
+                            className={styles.confirmPaymentAction}
+                            disabled={updatingId === order.id}
+                            onClick={() => confirmManualPayment(order)}
                           >
-                            <Link
-                              href={`/admin/orders/${order.id}`}
-                              onClick={() =>
-                                setOpenMenuId(null)
-                              }
-                            >
-                              <Eye size={15} />
-                              View Order
-                            </Link>
+                            <CheckCircle2 size={15} />
+                            Confirm Payment
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.cancelPaymentAction}
+                            disabled={updatingId === order.id}
+                            onClick={() => cancelManualPayment(order)}
+                          >
+                            <XCircle size={15} />
+                            Cancel Order
+                          </button>
+                          <Link
+                            href={`/admin/orders/${order.id}`}
+                            className={styles.verificationDetailsLink}
+                          >
+                            <Eye size={14} />
+                            View details
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className={styles.actionWrap}>
+                          <button
+                            type="button"
+                            className={styles.actionButton}
+                            onClick={() => setOpenMenuId(openMenuId === order.id ? null : order.id)}
+                            aria-label="Order actions"
+                          >
+                            <MoreVertical size={17} />
+                          </button>
 
-                            <button
-                              type="button"
-                              disabled={
-                                updatingId === order.id
-                              }
-                              onClick={() =>
-                                updateOrder(
-                                  order.id,
-                                  {
-                                    status: 'PROCESSING',
-                                  }
-                                )
-                              }
-                            >
-                              Processing
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={
-                                updatingId === order.id
-                              }
-                              onClick={() =>
-                                updateOrder(
-                                  order.id,
-                                  {
-                                    status: 'SHIPPED',
-                                  }
-                                )
-                              }
-                            >
-                              Shipped
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={
-                                updatingId === order.id
-                              }
-                              onClick={() =>
-                                updateOrder(
-                                  order.id,
-                                  {
-                                    status: 'DELIVERED',
-                                  }
-                                )
-                              }
-                            >
-                              Completed
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={
-                                updatingId === order.id
-                              }
-                              onClick={() =>
-                                updateOrder(
-                                  order.id,
-                                  {
-                                    status: 'CANCELLED',
-                                  }
-                                )
-                              }
-                            >
-                              Cancel Order
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                          {openMenuId === order.id && (
+                            <div className={styles.actionMenu}>
+                              <Link
+                                href={`/admin/orders/${order.id}`}
+                                onClick={() => setOpenMenuId(null)}
+                              >
+                                <Eye size={15} />
+                                View Order
+                              </Link>
+                              <button
+                                type="button"
+                                disabled={updatingId === order.id}
+                                onClick={() => updateOrder(order.id, { status: 'PROCESSING' })}
+                              >
+                                Processing
+                              </button>
+                              <button
+                                type="button"
+                                disabled={updatingId === order.id}
+                                onClick={() => updateOrder(order.id, { status: 'SHIPPED' })}
+                              >
+                                Shipped
+                              </button>
+                              <button
+                                type="button"
+                                disabled={updatingId === order.id}
+                                onClick={() => updateOrder(order.id, { status: 'DELIVERED' })}
+                              >
+                                Completed
+                              </button>
+                              <button
+                                type="button"
+                                disabled={updatingId === order.id}
+                                onClick={() => updateOrder(order.id, { status: 'CANCELLED' })}
+                              >
+                                Cancel Order
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

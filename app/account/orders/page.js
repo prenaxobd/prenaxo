@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import AccountSidebar from '@/components/account/AccountSidebar';
+import OrderStatusNotice from '@/components/orders/OrderStatusNotice';
+import OrderStatusRefresh from '@/components/account/OrderStatusRefresh';
 
 export default async function OrdersPage() {
 
@@ -39,6 +41,7 @@ export default async function OrdersPage() {
 
   return (
     <main className="account-page">
+      <OrderStatusRefresh />
 
       <div className="account-container">
 
@@ -108,6 +111,10 @@ export default async function OrdersPage() {
                     className="account-card order-card"
                     key={order.id}
                   >
+                    <OrderStatusNotice
+                      status={order.status}
+                      paymentStatus={order.paymentStatus}
+                    />
 
                     <div className="order-card-top">
 

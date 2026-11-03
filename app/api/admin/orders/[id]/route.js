@@ -30,13 +30,39 @@ export async function PATCH(request, { params }) {
     const order = await prisma.$transaction(async (tx) => {
       const existing = await tx.order.findUnique({
         where: { id },
-        select: { id: true, paymentMethod: true, paymentStatus: true },
+        select: { id: true, paymentMethod: true, paymentStatus: true, paymentTransactionId: true },
       });
       if (!existing) throw new Error('Order not found.');
 
+      const method = await tx.paymentMethod.findUnique({
+        where: { code: existing.paymentMethod },
+        select: { type: true },
+      });
+      const isManualPayment = ['BANK_TRANSFER', 'MANUAL_WALLET'].includes(method?.type);
+      const pendingManualVerification = isManualPayment && existing.paymentStatus === 'PENDING_VERIFICATION';
+      let effectivePaymentNote = paymentNote;
+      const updateData = {};
+
+      if (pendingManualVerification) {
+        if (paymentStatus === 'PAID' && !existing.paymentTransactionId) {
+          throw new Error('This order has no submitted transaction ID to verify.');
+        }
+        if (['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(status) && paymentStatus !== 'PAID') {
+          throw new Error('Verify the manual payment and mark it as paid before processing this order.');
+        }
+        if (paymentStatus === 'PAID' && status && status !== 'PROCESSING') {
+          throw new Error('A verified manual payment must move the order to processing.');
+        }
+        if (paymentStatus === 'FAILED' && status && status !== 'CANCELLED') {
+          throw new Error('A rejected manual payment must cancel the order.');
+        }
+        if (status === 'CANCELLED' && paymentStatus && paymentStatus !== 'FAILED') {
+          throw new Error('Canceling this unverified manual-payment order must mark its payment as failed.');
+        }
+      }
+
       if (status === 'CANCELLED') {
-        const gatewayMethod = await tx.paymentMethod.findUnique({ where: { code: existing.paymentMethod }, select: { type: true } });
-        if (gatewayMethod?.type === 'GATEWAY') {
+        if (method?.type === 'GATEWAY') {
           const pendingAttempt = await tx.paymentAttempt.findFirst({
             where: { orderId: id, status: 'PENDING', checkoutLockUserId: { not: null } },
             select: { id: true },
@@ -45,15 +71,15 @@ export async function PATCH(request, { params }) {
         }
       }
 
-      const updateData = {};
       if (status) updateData.status = status;
+      if (pendingManualVerification && paymentStatus === 'PAID') updateData.status = 'PROCESSING';
+      if (pendingManualVerification && paymentStatus === 'FAILED') updateData.status = 'CANCELLED';
+      if (pendingManualVerification && status === 'CANCELLED' && !paymentStatus) {
+        updateData.paymentStatus = 'FAILED';
+        effectivePaymentNote = paymentNote || 'Order cancelled before manual payment verification.';
+      }
       if (paymentStatus && paymentStatus !== existing.paymentStatus) {
-        const method = await tx.paymentMethod.findUnique({
-          where: { code: existing.paymentMethod },
-          select: { type: true },
-        });
         const cashCollection = method?.type === 'COD' && existing.paymentStatus === 'PENDING' && paymentStatus === 'PAID';
-        const isManualPayment = ['BANK_TRANSFER', 'MANUAL_WALLET'].includes(method?.type);
         const reviewableStatus = existing.paymentStatus === 'PENDING_VERIFICATION' || (isManualPayment && existing.paymentStatus === 'PENDING');
         const reviewedManualPayment = reviewableStatus && ['PAID', 'FAILED'].includes(paymentStatus) && isManualPayment;
         const reviewedGatewayPayment = existing.paymentStatus === 'PENDING_VERIFICATION' && paymentStatus === 'PAID' && method?.type === 'GATEWAY';
@@ -62,7 +88,7 @@ export async function PATCH(request, { params }) {
         if (!cashCollection && !reviewedManualPayment && !reviewedGatewayPayment && !manualRefund) {
           throw new Error('This payment status can only be changed after a valid payment review or provider confirmation.');
         }
-        if (!paymentNote) throw new Error('Add a note describing this payment decision.');
+        if (!effectivePaymentNote) throw new Error('Add a note describing this payment decision.');
 
         updateData.paymentStatus = paymentStatus;
         if (reviewedGatewayPayment) {
@@ -74,15 +100,26 @@ export async function PATCH(request, { params }) {
         }
       }
 
-      await tx.order.update({ where: { id }, data: updateData });
+      if (pendingManualVerification) {
+        const updated = await tx.order.updateMany({
+          where: { id, paymentStatus: 'PENDING_VERIFICATION' },
+          data: updateData,
+        });
+        if (!updated.count) {
+          throw new Error('This payment was already reviewed. Refresh the order and try again.');
+        }
+      } else {
+        await tx.order.update({ where: { id }, data: updateData });
+      }
+
       if (updateData.paymentStatus) {
         await tx.paymentEvent.create({
           data: {
             orderId: id,
             actorId: admin.id,
-            status: paymentStatus,
+            status: updateData.paymentStatus,
             source: 'ADMIN',
-            note: paymentNote,
+            note: effectivePaymentNote,
           },
         });
       }

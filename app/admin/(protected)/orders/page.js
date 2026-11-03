@@ -83,6 +83,12 @@ export default async function OrdersPage() {
     }),
   ]);
 
+  const paymentMethods = await prisma.paymentMethod.findMany({
+    where: { code: { in: [...new Set(orders.map((order) => order.paymentMethod))] } },
+    select: { code: true, type: true },
+  });
+  const paymentMethodTypes = new Map(paymentMethods.map((method) => [method.code, method.type]));
+
   const stats = {
     totalOrders,
     pendingOrders,
@@ -94,7 +100,10 @@ export default async function OrdersPage() {
 
   return (
     <OrderManager
-      initialOrders={orders.map(serializeOrder)}
+      initialOrders={orders.map((order) => serializeOrder({
+        ...order,
+        paymentMethodType: paymentMethodTypes.get(order.paymentMethod) || null,
+      }))}
       initialStats={stats}
     />
   );
