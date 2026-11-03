@@ -6,6 +6,8 @@ const updateSchema = z.object({
   status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']).optional(),
   paymentStatus: z.enum(['PENDING', 'PENDING_VERIFICATION', 'PAID', 'FAILED', 'REFUNDED']).optional(),
   paymentNote: z.string().trim().min(5).max(500).optional(),
+}).refine(({ status, paymentStatus }) => Boolean(status || paymentStatus), {
+  message: 'Provide an order status or payment status to update.',
 });
 
 export async function GET(request, { params }) {
@@ -43,7 +45,8 @@ export async function PATCH(request, { params }) {
         }
       }
 
-      const updateData = { ...(status ? { status } : {}) };
+      const updateData = {};
+      if (status) updateData.status = status;
       if (paymentStatus && paymentStatus !== existing.paymentStatus) {
         const method = await tx.paymentMethod.findUnique({
           where: { code: existing.paymentMethod },

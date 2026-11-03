@@ -105,7 +105,7 @@ export default function OrderSuccessView({ orderNumber }) {
               ? paymentStatus === 'PAID'
                 ? 'Your payment has been verified. We will keep you updated as your order moves forward.'
                 : paymentStatus === 'PENDING_VERIFICATION'
-                  ? 'We received your transfer reference. Our team will review it and update the payment status.'
+                  ? 'আপনার অর্ডারটি সফলভাবে জমা হয়েছে। আমাদের টিম পেমেন্ট (Transaction ID) যাচাই করার পর অর্ডারটি কনফার্ম করা হবে।'
                   : paymentStatus === 'FAILED'
                     ? 'The payment was not completed. Your order remains unpaid; contact support before trying again.'
                     : paymentStatus === 'REFUNDED'
