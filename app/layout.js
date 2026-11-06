@@ -4,6 +4,8 @@ import StorefrontShell from '@/components/layout/StorefrontShell';
 import Footer from '@/components/layout/Footer';
 import AuthSessionProvider from '@/components/auth/SessionProvider';
 import MetaPixel from '@/components/MetaPixel';
+import Script from 'next/script';
+import { META_PIXEL_ID } from '@/lib/meta-pixel';
 import {
   SITE_NAME,
   SITE_URL,
@@ -132,12 +134,34 @@ export default function RootLayout({ children }) {
           </StorefrontShell>
         </AuthSessionProvider>
         <MetaPixel />
+        <Script
+          id="meta-pixel"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              if (!window.__prenaxoMetaPixelInitialized) {
+                window.fbq('init', '${META_PIXEL_ID}');
+                window.fbq('track', 'PageView');
+                window.__prenaxoMetaPixelInitialized = true;
+              }
+              window.__prenaxoMetaPixelScriptRequested = true;
+            `,
+          }}
+        />
         <noscript>
           <img
             height="1"
             width="1"
             style={{ display: 'none' }}
-            src="https://www.facebook.com/tr?id=1485362603491782&ev=PageView&noscript=1"
+            src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
             alt=""
           />
         </noscript>
