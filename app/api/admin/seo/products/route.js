@@ -8,7 +8,6 @@ const schema = z.object({
   metaTitle: z.string().max(191).nullable().optional(),
   metaDescription: z.string().max(191).nullable().optional(),
   focusKeyword: z.string().max(191).nullable().optional(),
-  canonicalUrl: z.string().max(191).nullable().optional(),
   robotsIndex: z.enum(['INDEX', 'NOINDEX']).default('INDEX'),
   robotsFollow: z.enum(['FOLLOW', 'NOFOLLOW']).default('FOLLOW'),
   ogTitle: z.string().max(191).nullable().optional(),
@@ -39,8 +38,8 @@ export async function PUT(request) {
     const { productId, ...data } = input;
     const seo = await prisma.productSEO.upsert({
       where: { productId },
-      create: { productId, ...data },
-      update: data,
+      create: { productId, ...data, canonicalUrl: null },
+      update: { ...data, canonicalUrl: null },
     });
     invalidatePublicCache('seo', 'products', 'homepage');
     return Response.json(seo);

@@ -34,7 +34,6 @@ import {
   cleanText,
   truncate,
   getRobots,
-  getCanonical,
   getProductPrice,
   safeJsonLd,
 } from '@/lib/seo';
@@ -73,10 +72,7 @@ export async function generateMetadata({
     `${product.name} | ${SITE_NAME}`;
 
 
-  const canonical = getCanonical(
-    seo?.canonicalUrl,
-    `/product/${product.slug}`
-  );
+  const canonical = absoluteUrl(`/product/${product.slug}`);
 
   const description = truncate(
     cleanText(seo?.metaDescription) ||
@@ -462,10 +458,7 @@ export default async function ProductPage({
     notFound();
   }
 
-  const canonicalUrl = getCanonical(
-    product.seo?.canonicalUrl,
-    `/product/${product.slug}`
-  );
+  const canonicalUrl = absoluteUrl(`/product/${product.slug}`);
 
   /* =========================================
      PRICE

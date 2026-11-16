@@ -396,9 +396,11 @@ export default function BannerManager({
           <h1>Hero Slider</h1>
 
           <p className="muted">
-            Manage homepage banner images.
-            Banner artwork contains its own
-            text and design.
+            Add multiple homepage banners;
+            active banners rotate every 5 seconds
+            in sort order. Inactive banners are
+            hidden. Banner artwork contains its
+            own text and design.
           </p>
         </div>
 

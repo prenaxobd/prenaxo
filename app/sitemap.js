@@ -1,9 +1,7 @@
 import { prisma } from '@/lib/prisma';
 
-import {
-  absoluteUrl,
-  getCanonical,
-} from '@/lib/seo';
+import { absoluteUrl } from '@/lib/seo';
+import { getCategoryUrl } from '@/lib/category-navigation';
 
 export const revalidate = 3600;
 
@@ -20,7 +18,6 @@ export default async function sitemap() {
         salePrice: true,
         seo: {
           select: {
-            canonicalUrl: true,
             robotsIndex: true,
           },
         },
@@ -44,10 +41,6 @@ export default async function sitemap() {
 
   const productUrls = products
     .filter((product) => product.seo?.robotsIndex !== 'NOINDEX')
-    .filter((product) => {
-      const path = `/product/${product.slug}`;
-      return getCanonical(product.seo?.canonicalUrl, path) === absoluteUrl(path);
-    })
     .map((product) => ({
       url: absoluteUrl(`/product/${product.slug}`),
       lastModified: product.updatedAt,
@@ -58,11 +51,11 @@ export default async function sitemap() {
   const categoryUrls = categories
     .filter((category) => category.seo?.robotsIndex !== 'NOINDEX')
     .filter((category) => {
-      const path = `/category/${category.slug}`;
+      const path = getCategoryUrl(category.slug);
       return getCanonical(category.seo?.canonicalUrl, path) === absoluteUrl(path);
     })
     .map((category) => ({
-      url: absoluteUrl(`/category/${category.slug}`),
+      url: absoluteUrl(getCategoryUrl(category.slug)),
       changeFrequency: 'weekly',
       priority: 0.7,
     }));
