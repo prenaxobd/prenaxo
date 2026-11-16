@@ -5647,7 +5647,7 @@ body.header-menu-open {
 
 
 /* =========================================================
-   RIGHT STATIC BANNER
+   RIGHT PROMOTIONAL BANNER SLIDER
    SAME HEIGHT AS LEFT SLIDER
    ========================================================= */
 
@@ -5666,6 +5666,20 @@ body.header-menu-open {
   background: #f3f4f6;
 
   isolation: isolate;
+}
+
+.home-hero-right-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 800ms ease-in-out;
+  pointer-events: none;
+}
+
+.home-hero-right-slide.is-active {
+  z-index: 1;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 
@@ -5688,6 +5702,12 @@ body.header-menu-open {
 
   user-select: none;
   -webkit-user-drag: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-right-slide {
+    transition: none;
+  }
 }
 
 

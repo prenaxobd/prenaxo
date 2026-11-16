@@ -40,31 +40,66 @@ function BannerImage({ banner, priority = false, sizes }) {
   );
 }
 
-function RightBanner({ banner }) {
-  if (!banner?.image) return null;
+function RightBannerSlider({ banners }) {
+  const [active, setActive] = useState(0);
 
-  const content = (
-    <OptimizedImage
-      src={banner.image}
-      alt=""
-      className="home-hero-right-image"
-      loading="lazy"
-      draggable="false"
-    />
-  );
+  useEffect(() => {
+    if (
+      banners.length < 2 ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
 
-  if (!banner?.link) {
-    return content;
-  }
+    const timer = window.setInterval(() => {
+      setActive((current) => (current + 1) % banners.length);
+    }, AUTOPLAY_MS);
+
+    return () => window.clearInterval(timer);
+  }, [banners.length]);
+
+  if (!banners.length) return null;
+
+  const visibleActive = Math.min(active, banners.length - 1);
 
   return (
-    <a
-      href={banner.link}
-      className="home-hero-right-link"
-      aria-label="Open promotional banner"
+    <aside
+      className="home-hero-right"
+      aria-label="Promotional banners"
     >
-      {content}
-    </a>
+      {banners.map((banner, index) => {
+        const isActive = index === visibleActive;
+        const image = (
+          <OptimizedImage
+            src={banner.image}
+            alt=""
+            className="home-hero-right-image"
+            loading={index === 0 ? 'eager' : 'lazy'}
+            fetchPriority={index === 0 ? 'high' : 'auto'}
+            draggable="false"
+          />
+        );
+
+        return (
+          <div
+            key={banner.id || index}
+            className={`home-hero-right-slide${isActive ? ' is-active' : ''}`}
+            aria-hidden={!isActive}
+          >
+            {banner.link ? (
+              <a
+                href={banner.link}
+                className="home-hero-right-link"
+                aria-label="Open promotional banner"
+                tabIndex={isActive ? 0 : -1}
+              >
+                {image}
+              </a>
+            ) : image}
+          </div>
+        );
+      })}
+    </aside>
   );
 }
 
@@ -75,6 +110,13 @@ export default function HeroSlider({
   const validBanners = banners.filter(
     (banner) => banner?.desktopImage || banner?.image
   );
+  const validRightBanners = (
+    Array.isArray(rightBanner)
+      ? rightBanner
+      : rightBanner
+        ? [rightBanner]
+        : []
+  ).filter((banner) => banner?.image);
 
   const [active, setActive] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -215,7 +257,7 @@ export default function HeroSlider({
 
   if (
     !validBanners.length &&
-    !rightBanner?.image
+    !validRightBanners.length
   ) {
     return null;
   }
@@ -358,16 +400,7 @@ export default function HeroSlider({
           NO DOT
           ========================================= */}
 
-      {rightBanner?.image && (
-        <aside
-          className="home-hero-right"
-          aria-label="Promotional banner"
-        >
-          <RightBanner
-            banner={rightBanner}
-          />
-        </aside>
-      )}
+      <RightBannerSlider banners={validRightBanners} />
     </section>
   );
 }

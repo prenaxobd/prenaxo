@@ -26,16 +26,14 @@ export async function GET() {
       'view'
     );
 
-    const banner =
-      await prisma.homeRightBanner.findFirst({
+    const banners =
+      await prisma.homeRightBanner.findMany({
         orderBy: {
-          updatedAt: 'desc',
+          createdAt: 'asc',
         },
       });
 
-    return Response.json(
-      banner
-    );
+    return Response.json(banners);
   } catch (error) {
     return jsonError(error);
   }
@@ -50,24 +48,6 @@ export async function POST(request) {
     const input = schema.parse(
       await request.json()
     );
-
-    /*
-     * Only one active right banner.
-     * Deactivate any existing active banner
-     * before saving the new one.
-     */
-    if (input.isActive) {
-      await prisma.homeRightBanner.updateMany(
-        {
-          where: {
-            isActive: true,
-          },
-          data: {
-            isActive: false,
-          },
-        }
-      );
-    }
 
     const banner =
       await prisma.homeRightBanner.create({
@@ -107,22 +87,6 @@ export async function PATCH(request) {
 
     const input =
       schema.partial().parse(body);
-
-    if (input.isActive) {
-      await prisma.homeRightBanner.updateMany(
-        {
-          where: {
-            isActive: true,
-            NOT: {
-              id: body.id,
-            },
-          },
-          data: {
-            isActive: false,
-          },
-        }
-      );
-    }
 
     const data = {};
 
@@ -170,18 +134,20 @@ export async function PATCH(request) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request) {
   try {
     await requireRightBannerPermission(
       'delete'
     );
 
-    const banner =
-      await prisma.homeRightBanner.findFirst({
-        orderBy: {
-          updatedAt: 'desc',
-        },
-      });
+    const id = new URL(request.url).searchParams.get('id');
+    const banner = id
+      ? await prisma.homeRightBanner.findUnique({
+          where: { id },
+        })
+      : await prisma.homeRightBanner.findFirst({
+          orderBy: { updatedAt: 'desc' },
+        });
 
     if (!banner) {
       return Response.json({

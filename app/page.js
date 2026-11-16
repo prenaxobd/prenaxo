@@ -233,7 +233,7 @@ export default async function Home() {
 
         <HeroSlider
           banners={data.banners}
-          rightBanner={data.homeRightBanner}
+          rightBanner={data.homeRightBanners}
         />
         
         {/* =====================================================

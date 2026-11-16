@@ -40,13 +40,13 @@ function BannerPreview({ src, alt = 'Banner preview' }) {
 
 export default function BannerManager({
   initialBanners = [],
-  initialRightBanner = null,
+  initialRightBanners = [],
 }) {
   const [banners, setBanners] =
     useState(initialBanners);
 
-  const [rightBanner, setRightBanner] =
-    useState(initialRightBanner);
+  const [rightBanners, setRightBanners] =
+    useState(initialRightBanners);
 
   const [form, setForm] = useState(null);
   const [rightForm, setRightForm] =
@@ -61,6 +61,8 @@ export default function BannerManager({
     useState(false);
 
   const [actionId, setActionId] =
+    useState(null);
+  const [rightActionId, setRightActionId] =
     useState(null);
 
   function openAddBanner() {
@@ -275,10 +277,21 @@ export default function BannerManager({
   function openRightForm() {
     setRightForm({
       ...emptyRightBanner,
-      ...(rightBanner || {}),
     });
 
     setRightMessage('');
+  }
+
+  function openEditRightForm(banner) {
+    setRightForm({
+      id: banner.id,
+      image: banner.image || '',
+      link: banner.link || '',
+      isActive: Boolean(banner.isActive),
+    });
+
+    setRightMessage('');
+    setRightActionId(null);
   }
 
   async function saveRightBanner(
@@ -331,7 +344,15 @@ export default function BannerManager({
         );
       }
 
-      setRightBanner(data);
+      setRightBanners((items) => {
+        const nextItems = rightForm.id
+          ? items.map((item) => item.id === data.id ? data : item)
+          : [...items, data];
+
+        return nextItems.sort(
+          (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+        );
+      });
       setRightForm(null);
       setRightMessage(
         'Promotional banner saved.'
@@ -346,7 +367,7 @@ export default function BannerManager({
     }
   }
 
-  async function deleteRightBanner() {
+  async function deleteRightBanner(id) {
     if (
       !confirm(
         'Delete the right promotional banner?'
@@ -357,7 +378,7 @@ export default function BannerManager({
 
     try {
       const response = await fetch(
-        '/api/admin/home-right-banner',
+        `/api/admin/home-right-banner?id=${encodeURIComponent(id)}`,
         {
           method: 'DELETE',
         }
@@ -373,7 +394,10 @@ export default function BannerManager({
         );
       }
 
-      setRightBanner(null);
+      setRightBanners((items) =>
+        items.filter((item) => item.id !== id)
+      );
+      setRightActionId(null);
       setRightMessage(
         'Promotional banner deleted.'
       );
@@ -381,6 +405,41 @@ export default function BannerManager({
       setRightMessage(
         error.message ||
           'Unable to delete promotional banner.'
+      );
+    }
+  }
+
+  async function toggleRightBanner(banner) {
+    setRightActionId(null);
+
+    try {
+      const response = await fetch(
+        '/api/admin/home-right-banner',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: banner.id,
+            isActive: !banner.isActive,
+          }),
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Unable to update promotional banner.'
+        );
+      }
+
+      setRightBanners((items) =>
+        items.map((item) => item.id === data.id ? data : item)
+      );
+    } catch (error) {
+      setRightMessage(
+        error.message || 'Unable to update promotional banner.'
       );
     }
   }
@@ -680,13 +739,13 @@ export default function BannerManager({
               Homepage
             </div>
 
-            <h2>
-              Right Promotional Banner
-            </h2>
+            <h2>Right Promotional Banners</h2>
 
             <p className="muted">
-              This banner is independent
-              from the hero slider.
+              Add as many banners as you need.
+              Active banners fade between images
+              every 5 seconds; this does not
+              change the left hero banners.
             </p>
           </div>
 
@@ -695,9 +754,7 @@ export default function BannerManager({
             className="btn"
             onClick={openRightForm}
           >
-            {rightBanner
-              ? 'Replace Banner'
-              : '+ Add Banner'}
+            + Add Banner
           </button>
         </div>
 
@@ -707,7 +764,7 @@ export default function BannerManager({
           </p>
         )}
 
-        {rightBanner?.image && (
+        {rightBanners.length > 0 && (
           <div className="admin-table-wrap admin-banner-table-wrap admin-right-banner-table-wrap">
             <table className="table admin-banner-table admin-right-banner-table">
               <thead>
@@ -719,34 +776,62 @@ export default function BannerManager({
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    <div className="admin-banner-product-cell">
-                      <div className="admin-banner-thumb">
-                        <BannerPreview src={rightBanner.image} alt="Right promotional banner" />
+                {rightBanners.map((banner, index) => (
+                  <tr key={banner.id}>
+                    <td>
+                      <div className="admin-banner-product-cell">
+                        <div className="admin-banner-thumb">
+                          <BannerPreview src={banner.image} alt="Right promotional banner" />
+                        </div>
+                        <div>
+                          <strong>Right banner {index + 1}</strong>
+                          <small>{banner.id}</small>
+                        </div>
                       </div>
-                      <div>
-                        <strong>Right promotional banner</strong>
-                        <small>{rightBanner.id || 'Homepage promotion'}</small>
+                    </td>
+                    <td>
+                      {banner.link ? <span className="admin-banner-link-pill">{banner.link}</span> : <span className="admin-banner-no-link">No destination</span>}
+                    </td>
+                    <td>
+                      <span className={banner.isActive ? 'status active' : 'status'}>{banner.isActive ? 'Active' : 'Inactive'}</span>
+                    </td>
+                    <td>
+                      <div className="admin-action-menu">
+                        <button
+                          type="button"
+                          aria-label={`Actions for right banner ${index + 1}`}
+                          onClick={() => setRightActionId(
+                            rightActionId === banner.id ? null : banner.id
+                          )}
+                        >
+                          ⋮
+                        </button>
+                        {rightActionId === banner.id && (
+                          <div className="admin-action-popover">
+                            <button type="button" onClick={() => openEditRightForm(banner)}>
+                              Edit
+                            </button>
+                            <button type="button" onClick={() => toggleRightBanner(banner)}>
+                              {banner.isActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button type="button" onClick={() => deleteRightBanner(banner.id)}>
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    {rightBanner.link ? <span className="admin-banner-link-pill">{rightBanner.link}</span> : <span className="admin-banner-no-link">No destination</span>}
-                  </td>
-                  <td>
-                    <span className={rightBanner.isActive ? 'status active' : 'status'}>{rightBanner.isActive ? 'Active' : 'Inactive'}</span>
-                  </td>
-                  <td>
-                    <div className="admin-right-banner-actions">
-                      <button type="button" className="btn" onClick={openRightForm}>Edit</button>
-                      <button type="button" className="btn btn-danger" onClick={deleteRightBanner}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
+        )}
+
+        {!rightBanners.length && (
+          <p className="muted admin-empty">
+            No right-side banners yet.
+          </p>
         )}
 
         {rightForm && (
