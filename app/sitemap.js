@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma';
 
-import { absoluteUrl } from '@/lib/seo';
-import { getCategoryUrl } from '@/lib/category-navigation';
+import { absoluteUrl, getCanonical } from '@/lib/seo';
 
 export const revalidate = 3600;
 
@@ -51,11 +50,11 @@ export default async function sitemap() {
   const categoryUrls = categories
     .filter((category) => category.seo?.robotsIndex !== 'NOINDEX')
     .filter((category) => {
-      const path = getCategoryUrl(category.slug);
+      const path = `/category/${encodeURIComponent(category.slug.trim())}`;
       return getCanonical(category.seo?.canonicalUrl, path) === absoluteUrl(path);
     })
     .map((category) => ({
-      url: absoluteUrl(getCategoryUrl(category.slug)),
+      url: absoluteUrl(`/category/${encodeURIComponent(category.slug.trim())}`),
       changeFrequency: 'weekly',
       priority: 0.7,
     }));
